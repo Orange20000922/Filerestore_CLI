@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="Filerestore_CLI/Filerestore_CLI.vcxproj" Id="c588cb7b-6758-44d5-95fe-80c6dcac7ebc" />
+</Solution>

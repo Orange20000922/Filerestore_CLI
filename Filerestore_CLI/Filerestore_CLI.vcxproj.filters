@@ -1,0 +1,138 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="源文件">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="头文件">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="资源文件">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="源文件\CLI">
+      <UniqueIdentifier>{3022a833-ab33-4633-baa6-d443e6a1480a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\FileAnalyze">
+      <UniqueIdentifier>{c7d6876d-6b47-401f-8498-2cb7b97e753e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\Other Function">
+      <UniqueIdentifier>{fb742311-24be-45a1-955b-2330f21a16cc}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="cli.cpp">
+      <Filter>源文件\CLI</Filter>
+    </ClCompile>
+    <ClCompile Include="climodule.cpp">
+      <Filter>源文件\CLI</Filter>
+    </ClCompile>
+    <ClCompile Include="cmd.cpp">
+      <Filter>源文件\CLI</Filter>
+    </ClCompile>
+    <ClCompile Include="CrashHandler.cpp">
+      <Filter>源文件\FileAnalyze</Filter>
+    </ClCompile>
+    <ClCompile Include="DeletedFileScanner.cpp">
+      <Filter>源文件\FileAnalyze</Filter>
+    </ClCompile>
+    <ClCompile Include="FileRestore.cpp">
+      <Filter>源文件\FileAnalyze</Filter>
+    </ClCompile>
+    <ClCompile Include="MFTBatchReader.cpp">
+      <Filter>源文件\FileAnalyze</Filter>
+    </ClCompile>
+    <ClCompile Include="MFTParser.cpp">
+      <Filter>源文件\FileAnalyze</Filter>
+    </ClCompile>
+    <ClCompile Include="MFTReader.cpp">
+      <Filter>源文件\FileAnalyze</Filter>
+    </ClCompile>
+    <ClCompile Include="OverwriteDetectionThreadPool.cpp">
+      <Filter>源文件\FileAnalyze</Filter>
+    </ClCompile>
+    <ClCompile Include="OverwriteDetector.cpp">
+      <Filter>源文件\FileAnalyze</Filter>
+    </ClCompile>
+    <ClCompile Include="PathResolver.cpp">
+      <Filter>源文件\FileAnalyze</Filter>
+    </ClCompile>
+    <ClCompile Include="UsnJournalReader.cpp">
+      <Filter>源文件\FileAnalyze</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageTable.cpp">
+      <Filter>源文件\FileAnalyze</Filter>
+    </ClCompile>
+    <ClCompile Include="LocalizationManager.cpp">
+      <Filter>源文件\Other Function</Filter>
+    </ClCompile>
+    <ClCompile Include="Logger.cpp">
+      <Filter>源文件\Other Function</Filter>
+    </ClCompile>
+    <ClCompile Include="ProgressBar.cpp">
+      <Filter>源文件\Other Function</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="cli.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="climodule.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="cmd.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="CrashHandler.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="DeletedFileScanner.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="FileRestore.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageTable.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LocalizationManager.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Logger.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MFTBatchReader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MFTParser.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MFTReader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="MFTStructures.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="OverwriteDetectionThreadPool.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="OverwriteDetector.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="PathResolver.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="ProgressBar.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="UsnJournalReader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

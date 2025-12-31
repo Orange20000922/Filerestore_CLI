@@ -1,0 +1,46 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Intermediate files
+*.obj
+*.pch
+*.pdb
+*.ilk
+*.log
+*.tlog
+*.lastbuildstate
+*.idb
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.db-shm
+*.VC.db-wal
+*.VC.opendb
+
+# Build directories
+Filerestore_CLI/x64/
+Filerestore_CLI/ImportTableAnalyzer/
+
+# Cache files
+*.cache
+path_cache_*.bin
+deleted_files_cache_*.bin
+
+# Debug logs
+debug*.log
