@@ -282,18 +282,6 @@ using namespace std;
 		}
 		return false;
 	}
-	// ==================== IATHookByNameCommand REMOVED ====================
-	// IAT Hook functionality has been removed from public version
-
-	// ==================== IATHookByCreateProc REMOVED ====================
-	// IAT Hook functionality has been removed from public version
-
-	// ==================== ElevateAdminPrivilegeCommand REMOVED ====================
-	// Privilege elevation functionality has been removed from public version
-
-	// ==================== ElevateSystemPrivilegeCommand REMOVED ====================
-	// Privilege elevation functionality has been removed from public version
-
 	DiagnoseMFTCommand::DiagnoseMFTCommand()
 	{
 		FlagHasArgs = TRUE;

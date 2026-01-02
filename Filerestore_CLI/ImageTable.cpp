@@ -244,10 +244,6 @@ bool ImageTableAnalyzer::IsImagineTable(LPVOID lpBuffer)
 	}
 	return true;
 }
-// ==================== IATHooked REMOVED ====================
-// IAT Hook functionality has been removed from public version
-// Original implementation: Remote DLL injection code
-
 //根据进程名称获取PID
 int ImageTableAnalyzer::GetPIDByName(wstring processname)
 {
