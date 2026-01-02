@@ -63,8 +63,6 @@ void CLI::Run(string& command)
                         HANDLE hFile = CreateFileA(theargs.front().c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
                         if (hFile==INVALID_HANDLE_VALUE) {
                             subcommands.push_back(tempcommand);
-                            // 注意：参数将在第二阶段（line 112-113）被收集，这里不需要添加
-                            // argsinstances.push_back((LPVOID)new string(theargs.front()));
                         }
                         else {
                             CloseHandle(hFile);
