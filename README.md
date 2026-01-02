@@ -307,13 +307,7 @@ restorebyrecord C 12345 C:\recovered\document.docx
 
 ### 正在调查的问题
 
-#### 1. XML 文件搜索问题
-- **现象**: `searchdeleted C * .xml` 无法搜索到 XML 文件
-- **状态**: 已添加诊断代码，正在调查
-- **临时方案**: 使用 `listdeleted C none` 查看所有文件
-- **相关文档**: [SEARCH_BUG_ANALYSIS.md](SEARCH_BUG_ANALYSIS.md)
-
-#### 2. 最近删除文件扫描不到
+#### 1. 最近删除文件扫描不到
 - **现象**: 刚删除的文件无法立即在扫描结果中找到
 - **可能原因**: MFT 缓存、文件系统延迟
 - **计划方案**: 实现 USN Journal 支持
