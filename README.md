@@ -168,7 +168,7 @@ getfuncaddr kernel32.dll CreateFileW
 
 ```bash
 # 在 Visual Studio 中
-1. 打开 ConsoleApplication5.sln
+1. 打开 Filerestore_CLI.sln
 2. 选择 Release x64 配置
 3. 生成 → 重新生成解决方案 (Ctrl+Shift+B)
 ```
@@ -178,7 +178,7 @@ getfuncaddr kernel32.dll CreateFileW
 ```bash
 # 以管理员权限运行
 cd x64\Release
-.\ConsoleApplication5.exe
+.\Filerestore_CLI.exe
 ```
 
 ### 3. 基础使用流程
