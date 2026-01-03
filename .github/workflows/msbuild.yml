@@ -48,5 +48,5 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: Filerestore_CLI-${{env.BUILD_PLATFORM}}-${{env.BUILD_CONFIGURATION}}
-        path: Filerestore_CLI/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.exe
+        path: ${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.exe
         if-no-files-found: warn
