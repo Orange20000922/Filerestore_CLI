@@ -77,6 +77,8 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -94,6 +96,8 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -109,6 +113,8 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -126,6 +132,8 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
+      <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -135,44 +143,44 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="cli.cpp" />
-    <ClCompile Include="climodule.cpp" />
-    <ClCompile Include="cmd.cpp" />
-    <ClCompile Include="CrashHandler.cpp" />
-    <ClCompile Include="DeletedFileScanner.cpp" />
-    <ClCompile Include="FileRestore.cpp" />
-    <ClCompile Include="ImageTable.cpp" />
-    <ClCompile Include="LocalizationManager.cpp" />
-    <ClCompile Include="Logger.cpp" />
-    <ClCompile Include="Main.cpp" />
-    <ClCompile Include="MFTBatchReader.cpp" />
-    <ClCompile Include="MFTParser.cpp" />
-    <ClCompile Include="MFTReader.cpp" />
-    <ClCompile Include="OverwriteDetectionThreadPool.cpp" />
-    <ClCompile Include="OverwriteDetector.cpp" />
-    <ClCompile Include="PathResolver.cpp" />
-    <ClCompile Include="ProgressBar.cpp" />
-    <ClCompile Include="UsnJournalReader.cpp" />
+    <ClCompile Include="src\core\cli.cpp" />
+    <ClCompile Include="src\core\climodule.cpp" />
+    <ClCompile Include="src\commands\cmd.cpp" />
+    <ClCompile Include="src\utils\CrashHandler.cpp" />
+    <ClCompile Include="src\fileRestore\DeletedFileScanner.cpp" />
+    <ClCompile Include="src\fileRestore\FileRestore.cpp" />
+    <ClCompile Include="src\analysis\ImageTable.cpp" />
+    <ClCompile Include="src\utils\LocalizationManager.cpp" />
+    <ClCompile Include="src\utils\Logger.cpp" />
+    <ClCompile Include="src\core\Main.cpp" />
+    <ClCompile Include="src\fileRestore\MFTBatchReader.cpp" />
+    <ClCompile Include="src\fileRestore\MFTParser.cpp" />
+    <ClCompile Include="src\fileRestore\MFTReader.cpp" />
+    <ClCompile Include="src\fileRestore\OverwriteDetectionThreadPool.cpp" />
+    <ClCompile Include="src\fileRestore\OverwriteDetector.cpp" />
+    <ClCompile Include="src\fileRestore\PathResolver.cpp" />
+    <ClCompile Include="src\utils\ProgressBar.cpp" />
+    <ClCompile Include="src\fileRestore\UsnJournalReader.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="cli.h" />
-    <ClInclude Include="climodule.h" />
-    <ClInclude Include="cmd.h" />
-    <ClInclude Include="CrashHandler.h" />
-    <ClInclude Include="DeletedFileScanner.h" />
-    <ClInclude Include="FileRestore.h" />
-    <ClInclude Include="ImageTable.h" />
-    <ClInclude Include="LocalizationManager.h" />
-    <ClInclude Include="Logger.h" />
-    <ClInclude Include="MFTBatchReader.h" />
-    <ClInclude Include="MFTParser.h" />
-    <ClInclude Include="MFTReader.h" />
-    <ClInclude Include="MFTStructures.h" />
-    <ClInclude Include="OverwriteDetectionThreadPool.h" />
-    <ClInclude Include="OverwriteDetector.h" />
-    <ClInclude Include="PathResolver.h" />
-    <ClInclude Include="ProgressBar.h" />
-    <ClInclude Include="UsnJournalReader.h" />
+    <ClInclude Include="src\core\cli.h" />
+    <ClInclude Include="src\core\climodule.h" />
+    <ClInclude Include="src\commands\cmd.h" />
+    <ClInclude Include="src\utils\CrashHandler.h" />
+    <ClInclude Include="src\fileRestore\DeletedFileScanner.h" />
+    <ClInclude Include="src\fileRestore\FileRestore.h" />
+    <ClInclude Include="src\analysis\ImageTable.h" />
+    <ClInclude Include="src\utils\LocalizationManager.h" />
+    <ClInclude Include="src\utils\Logger.h" />
+    <ClInclude Include="src\fileRestore\MFTBatchReader.h" />
+    <ClInclude Include="src\fileRestore\MFTParser.h" />
+    <ClInclude Include="src\fileRestore\MFTReader.h" />
+    <ClInclude Include="src\fileRestore\MFTStructures.h" />
+    <ClInclude Include="src\fileRestore\OverwriteDetectionThreadPool.h" />
+    <ClInclude Include="src\fileRestore\OverwriteDetector.h" />
+    <ClInclude Include="src\fileRestore\PathResolver.h" />
+    <ClInclude Include="src\utils\ProgressBar.h" />
+    <ClInclude Include="src\fileRestore\UsnJournalReader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,11 +1,60 @@
 # ImportTableAnalyzer - NTFS 文件恢复工具
 
-[![Version](https://img.shields.io/badge/version-v0.1.0-blue.svg)](https://github.com/yourusername/ImportTableAnalyzer)
+[![Version](https://img.shields.io/badge/version-v0.1.1-blue.svg)](https://github.com/yourusername/ImportTableAnalyzer)
 [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
 [![Language](https://img.shields.io/badge/language-C%2B%2B20-orange.svg)](https://isocpp.org/)
 [![License](https://img.shields.io/badge/license-Research%20Only-red.svg)](LICENSE)
 
 > 一个功能强大的 NTFS 文件恢复工具，支持 MFT 扫描、智能覆盖检测和高性能文件恢复
+
+---
+
+## 🎉 最新更新 (2026-01-04)
+
+### v0.1.1 - 架构升级与扩展性增强
+
+#### 🔧 核心改进
+- **✨ 优雅退出机制** - 替代直接 `exit(0)`，确保所有资源正确释放
+  - 自动释放日志系统资源
+  - 清理崩溃处理程序
+  - 释放动态加载的模块
+  - 防止内存泄漏
+
+- **📁 日志系统增强** - 日志文件使用绝对路径
+  - 自动保存在程序所在目录
+  - 启动时显示完整日志路径
+  - 支持日志轮转和自动清理
+
+#### 🔌 扩展性功能
+- **🚀 动态模块系统** - 支持运行时加载 DLL 扩展模块
+  - 自动扫描 `modules\` 目录
+  - 支持热插拔式命令扩展
+  - 完整的模块生命周期管理
+  - 详细的加载日志和错误处理
+
+- **📚 核心功能库分离** - `Filerestore_lib` 静态库
+  - 13 个公共头文件，12 个核心实现
+  - 完整的 NTFS MFT 操作 API
+  - 支持第三方开发者创建扩展模块
+  - 详细的 API 文档和示例代码
+
+#### 🛠️ 内存管理优化
+- 修复了模块注册系统的内存泄漏
+- 改进了命令参数的内存管理
+- 优化了动态模块卸载流程
+- 使用 `const` 引用避免不必要的复制
+
+#### 📖 文档更新
+- 新增 [`Filerestore_lib/README.md`](../Filerestore_lib/README.md) - 扩展开发指南
+- 包含 4 个完整的 DLL 模块开发示例
+- 详细的 API 参考和最佳实践
+- 性能优化和调试技巧
+
+#### 🔗 扩展开发支持
+想为 Filerestore_CLI 开发扩展模块？查看：
+- 📦 [Filerestore_lib 开发文档](../Filerestore_lib/README.md)
+- 💡 示例模块：文件恢复、覆盖检测、USN 分析等
+- 🛠️ 完整的项目模板代码
 
 ---
 
@@ -402,7 +451,29 @@ ConsoleApplication5/
 
 ## 🔄 更新日志
 
-### v0.1.0 (当前版本) - 2025-12-31
+### v0.1.1 (当前版本) - 2026-01-04
+
+#### 架构改进
+- ✅ 优雅退出机制（替代 exit(0)）
+- ✅ 日志系统使用绝对路径
+- ✅ 动态模块加载系统（DLL 插件支持）
+- ✅ 核心功能库分离（Filerestore_lib）
+- ✅ 内存管理优化（修复多个内存泄漏）
+
+#### 扩展性增强
+- ✅ 支持运行时加载 DLL 扩展模块
+- ✅ 完整的模块生命周期管理
+- ✅ 13 个公共 API 头文件
+- ✅ 详细的扩展开发文档和示例
+
+#### 代码质量
+- ✅ 使用 const 引用避免不必要复制
+- ✅ 改进异常处理和日志记录
+- ✅ 清理冗余代码和优化结构
+
+---
+
+### v0.1.0 - 2025-12-31
 
 #### 新增功能
 - ✅ 完整的 MFT 扫描和文件恢复系统

@@ -19,119 +19,119 @@
     <Filter Include="源文件\FileAnalyze">
       <UniqueIdentifier>{c7d6876d-6b47-401f-8498-2cb7b97e753e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="源文件\Other Function">
+    <Filter Include="源文件\Util">
       <UniqueIdentifier>{fb742311-24be-45a1-955b-2330f21a16cc}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Main.cpp">
+    <ClCompile Include="src\core\Main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="cli.cpp">
+    <ClCompile Include="src\core\cli.cpp">
       <Filter>源文件\CLI</Filter>
     </ClCompile>
-    <ClCompile Include="climodule.cpp">
+    <ClCompile Include="src\core\climodule.cpp">
       <Filter>源文件\CLI</Filter>
     </ClCompile>
-    <ClCompile Include="cmd.cpp">
+    <ClCompile Include="src\utils\CrashHandler.cpp">
+      <Filter>源文件\FileAnalyze</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\FileRestore.cpp">
+      <Filter>源文件\FileAnalyze</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\cmd.cpp">
       <Filter>源文件\CLI</Filter>
     </ClCompile>
-    <ClCompile Include="CrashHandler.cpp">
+    <ClCompile Include="src\fileRestore\DeletedFileScanner.cpp">
       <Filter>源文件\FileAnalyze</Filter>
     </ClCompile>
-    <ClCompile Include="DeletedFileScanner.cpp">
+    <ClCompile Include="src\utils\LocalizationManager.cpp">
+      <Filter>源文件\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\analysis\ImageTable.cpp">
       <Filter>源文件\FileAnalyze</Filter>
     </ClCompile>
-    <ClCompile Include="FileRestore.cpp">
+    <ClCompile Include="src\fileRestore\MFTBatchReader.cpp">
       <Filter>源文件\FileAnalyze</Filter>
     </ClCompile>
-    <ClCompile Include="MFTBatchReader.cpp">
+    <ClCompile Include="src\fileRestore\MFTParser.cpp">
       <Filter>源文件\FileAnalyze</Filter>
     </ClCompile>
-    <ClCompile Include="MFTParser.cpp">
+    <ClCompile Include="src\fileRestore\MFTReader.cpp">
       <Filter>源文件\FileAnalyze</Filter>
     </ClCompile>
-    <ClCompile Include="MFTReader.cpp">
+    <ClCompile Include="src\fileRestore\OverwriteDetectionThreadPool.cpp">
       <Filter>源文件\FileAnalyze</Filter>
     </ClCompile>
-    <ClCompile Include="OverwriteDetectionThreadPool.cpp">
+    <ClCompile Include="src\fileRestore\OverwriteDetector.cpp">
       <Filter>源文件\FileAnalyze</Filter>
     </ClCompile>
-    <ClCompile Include="OverwriteDetector.cpp">
+    <ClCompile Include="src\fileRestore\PathResolver.cpp">
       <Filter>源文件\FileAnalyze</Filter>
     </ClCompile>
-    <ClCompile Include="PathResolver.cpp">
+    <ClCompile Include="src\utils\ProgressBar.cpp">
+      <Filter>源文件\Util</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\UsnJournalReader.cpp">
       <Filter>源文件\FileAnalyze</Filter>
     </ClCompile>
-    <ClCompile Include="UsnJournalReader.cpp">
-      <Filter>源文件\FileAnalyze</Filter>
-    </ClCompile>
-    <ClCompile Include="ImageTable.cpp">
-      <Filter>源文件\FileAnalyze</Filter>
-    </ClCompile>
-    <ClCompile Include="LocalizationManager.cpp">
-      <Filter>源文件\Other Function</Filter>
-    </ClCompile>
-    <ClCompile Include="Logger.cpp">
-      <Filter>源文件\Other Function</Filter>
-    </ClCompile>
-    <ClCompile Include="ProgressBar.cpp">
-      <Filter>源文件\Other Function</Filter>
+    <ClCompile Include="src\utils\Logger.cpp">
+      <Filter>源文件\Util</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="cli.h">
+    <ClInclude Include="src\core\cli.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="climodule.h">
+    <ClInclude Include="src\core\climodule.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="cmd.h">
+    <ClInclude Include="src\commands\cmd.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="CrashHandler.h">
+    <ClInclude Include="src\utils\CrashHandler.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="DeletedFileScanner.h">
+    <ClInclude Include="src\fileRestore\DeletedFileScanner.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="FileRestore.h">
+    <ClInclude Include="src\fileRestore\FileRestore.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="ImageTable.h">
+    <ClInclude Include="src\analysis\ImageTable.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="LocalizationManager.h">
+    <ClInclude Include="src\utils\LocalizationManager.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Logger.h">
+    <ClInclude Include="src\utils\Logger.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="MFTBatchReader.h">
+    <ClInclude Include="src\fileRestore\MFTBatchReader.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="MFTParser.h">
+    <ClInclude Include="src\fileRestore\MFTParser.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="MFTReader.h">
+    <ClInclude Include="src\fileRestore\MFTReader.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="MFTStructures.h">
+    <ClInclude Include="src\fileRestore\MFTStructures.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="OverwriteDetectionThreadPool.h">
+    <ClInclude Include="src\fileRestore\OverwriteDetectionThreadPool.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="OverwriteDetector.h">
+    <ClInclude Include="src\fileRestore\OverwriteDetector.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="PathResolver.h">
+    <ClInclude Include="src\fileRestore\PathResolver.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="ProgressBar.h">
+    <ClInclude Include="src\utils\ProgressBar.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="UsnJournalReader.h">
+    <ClInclude Include="src\fileRestore\UsnJournalReader.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
