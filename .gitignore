@@ -44,3 +44,4 @@ deleted_files_cache_*.bin
 
 # Debug logs
 debug*.log
+/nul
