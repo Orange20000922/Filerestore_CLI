@@ -87,15 +87,66 @@ bool OverwriteDetector::HasValidFileStructure(const vector<BYTE>& data) {
         return true;
     }
 
-    // ZIP/DOCX: 50 4B 03 04
+    // ZIP/DOCX/XLSX/PPTX: 50 4B 03 04
     if (data.size() >= 4 && data[0] == 0x50 && data[1] == 0x4B &&
         data[2] == 0x03 && data[3] == 0x04) {
+        return true;
+    }
+
+    // 7z: 37 7A BC AF 27 1C
+    if (data.size() >= 6 && data[0] == 0x37 && data[1] == 0x7A &&
+        data[2] == 0xBC && data[3] == 0xAF && data[4] == 0x27 && data[5] == 0x1C) {
+        return true;
+    }
+
+    // RAR: 52 61 72 21 1A 07
+    if (data.size() >= 6 && data[0] == 0x52 && data[1] == 0x61 &&
+        data[2] == 0x72 && data[3] == 0x21 && data[4] == 0x1A && data[5] == 0x07) {
+        return true;
+    }
+
+    // GZ: 1F 8B
+    if (data.size() >= 2 && data[0] == 0x1F && data[1] == 0x8B) {
+        return true;
+    }
+
+    // BZ2: 42 5A 68 (BZh)
+    if (data.size() >= 3 && data[0] == 0x42 && data[1] == 0x5A && data[2] == 0x68) {
+        return true;
+    }
+
+    // XZ: FD 37 7A 58 5A 00
+    if (data.size() >= 6 && data[0] == 0xFD && data[1] == 0x37 &&
+        data[2] == 0x7A && data[3] == 0x58 && data[4] == 0x5A && data[5] == 0x00) {
         return true;
     }
 
     // EXE/DLL: 4D 5A (MZ)
     if (data.size() >= 2 && data[0] == 0x4D && data[1] == 0x5A) {
         return true;
+    }
+
+    // MP4/MOV: 00 00 00 xx 66 74 79 70 (ftyp)
+    if (data.size() >= 8 && data[4] == 0x66 && data[5] == 0x74 &&
+        data[6] == 0x79 && data[7] == 0x70) {
+        return true;
+    }
+
+    // AVI: 52 49 46 46 ... 41 56 49 20 (RIFF...AVI )
+    if (data.size() >= 12 && data[0] == 0x52 && data[1] == 0x49 &&
+        data[2] == 0x46 && data[3] == 0x46 && data[8] == 0x41 &&
+        data[9] == 0x56 && data[10] == 0x49 && data[11] == 0x20) {
+        return true;
+    }
+
+    // MP3: FF FB, FF FA, FF F3, FF F2, or ID3
+    if (data.size() >= 3) {
+        if ((data[0] == 0xFF && (data[1] & 0xE0) == 0xE0)) {
+            return true;
+        }
+        if (data[0] == 0x49 && data[1] == 0x44 && data[2] == 0x33) { // ID3
+            return true;
+        }
     }
 
     // 检查是否包含可打印的ASCII文本（可能是文本文件）
@@ -279,20 +330,34 @@ ClusterStatus OverwriteDetector::CheckCluster(ULONGLONG clusterNumber) {
     // 检查5: 是否已分配给其他文件
     status.isAllocated = CheckClusterAllocation(clusterNumber);
 
-    // 综合判断
-    if (status.dataEntropy > 7.8) {
-        // 非常高的熵值，可能是随机数据或加密数据
+    // ========== 改进的综合判断逻辑 ==========
+    // 对于高熵文件（压缩/加密），提高阈值以减少误判
+
+    if (status.dataEntropy > 7.95) {
+        // 极高的熵值（接近理论最大值8.0），极可能是真正的随机数据
         if (!hasValidStructure) {
             status.isOverwritten = true;
-            status.overwriteReason = "Very high entropy, likely random data or encrypted";
+            status.overwriteReason = "Extremely high entropy (>7.95), likely random/encrypted data";
         } else {
             status.isOverwritten = false;
-            status.overwriteReason = "High entropy but has valid structure (compressed/encrypted file)";
+            status.overwriteReason = "Very high entropy but has valid structure (compressed/encrypted file)";
+        }
+    } else if (status.dataEntropy > 7.5) {
+        // 非常高的熵值（典型的压缩/加密文件范围）
+        // 在这个范围内，优先考虑为合法的压缩/加密数据
+        if (hasValidStructure) {
+            status.isOverwritten = false;
+            status.overwriteReason = "High entropy with valid structure (compressed/encrypted file)";
+        } else {
+            // 即使没有识别的文件结构，也不能确定是覆盖
+            // 可能是：1) 碎片化文件的中间簇 2) 未识别的压缩格式
+            status.isOverwritten = false;
+            status.overwriteReason = "High entropy (7.5-7.95), likely compressed/encrypted data";
         }
     } else if (status.dataEntropy < 1.0) {
         // 非常低的熵值，可能被清零或填充
         status.isOverwritten = true;
-        status.overwriteReason = "Very low entropy, likely wiped";
+        status.overwriteReason = "Very low entropy (<1.0), likely wiped";
     } else if (status.isAllocated) {
         // 已分配给其他文件
         status.isOverwritten = true;
@@ -302,11 +367,11 @@ ClusterStatus OverwriteDetector::CheckCluster(ULONGLONG clusterNumber) {
         status.isOverwritten = false;
         status.overwriteReason = "Contains valid file structure";
     } else {
-        // 中等熵值，无明显特征
-        // 保守判断：可能被覆盖
-        if (status.dataEntropy > 6.0) {
+        // 中等熵值 (1.0 - 7.5)
+        // 只有在熵值非常高 (>7.2) 且无任何文件特征时才判定为覆盖
+        if (status.dataEntropy > 7.2) {
             status.isOverwritten = true;
-            status.overwriteReason = "High entropy without recognizable structure";
+            status.overwriteReason = "High entropy (>7.2) without recognizable structure";
         } else {
             status.isOverwritten = false;
             status.overwriteReason = "Medium entropy, possibly original data";
@@ -461,12 +526,28 @@ bool OverwriteDetector::IsAllSameValueFromPointer(const BYTE* data, size_t size)
 bool OverwriteDetector::HasValidFileStructureFromPointer(const BYTE* data, size_t size) {
     if (size < 16) return false;
 
-    // 检查常见文件签名
-    if (size >= 3 && data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF) return true;
-    if (size >= 4 && data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47) return true;
-    if (size >= 4 && data[0] == 0x25 && data[1] == 0x50 && data[2] == 0x44 && data[3] == 0x46) return true;
-    if (size >= 4 && data[0] == 0x50 && data[1] == 0x4B && data[2] == 0x03 && data[3] == 0x04) return true;
-    if (size >= 2 && data[0] == 0x4D && data[1] == 0x5A) return true;
+    // 检查常见文件签名 (与 HasValidFileStructure 保持一致)
+    if (size >= 3 && data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF) return true;  // JPEG
+    if (size >= 4 && data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47) return true;  // PNG
+    if (size >= 4 && data[0] == 0x25 && data[1] == 0x50 && data[2] == 0x44 && data[3] == 0x46) return true;  // PDF
+    if (size >= 4 && data[0] == 0x50 && data[1] == 0x4B && data[2] == 0x03 && data[3] == 0x04) return true;  // ZIP
+    if (size >= 6 && data[0] == 0x37 && data[1] == 0x7A && data[2] == 0xBC &&
+        data[3] == 0xAF && data[4] == 0x27 && data[5] == 0x1C) return true;  // 7z
+    if (size >= 6 && data[0] == 0x52 && data[1] == 0x61 && data[2] == 0x72 &&
+        data[3] == 0x21 && data[4] == 0x1A && data[5] == 0x07) return true;  // RAR
+    if (size >= 2 && data[0] == 0x1F && data[1] == 0x8B) return true;  // GZ
+    if (size >= 3 && data[0] == 0x42 && data[1] == 0x5A && data[2] == 0x68) return true;  // BZ2
+    if (size >= 6 && data[0] == 0xFD && data[1] == 0x37 && data[2] == 0x7A &&
+        data[3] == 0x58 && data[4] == 0x5A && data[5] == 0x00) return true;  // XZ
+    if (size >= 2 && data[0] == 0x4D && data[1] == 0x5A) return true;  // EXE/DLL
+    if (size >= 8 && data[4] == 0x66 && data[5] == 0x74 &&
+        data[6] == 0x79 && data[7] == 0x70) return true;  // MP4/MOV
+    if (size >= 12 && data[0] == 0x52 && data[1] == 0x49 && data[2] == 0x46 && data[3] == 0x46 &&
+        data[8] == 0x41 && data[9] == 0x56 && data[10] == 0x49 && data[11] == 0x20) return true;  // AVI
+    if (size >= 3) {
+        if (data[0] == 0xFF && (data[1] & 0xE0) == 0xE0) return true;  // MP3
+        if (data[0] == 0x49 && data[1] == 0x44 && data[2] == 0x33) return true;  // ID3
+    }
 
     // 检查可打印文本
     int printableCount = 0;
@@ -683,25 +764,37 @@ ClusterStatus OverwriteDetector::CheckClusterFromMemory(const BYTE* clusterData,
     // 检查4: 是否包含有效的文件结构
     bool hasValidStructure = HasValidFileStructureFromPointer(clusterData, bytesPerCluster);
 
-    // 综合判断
-    if (status.dataEntropy > 7.8) {
+    // ========== 改进的综合判断逻辑 (与 CheckCluster 保持一致) ==========
+    if (status.dataEntropy > 7.95) {
+        // 极高的熵值（接近理论最大值8.0）
         if (!hasValidStructure) {
             status.isOverwritten = true;
-            status.overwriteReason = "Very high entropy, likely random data or encrypted";
+            status.overwriteReason = "Extremely high entropy (>7.95), likely random/encrypted data";
         } else {
             status.isOverwritten = false;
-            status.overwriteReason = "High entropy but has valid structure (compressed/encrypted file)";
+            status.overwriteReason = "Very high entropy but has valid structure (compressed/encrypted file)";
+        }
+    } else if (status.dataEntropy > 7.5) {
+        // 非常高的熵值（典型的压缩/加密文件范围）
+        if (hasValidStructure) {
+            status.isOverwritten = false;
+            status.overwriteReason = "High entropy with valid structure (compressed/encrypted file)";
+        } else {
+            // 优先假设为合法的压缩/加密数据
+            status.isOverwritten = false;
+            status.overwriteReason = "High entropy (7.5-7.95), likely compressed/encrypted data";
         }
     } else if (status.dataEntropy < 1.0) {
         status.isOverwritten = true;
-        status.overwriteReason = "Very low entropy, likely wiped";
+        status.overwriteReason = "Very low entropy (<1.0), likely wiped";
     } else if (hasValidStructure) {
         status.isOverwritten = false;
         status.overwriteReason = "Contains valid file structure";
     } else {
-        if (status.dataEntropy > 6.0) {
+        // 中等熵值 (1.0 - 7.5)
+        if (status.dataEntropy > 7.2) {
             status.isOverwritten = true;
-            status.overwriteReason = "High entropy without recognizable structure";
+            status.overwriteReason = "High entropy (>7.2) without recognizable structure";
         } else {
             status.isOverwritten = false;
             status.overwriteReason = "Medium entropy, possibly original data";
@@ -960,21 +1053,67 @@ OverwriteDetectionResult OverwriteDetector::DetectOverwrite(const vector<BYTE>& 
 
     PFILE_RECORD_HEADER header = (PFILE_RECORD_HEADER)mftRecord.data();
 
-    // 验证MFT记录签名
+    // ========== 宽松的记录头验证策略 ==========
+    // 已删除文件的MFT记录头可能被部分覆盖，但数据簇可能仍然完好
+    // 采用多层次验证策略，而非一刀切
+
+    bool headerPartiallyCorrupted = false;
+    string corruptionWarning;
+
+    // 检查1：签名验证（宽松）
     if (header->Signature != 'ELIF') {  // "FILE" in little-endian
-        LOG_WARNING_FMT("Warning:","Invalid MFT record signature: 0x%08X", header->Signature,"but continue");
+        headerPartiallyCorrupted = true;
+        corruptionWarning = "MFT record signature invalid, but attempting to continue";
+        LOG_WARNING_FMT("MFT signature: 0x%08X (expected 0x454C4946)", header->Signature);
     }
 
-    // 验证记录头的基本有效性
-    if (header->UsedSize > mftRecord.size() ||
-        header->FirstAttributeOffset >= header->UsedSize ||
-        header->FirstAttributeOffset < sizeof(FILE_RECORD_HEADER)) {
-        LOG_WARNING_FMT("Warning:","Invalid MFT record header fields", "but continue");
+    // 检查2：UsedSize 合理性验证
+    if (header->UsedSize == 0) {
+        // UsedSize为0，记录完全为空或被清零
+        LOG_ERROR("MFT record UsedSize is 0, record appears to be wiped");
         result.isFullyAvailable = false;
-        result.isPartiallyAvailable = false;
         result.overwritePercentage = 100.0;
         result.overwrittenClusters = 1;
         result.totalClusters = 1;
+        return result;
+    }
+
+    if (header->UsedSize > mftRecord.size()) {
+        // UsedSize超出记录大小，可能是损坏
+        // 但尝试使用记录的实际大小继续
+        headerPartiallyCorrupted = true;
+        corruptionWarning += "; UsedSize exceeds record size, using actual size";
+        LOG_WARNING_FMT("UsedSize (%u) > actual size (%zu), attempting recovery",
+                       header->UsedSize, mftRecord.size());
+        // 不返回，继续尝试
+    }
+
+    // 检查3：FirstAttributeOffset 合理性验证
+    if (header->FirstAttributeOffset < sizeof(FILE_RECORD_HEADER)) {
+        LOG_ERROR_FMT("FirstAttributeOffset (%u) too small, record severely corrupted",
+                     header->FirstAttributeOffset);
+        result.isFullyAvailable = false;
+        result.overwritePercentage = 100.0;
+        result.overwrittenClusters = 1;
+        result.totalClusters = 1;
+        return result;
+    }
+
+    if (header->FirstAttributeOffset >= mftRecord.size()) {
+        LOG_ERROR("FirstAttributeOffset out of bounds, record severely corrupted");
+        result.isFullyAvailable = false;
+        result.overwritePercentage = 100.0;
+        result.overwrittenClusters = 1;
+        result.totalClusters = 1;
+        return result;
+    }
+
+    // 如果检测到部分损坏，记录警告但继续尝试
+    if (headerPartiallyCorrupted) {
+        LOG_WARNING("MFT record header partially corrupted, but attempting data recovery");
+        LOG_WARNING(corruptionWarning);
+        cout << "Warning: " << corruptionWarning << endl;
+        cout << "Attempting to recover data despite header corruption..." << endl;
     }
 
     // 提取Data Runs

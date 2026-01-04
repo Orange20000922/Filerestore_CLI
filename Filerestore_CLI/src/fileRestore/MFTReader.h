@@ -43,6 +43,7 @@ private:
     DWORD sectorsPerCluster;
     ULONGLONG mftStartLCN;
     DWORD bytesPerFileRecord;
+    ULONGLONG totalClusters;            // 卷总簇数
 
     // MFT的data runs（MFT在磁盘上的实际分布）
     vector<pair<ULONGLONG, ULONGLONG>> mftDataRuns;  // pair<LCN, clusterCount>
@@ -81,5 +82,7 @@ public:
     DWORD GetSectorsPerCluster() const { return sectorsPerCluster; }
     DWORD GetBytesPerFileRecord() const { return bytesPerFileRecord; }
     ULONGLONG GetMftStartLCN() const { return mftStartLCN; }
+    ULONGLONG GetTotalClusters() const { return totalClusters; }
+    ULONGLONG GetBytesPerCluster() const { return (ULONGLONG)bytesPerSector * sectorsPerCluster; }
     HANDLE GetVolumeHandle() const { return hVolume; }
 };

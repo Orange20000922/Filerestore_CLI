@@ -148,6 +148,7 @@
     <ClCompile Include="src\commands\cmd.cpp" />
     <ClCompile Include="src\utils\CrashHandler.cpp" />
     <ClCompile Include="src\fileRestore\DeletedFileScanner.cpp" />
+    <ClCompile Include="src\fileRestore\FileCarver.cpp" />
     <ClCompile Include="src\fileRestore\FileRestore.cpp" />
     <ClCompile Include="src\analysis\ImageTable.cpp" />
     <ClCompile Include="src\utils\LocalizationManager.cpp" />
@@ -166,8 +167,10 @@
     <ClInclude Include="src\core\cli.h" />
     <ClInclude Include="src\core\climodule.h" />
     <ClInclude Include="src\commands\cmd.h" />
+    <ClInclude Include="src\commands\CommandMacros.h" />
     <ClInclude Include="src\utils\CrashHandler.h" />
     <ClInclude Include="src\fileRestore\DeletedFileScanner.h" />
+    <ClInclude Include="src\fileRestore\FileCarver.h" />
     <ClInclude Include="src\fileRestore\FileRestore.h" />
     <ClInclude Include="src\analysis\ImageTable.h" />
     <ClInclude Include="src\utils\LocalizationManager.h" />

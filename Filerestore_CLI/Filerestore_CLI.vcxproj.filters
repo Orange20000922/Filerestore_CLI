@@ -78,6 +78,9 @@
     <ClCompile Include="src\utils\Logger.cpp">
       <Filter>源文件\Util</Filter>
     </ClCompile>
+    <ClCompile Include="src\fileRestore\FileCarver.cpp">
+      <Filter>源文件\FileAnalyze</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\cli.h">
@@ -132,6 +135,12 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\fileRestore\UsnJournalReader.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\commands\CommandMacros.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\FileCarver.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

@@ -13,25 +13,8 @@
 #include "CrashHandler.h"
 #include "LocalizationManager.h"
 using namespace std;
-string PrintAllCommand::name = "printallcommand -list";
-string HelpCommand::name = "help |name";
-string QueueDLLsCommand::name = "queuedllsname |file";
-string GetProcessFuncAddressCommand::name = "getfuncaddr |file |name";
-string ExitCommand::name = "exit";
-string PrintAllFunction::name = "printallfunc |file";
-string ListDeletedFilesCommand::name = "listdeleted |name |name";
-string RestoreByRecordCommand::name = "restorebyrecord |name |name |file";
-string DiagnoseMFTCommand::name = "diagnosemft |name";
-string DetectOverwriteCommand::name = "detectoverwrite |name |name |name";
-string SearchDeletedFilesCommand::name = "searchdeleted |name |name |name |name";
-string DiagnoseFileCommand::name = "diagnosefile |name |name";
-string SearchUsnCommand::name = "searchusn |name |name |name";
-string FilterSizeCommand::name = "filtersize |name |name |name |name";
-string FindRecordCommand::name = "findrecord |name |file";
-string FindUserFilesCommand::name = "finduserfiles |name |name";
-string BatchRestoreCommand::name = "batchrestore |name |name |file";
-string SetLanguageCommand::name = "setlang |name";
-string ScanUsnCommand::name = "scanusn |name |name";
+// 所有命令的静态成员现在通过 DEFINE_COMMAND_BASE 宏在 cmd.cpp 中定义
+// 并通过 REGISTER_COMMAND 宏自动注册到 CommandRegistry
 int main()
 {
 	// ========== 系统初始化 ==========

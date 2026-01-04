@@ -4,15 +4,41 @@
 #include <vector>
 #include <functional>
 
+// FileReferenceNumber 格式说明:
+// ┌──────────────────┬────────────────────────────────────────────┐
+// │  Sequence (16位) │           MFT Record Index (48位)          │
+// └──────────────────┴────────────────────────────────────────────┘
+// 使用 ExtractMftRecordNumber() 提取真实的 MFT 记录号
+
+// 从 FileReferenceNumber 提取 MFT 记录号 (低48位)
+inline ULONGLONG ExtractMftRecordNumber(DWORDLONG fileRefNumber) {
+    return fileRefNumber & 0x0000FFFFFFFFFFFFULL;
+}
+
+// 从 FileReferenceNumber 提取序列号 (高16位)
+inline WORD ExtractSequenceNumber(DWORDLONG fileRefNumber) {
+    return (WORD)(fileRefNumber >> 48);
+}
+
 // USN Journal 删除文件信息
 struct UsnDeletedFileInfo {
-    DWORDLONG FileReferenceNumber;      // 文件的 MFT 记录号
-    DWORDLONG ParentFileReferenceNumber; // 父目录的 MFT 记录号
+    DWORDLONG FileReferenceNumber;      // 文件引用号 (包含序列号+MFT记录号)
+    DWORDLONG ParentFileReferenceNumber; // 父目录引用号
     std::wstring FileName;               // 文件名
     LARGE_INTEGER TimeStamp;             // 删除时间戳
     DWORD Reason;                        // USN 原因标志
     DWORD FileAttributes;                // 文件属性
     USN Usn;                             // USN 号
+
+    // 获取真实的 MFT 记录号
+    ULONGLONG GetMftRecordNumber() const {
+        return ExtractMftRecordNumber(FileReferenceNumber);
+    }
+
+    // 获取父目录的 MFT 记录号
+    ULONGLONG GetParentMftRecordNumber() const {
+        return ExtractMftRecordNumber(ParentFileReferenceNumber);
+    }
 };
 
 // USN Journal 统计信息

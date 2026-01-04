@@ -5,397 +5,140 @@
 #include <queue>
 #include <vector>
 #include "ImageTable.h"
+#include "CommandMacros.h"
 using namespace std;
-class  Command 
-{
-    protected:
-		BOOL FlagHasArgs = false;
-		
-	public:
-		virtual void AcceptArgs(vector<LPVOID> argslist)=0;
-		virtual void Execute(string command) = 0;
-		virtual BOOL HasArgs() = 0;
-};
-class PrintAllCommand : public Command
-{
-public:
-	static string name;
-public:
-	PrintAllCommand();
-	void AcceptArgs(vector<LPVOID> argslist) override;
-	void Execute(string command) override;
-	BOOL HasArgs() override;
-	static BOOL CheckName(string input);
-	static LPVOID GetInstancePtr() {
-		return new PrintAllCommand();
-	}
-	static string GetName() {
-		return name;
-	}
-};
-class HelpCommand : public Command
-{
-public:
-	static string name;
-	static vector<LPVOID> ArgsList;
-public:
-	HelpCommand();
-	void AcceptArgs(vector<LPVOID> argslist) override;
-	void Execute(string command) override;
-	BOOL HasArgs() override;
-	static BOOL CheckName(string input);
-	static LPVOID GetInstancePtr() {
-		return new HelpCommand();
-	}
-	static string GetName() {
-		return name;
-	}
-};
-class QueueDLLsCommand : public Command
-{
-    public:
-	static string name;
-	static vector<LPVOID> ArgsList;
-	public:
-		QueueDLLsCommand();
-		~QueueDLLsCommand();
-	void AcceptArgs(vector<LPVOID> argslist) override;
-	void Execute(string command) override;
-	BOOL HasArgs() override;
-	static BOOL CheckName(string input);
-	static LPVOID GetInstancePtr() {
-		return new QueueDLLsCommand();
-	}
-	static string GetName() {
-		return name;
-	}
-};
-class GetProcessFuncAddressCommand : public Command
-{
-    public:
-	static string name;
-	static vector<LPVOID> ArgsList;
-	public:
-	GetProcessFuncAddressCommand();
-	~GetProcessFuncAddressCommand();
-	void AcceptArgs(vector<LPVOID> argslist) override;
-	void Execute(string command) override;
-	BOOL HasArgs() override;
-	static BOOL CheckName(string input);
-	static LPVOID GetInstancePtr() {
-		return new GetProcessFuncAddressCommand();
-	}
-	static string GetName() {
-		return name;
-	}
-};
-// IATHookDLLCommand removed - IAT hooking functionality not included in public version
 
-class ExitCommand : public Command
+// ============================================================================
+// 命令基类
+// ============================================================================
+class Command
 {
-   public:
+protected:
+	BOOL FlagHasArgs = false;
+
+public:
+	virtual void AcceptArgs(vector<LPVOID> argslist) = 0;
+	virtual void Execute(string command) = 0;
+	virtual BOOL HasArgs() = 0;
+};
+
+// ============================================================================
+// 系统命令
+// ============================================================================
+
+// 打印所有命令 (无参数)
+DECLARE_COMMAND_NOARGS(PrintAllCommand);
+
+// 帮助命令
+DECLARE_COMMAND(HelpCommand);
+
+// 退出命令 (无参数)
+DECLARE_COMMAND_NOARGS(ExitCommand);
+
+// 设置语言命令
+DECLARE_COMMAND(SetLanguageCommand);
+
+// ============================================================================
+// PE 分析命令
+// ============================================================================
+
+// 列出 DLL 依赖
+DECLARE_COMMAND(QueueDLLsCommand);
+
+// 获取函数地址
+DECLARE_COMMAND(GetProcessFuncAddressCommand);
+
+// 打印所有导入函数 - 特殊：包含额外成员变量
+class PrintAllFunction : public Command
+{
+public:
 	static string name;
-	static vector<LPVOID> ArgsList;
-   public:
-		ExitCommand();
+	static vector<LPVOID> Arglist;
+	ImageTableAnalyzer* analyzer = new ImageTableAnalyzer();
+public:
+	PrintAllFunction();
+	~PrintAllFunction();
 	void AcceptArgs(vector<LPVOID> argslist) override;
 	void Execute(string command) override;
 	BOOL HasArgs() override;
 	static BOOL CheckName(string input);
 	static LPVOID GetInstancePtr() {
-		return new ExitCommand();
-	}
-	static string GetName() {
-		return name;
-	}
-};
-class PrintAllFunction : public Command{
-    public:
-	 static string name;
-	 static vector<LPVOID> Arglist;
-	 ImageTableAnalyzer* analyzer = new ImageTableAnalyzer();
-   public:
-	   PrintAllFunction();
-	   ~PrintAllFunction();
-	   void AcceptArgs(vector<LPVOID> argslist) override;
-	   void Execute(string command) override;
-	   BOOL HasArgs() override;
-	   static BOOL CheckName(string input);
-	   static LPVOID GetInstancePtr() {
-		   return new PrintAllFunction();
-	   }
-	   static string GetName() {
-		   return name;
-	   }
-};
-// IATHookByNameCommand removed - IAT hooking functionality not included in public version
-// IATHookByCreateProc removed - IAT hooking functionality not included in public version
-// ElevateAdminPrivilegeCommand removed - privilege elevation functionality not included in public version
-// ElevateSystemPrivilegeCommand removed - privilege elevation functionality not included in public version
-class ListDeletedFilesCommand : public Command
-{
-public:
-	static string name;
-	static vector<LPVOID> ArgsList;
-public:
-	ListDeletedFilesCommand();
-	~ListDeletedFilesCommand();
-	void AcceptArgs(vector<LPVOID> argslist) override;
-	void Execute(string command) override;
-	BOOL HasArgs() override;
-	static BOOL CheckName(string input);
-	static LPVOID GetInstancePtr() {
-		return new ListDeletedFilesCommand();
+		return new PrintAllFunction();
 	}
 	static string GetName() {
 		return name;
 	}
 };
 
-class RestoreByRecordCommand : public Command
-{
-public:
-	static string name;
-	static vector<LPVOID> ArgsList;
-public:
-	RestoreByRecordCommand();
-	~RestoreByRecordCommand();
-	void AcceptArgs(vector<LPVOID> argslist) override;
-	void Execute(string command) override;
-	BOOL HasArgs() override;
-	static BOOL CheckName(string input);
-	static LPVOID GetInstancePtr() {
-		return new RestoreByRecordCommand();
-	}
-	static string GetName() {
-		return name;
-	}
-};
+// ============================================================================
+// 文件恢复命令
+// ============================================================================
 
-class DiagnoseMFTCommand : public Command
-{
-public:
-	static string name;
-	static vector<LPVOID> ArgsList;
-public:
-	DiagnoseMFTCommand();
-	~DiagnoseMFTCommand();
-	void AcceptArgs(vector<LPVOID> argslist) override;
-	void Execute(string command) override;
-	BOOL HasArgs() override;
-	static BOOL CheckName(string input);
-	static LPVOID GetInstancePtr() {
-		return new DiagnoseMFTCommand();
-	}
-	static string GetName() {
-		return name;
-	}
-};
+// 列出已删除文件
+DECLARE_COMMAND(ListDeletedFilesCommand);
 
-class DetectOverwriteCommand : public Command
-{
-public:
-	static string name;
-	static vector<LPVOID> ArgsList;
-public:
-	DetectOverwriteCommand();
-	~DetectOverwriteCommand();
-	void AcceptArgs(vector<LPVOID> argslist) override;
-	void Execute(string command) override;
-	BOOL HasArgs() override;
-	static BOOL CheckName(string input);
-	static LPVOID GetInstancePtr() {
-		return new DetectOverwriteCommand();
-	}
-	static string GetName() {
-		return name;
-	}
-};
+// 按记录号恢复文件
+DECLARE_COMMAND(RestoreByRecordCommand);
 
-class SearchDeletedFilesCommand : public Command
-{
-public:
-	static string name;
-	static vector<LPVOID> ArgsList;
-public:
-	SearchDeletedFilesCommand();
-	~SearchDeletedFilesCommand();
-	void AcceptArgs(vector<LPVOID> argslist) override;
-	void Execute(string command) override;
-	BOOL HasArgs() override;
-	static BOOL CheckName(string input);
-	static LPVOID GetInstancePtr() {
-		return new SearchDeletedFilesCommand();
-	}
-	static string GetName() {
-		return name;
-	}
-};
+// 强制恢复文件（跳过覆盖检测）
+DECLARE_COMMAND(ForceRestoreCommand);
 
-// ==================== USN Journal 扫描命令 ====================
-class ScanUsnCommand : public Command
-{
-public:
-	static string name;
-	static vector<LPVOID> ArgsList;
-public:
-	ScanUsnCommand();
-	~ScanUsnCommand();
-	void AcceptArgs(vector<LPVOID> argslist) override;
-	void Execute(string command) override;
-	BOOL HasArgs() override;
-	static BOOL CheckName(string input);
-	static LPVOID GetInstancePtr() {
-		return new ScanUsnCommand();
-	}
-	static string GetName() {
-		return name;
-	}
-};
+// 批量恢复文件
+DECLARE_COMMAND(BatchRestoreCommand);
 
-// ==================== 文件诊断命令 ====================
-class DiagnoseFileCommand : public Command
-{
-public:
-	static string name;
-	static vector<LPVOID> ArgsList;
-public:
-	DiagnoseFileCommand();
-	~DiagnoseFileCommand();
-	void AcceptArgs(vector<LPVOID> argslist) override;
-	void Execute(string command) override;
-	BOOL HasArgs() override;
-	static BOOL CheckName(string input);
-	static LPVOID GetInstancePtr() {
-		return new DiagnoseFileCommand();
-	}
-	static string GetName() {
-		return name;
-	}
-};
+// ============================================================================
+// 文件搜索命令
+// ============================================================================
 
-// ==================== USN搜索已删除文件命令 ====================
-class SearchUsnCommand : public Command
-{
-public:
-	static string name;
-	static vector<LPVOID> ArgsList;
-public:
-	SearchUsnCommand();
-	~SearchUsnCommand();
-	void AcceptArgs(vector<LPVOID> argslist) override;
-	void Execute(string command) override;
-	BOOL HasArgs() override;
-	static BOOL CheckName(string input);
-	static LPVOID GetInstancePtr() {
-		return new SearchUsnCommand();
-	}
-	static string GetName() {
-		return name;
-	}
-};
+// 搜索已删除文件
+DECLARE_COMMAND(SearchDeletedFilesCommand);
 
-// ==================== 按文件大小过滤命令 ====================
-class FilterSizeCommand : public Command
-{
-public:
-	static string name;
-	static vector<LPVOID> ArgsList;
-public:
-	FilterSizeCommand();
-	~FilterSizeCommand();
-	void AcceptArgs(vector<LPVOID> argslist) override;
-	void Execute(string command) override;
-	BOOL HasArgs() override;
-	static BOOL CheckName(string input);
-	static LPVOID GetInstancePtr() {
-		return new FilterSizeCommand();
-	}
-	static string GetName() {
-		return name;
-	}
-};
+// 按文件大小过滤
+DECLARE_COMMAND(FilterSizeCommand);
 
-// ==================== 查找文件记录号命令 ====================
-class FindRecordCommand : public Command
-{
-public:
-	static string name;
-	static vector<LPVOID> ArgsList;
-public:
-	FindRecordCommand();
-	~FindRecordCommand();
-	void AcceptArgs(vector<LPVOID> argslist) override;
-	void Execute(string command) override;
-	BOOL HasArgs() override;
-	static BOOL CheckName(string input);
-	static LPVOID GetInstancePtr() {
-		return new FindRecordCommand();
-	}
-	static string GetName() {
-		return name;
-	}
-};
+// 查找 MFT 记录号
+DECLARE_COMMAND(FindRecordCommand);
 
-// ==================== 查找用户文件命令 ====================
-class FindUserFilesCommand : public Command
-{
-public:
-	static string name;
-	static vector<LPVOID> ArgsList;
-public:
-	FindUserFilesCommand();
-	~FindUserFilesCommand();
-	void AcceptArgs(vector<LPVOID> argslist) override;
-	void Execute(string command) override;
-	BOOL HasArgs() override;
-	static BOOL CheckName(string input);
-	static LPVOID GetInstancePtr() {
-		return new FindUserFilesCommand();
-	}
-	static string GetName() {
-		return name;
-	}
-};
+// 查找用户文件
+DECLARE_COMMAND(FindUserFilesCommand);
 
-// ==================== 批量恢复文件命令 ====================
-class BatchRestoreCommand : public Command
-{
-public:
-	static string name;
-	static vector<LPVOID> ArgsList;
-public:
-	BatchRestoreCommand();
-	~BatchRestoreCommand();
-	void AcceptArgs(vector<LPVOID> argslist) override;
-	void Execute(string command) override;
-	BOOL HasArgs() override;
-	static BOOL CheckName(string input);
-	static LPVOID GetInstancePtr() {
-		return new BatchRestoreCommand();
-	}
-	static string GetName() {
-		return name;
-	}
-};
+// 文件诊断
+DECLARE_COMMAND(DiagnoseFileCommand);
 
-// ==================== 设置语言命令 ====================
-class SetLanguageCommand : public Command
-{
-public:
-	static string name;
-	static vector<LPVOID> ArgsList;
-public:
-	SetLanguageCommand();
-	~SetLanguageCommand();
-	void AcceptArgs(vector<LPVOID> argslist) override;
-	void Execute(string command) override;
-	BOOL HasArgs() override;
-	static BOOL CheckName(string input);
-	static LPVOID GetInstancePtr() {
-		return new SetLanguageCommand();
-	}
-	static string GetName() {
-		return name;
-	}
-};
+// ============================================================================
+// MFT/USN 诊断命令
+// ============================================================================
+
+// 诊断 MFT 碎片化
+DECLARE_COMMAND(DiagnoseMFTCommand);
+
+// 检测文件覆盖
+DECLARE_COMMAND(DetectOverwriteCommand);
+
+// 扫描 USN 日志
+DECLARE_COMMAND(ScanUsnCommand);
+
+// 搜索 USN 日志
+DECLARE_COMMAND(SearchUsnCommand);
+
+// ============================================================================
+// 文件签名搜索命令 (File Carving)
+// ============================================================================
+
+// 签名搜索扫描
+DECLARE_COMMAND(CarveCommand);
+
+// 列出支持的文件类型
+DECLARE_COMMAND(CarveTypesCommand);
+
+// 恢复 carved 文件
+DECLARE_COMMAND(CarveRecoverCommand);
+
+// ============================================================================
+// 已移除的命令 (公开版本不包含)
+// ============================================================================
+// IATHookDLLCommand - IAT Hook 功能
+// IATHookByNameCommand - IAT Hook 功能
+// IATHookByCreateProc - IAT Hook 功能
+// ElevateAdminPrivilegeCommand - 权限提升功能
+// ElevateSystemPrivilegeCommand - 权限提升功能

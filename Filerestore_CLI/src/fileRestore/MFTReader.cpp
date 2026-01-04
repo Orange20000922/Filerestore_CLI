@@ -7,7 +7,8 @@ using namespace std;
 
 MFTReader::MFTReader() : hVolume(INVALID_HANDLE_VALUE),
     bytesPerSector(0), sectorsPerCluster(0),
-    mftStartLCN(0), bytesPerFileRecord(0), mftDataRunsLoaded(false) {
+    mftStartLCN(0), bytesPerFileRecord(0), totalClusters(0),
+    mftDataRunsLoaded(false) {
 }
 
 MFTReader::~MFTReader() {
@@ -64,10 +65,12 @@ bool MFTReader::OpenVolume(char driveLetter) {
     bytesPerSector = bootSector.BytesPerSector;
     sectorsPerCluster = bootSector.SectorsPerCluster;
     mftStartLCN = bootSector.MftStartLCN;
+    totalClusters = bootSector.TotalSectors / sectorsPerCluster;
 
     LOG_DEBUG_FMT("BytesPerSector: %d", bytesPerSector);
     LOG_DEBUG_FMT("SectorsPerCluster: %d", (int)sectorsPerCluster);
     LOG_DEBUG_FMT("MFT Start LCN: %llu", mftStartLCN);
+    LOG_DEBUG_FMT("TotalClusters: %llu", totalClusters);
     LOG_DEBUG_FMT("ClustersPerFileRecord (raw): %d", (int)bootSector.ClustersPerFileRecord);
 
     // 验证基本参数
@@ -134,10 +137,35 @@ bool MFTReader::ReadClusters(ULONGLONG startLCN, ULONGLONG clusterCount, vector<
         return false;
     }
 
-    ULONGLONG offset = startLCN * sectorsPerCluster * bytesPerSector;
-    DWORD bytesToRead = (DWORD)(clusterCount * sectorsPerCluster * bytesPerSector);
+    // 安全检查：防止除以零或使用无效参数
+    if (sectorsPerCluster == 0 || bytesPerSector == 0) {
+        LOG_ERROR_FMT("Invalid volume parameters: sectorsPerCluster=%d, bytesPerSector=%d",
+                     sectorsPerCluster, bytesPerSector);
+        return false;
+    }
 
-    buffer.resize(bytesToRead);
+    // 安全检查：防止请求过大的数据（ReadFile 最多读取 DWORD 字节）
+    ULONGLONG bytesToReadFull = clusterCount * sectorsPerCluster * bytesPerSector;
+    const ULONGLONG MAX_READ_SIZE = 0xFFFFFFFF;  // DWORD 最大值（约 4GB）
+
+    if (bytesToReadFull > MAX_READ_SIZE) {
+        LOG_ERROR_FMT("Cluster read size too large: %llu bytes (max: %llu). LCN=%llu, Count=%llu",
+                     bytesToReadFull, MAX_READ_SIZE, startLCN, clusterCount);
+        cout << "Error: Cannot read more than 4GB in a single operation." << endl;
+        return false;
+    }
+
+    ULONGLONG offset = startLCN * sectorsPerCluster * bytesPerSector;
+    DWORD bytesToRead = (DWORD)bytesToReadFull;  // 现在是安全的
+
+    // 安全检查：防止 vector 分配过大内存导致崩溃
+    try {
+        buffer.resize(bytesToRead);
+    } catch (const std::bad_alloc&) {
+        LOG_ERROR_FMT("Failed to allocate memory for cluster read: %u bytes", bytesToRead);
+        cout << "Error: Out of memory while allocating buffer for cluster read." << endl;
+        return false;
+    }
 
     LARGE_INTEGER liOffset;
     liOffset.QuadPart = offset;

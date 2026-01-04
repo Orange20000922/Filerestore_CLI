@@ -173,6 +173,25 @@ bool FileRestore::RestoreFileByRecordNumber(char driveLetter, ULONGLONG recordNu
 
     // 保存恢复的文件
     cout << "Writing recovered data to file..." << endl;
+
+    // 确保父目录存在
+    string parentPath = restoreFilePath;
+    size_t lastSlash = parentPath.find_last_of("\\/");
+    if (lastSlash != string::npos) {
+        parentPath = parentPath.substr(0, lastSlash);
+        // 递归创建目录
+        string currentPath;
+        for (size_t i = 0; i < parentPath.length(); i++) {
+            char c = parentPath[i];
+            currentPath += c;
+            if (c == '\\' || c == '/' || i == parentPath.length() - 1) {
+                if (currentPath.length() > 2) {  // 跳过驱动器号如 "C:"
+                    CreateDirectoryA(currentPath.c_str(), NULL);
+                }
+            }
+        }
+    }
+
     HANDLE hFile = CreateFileA(restoreFilePath.c_str(), GENERIC_WRITE,
         0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 

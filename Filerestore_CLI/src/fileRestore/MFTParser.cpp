@@ -115,9 +115,48 @@ bool MFTParser::ExtractFileData(vector<BYTE>& mftRecord, vector<BYTE>& fileData)
 
     PFILE_RECORD_HEADER header = (PFILE_RECORD_HEADER)mftRecord.data();
 
-    if (header->UsedSize > mftRecord.size() || header->FirstAttributeOffset >= header->UsedSize) {
-        cout << "Error: Invalid MFT record header." << endl;
+    // ========== 宽松的记录头验证策略 ==========
+    // 已删除文件的 MFT 记录头可能被部分覆盖，但 DATA 属性可能仍然完好
+
+    bool headerCorrupted = false;
+
+    // 检查签名（宽松 - 仅警告）
+    if (header->Signature != 'ELIF') {
+        cout << "Warning: MFT record signature invalid (0x" << hex << header->Signature << dec << ")" << endl;
+        headerCorrupted = true;
+    }
+
+    // 确定有效的记录边界
+    size_t effectiveRecordEnd = mftRecord.size();
+
+    // UsedSize 验证（宽松）
+    if (header->UsedSize == 0) {
+        cout << "Error: MFT record UsedSize is 0, record appears wiped." << endl;
         return false;
+    }
+
+    if (header->UsedSize > mftRecord.size()) {
+        cout << "Warning: UsedSize (" << header->UsedSize << ") > record size ("
+             << mftRecord.size() << "), using actual size." << endl;
+        headerCorrupted = true;
+        // 使用实际记录大小而不是 UsedSize
+    } else {
+        effectiveRecordEnd = header->UsedSize;
+    }
+
+    // FirstAttributeOffset 验证（严格 - 必须在有效范围内）
+    if (header->FirstAttributeOffset < sizeof(FILE_RECORD_HEADER)) {
+        cout << "Error: FirstAttributeOffset too small, record severely corrupted." << endl;
+        return false;
+    }
+
+    if (header->FirstAttributeOffset >= effectiveRecordEnd) {
+        cout << "Error: FirstAttributeOffset out of bounds, record severely corrupted." << endl;
+        return false;
+    }
+
+    if (headerCorrupted) {
+        cout << "Attempting to extract data despite header corruption..." << endl;
     }
 
     // 检查文件是否已被删除
@@ -127,7 +166,7 @@ bool MFTParser::ExtractFileData(vector<BYTE>& mftRecord, vector<BYTE>& fileData)
 
     // 遍历属性找到DATA属性
     BYTE* attrPtr = mftRecord.data() + header->FirstAttributeOffset;
-    BYTE* recordEnd = mftRecord.data() + header->UsedSize;
+    BYTE* recordEnd = mftRecord.data() + effectiveRecordEnd;
 
     while (attrPtr < recordEnd) {
         // 边界检查
@@ -149,7 +188,30 @@ bool MFTParser::ExtractFileData(vector<BYTE>& mftRecord, vector<BYTE>& fileData)
         if (attr->Type == AttributeData) {
             if (attr->NonResident == 0) {
                 // 常驻属性 - 数据直接存储在MFT记录中
+                // 安全检查：确保有足够空间读取 RESIDENT_ATTRIBUTE
+                if (attrPtr + sizeof(ATTRIBUTE_HEADER) + sizeof(RESIDENT_ATTRIBUTE) > recordEnd) {
+                    cout << "Error: Not enough space for RESIDENT_ATTRIBUTE structure" << endl;
+                    return false;
+                }
+
                 PRESIDENT_ATTRIBUTE resAttr = (PRESIDENT_ATTRIBUTE)(attrPtr + sizeof(ATTRIBUTE_HEADER));
+
+                // 安全检查：验证 ValueOffset 和 ValueLength 在有效范围内
+                if (resAttr->ValueLength == 0) {
+                    cout << "Warning: Resident attribute has zero length" << endl;
+                    fileData.clear();
+                    return true;  // 空文件，但不算错误
+                }
+
+                // 检查数据是否越界
+                if (attrPtr + resAttr->ValueOffset + resAttr->ValueLength > recordEnd) {
+                    cout << "Error: Resident data extends beyond record boundary" << endl;
+                    cout << "  ValueOffset: " << resAttr->ValueOffset << endl;
+                    cout << "  ValueLength: " << resAttr->ValueLength << endl;
+                    cout << "  Available space: " << (recordEnd - attrPtr) << endl;
+                    return false;
+                }
+
                 BYTE* data = attrPtr + resAttr->ValueOffset;
                 fileData.resize(resAttr->ValueLength);
                 memcpy(fileData.data(), data, resAttr->ValueLength);

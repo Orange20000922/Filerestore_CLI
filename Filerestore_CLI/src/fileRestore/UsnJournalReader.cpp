@@ -7,12 +7,32 @@
 using namespace std;
 
 // USN_REASON 标志定义（如果未定义）
+#ifndef USN_REASON_DATA_OVERWRITE
+#define USN_REASON_DATA_OVERWRITE 0x00000001
+#endif
+
+#ifndef USN_REASON_DATA_EXTEND
+#define USN_REASON_DATA_EXTEND 0x00000002
+#endif
+
+#ifndef USN_REASON_DATA_TRUNCATION
+#define USN_REASON_DATA_TRUNCATION 0x00000004
+#endif
+
+#ifndef USN_REASON_FILE_CREATE
+#define USN_REASON_FILE_CREATE 0x00000100
+#endif
+
 #ifndef USN_REASON_FILE_DELETE
 #define USN_REASON_FILE_DELETE 0x00000200
 #endif
 
 #ifndef USN_REASON_RENAME_OLD_NAME
 #define USN_REASON_RENAME_OLD_NAME 0x00001000
+#endif
+
+#ifndef USN_REASON_RENAME_NEW_NAME
+#define USN_REASON_RENAME_NEW_NAME 0x00002000
 #endif
 
 #ifndef USN_REASON_CLOSE
@@ -142,7 +162,10 @@ bool UsnJournalReader::GetJournalStats(UsnJournalStats& stats, bool forceRefresh
 
 bool UsnJournalReader::IsDeleteReason(DWORD reason) const {
     // 检查是否包含删除相关的原因
-    return (reason & USN_REASON_FILE_DELETE) != 0;
+    // USN_REASON_FILE_DELETE: 文件被删除
+    // USN_REASON_RENAME_OLD_NAME: 文件被重命名（可能移动到回收站）
+    // 注意：删除操作通常与 USN_REASON_CLOSE 一起出现
+    return (reason & (USN_REASON_FILE_DELETE | USN_REASON_RENAME_OLD_NAME)) != 0;
 }
 
 FILETIME UsnJournalReader::GetCurrentFileTime() const {
@@ -200,7 +223,9 @@ vector<UsnDeletedFileInfo> UsnJournalReader::ScanRecentlyDeletedFiles(
     READ_USN_JOURNAL_DATA_V0 readData;
     ZeroMemory(&readData, sizeof(readData));
     readData.StartUsn = journalData.FirstUsn;
-    readData.ReasonMask = USN_REASON_FILE_DELETE | USN_REASON_RENAME_OLD_NAME;
+    // 不在系统级过滤，而是读取所有记录后在应用程序级过滤
+    // 这样可以确保不会遗漏任何删除操作
+    readData.ReasonMask = 0xFFFFFFFF;  // 读取所有原因
     readData.ReturnOnlyOnClose = FALSE;
     readData.Timeout = 0;
     readData.BytesToWaitFor = 0;
@@ -301,6 +326,17 @@ done:
     LOG_INFO_FMT("USN Journal scan complete: %zu records scanned, %zu deletions found",
                  totalRecordsScanned, deleteRecordsFound);
 
+    // 按时间戳降序排序（最新删除的文件排在前面）
+    if (!deletedFiles.empty()) {
+        LOG_INFO("Sorting results by timestamp (newest first)...");
+        sort(deletedFiles.begin(), deletedFiles.end(),
+            [](const UsnDeletedFileInfo& a, const UsnDeletedFileInfo& b) {
+                // 降序排序：时间戳大的（更新的）排在前面
+                return a.TimeStamp.QuadPart > b.TimeStamp.QuadPart;
+            });
+        LOG_INFO("Sorting completed");
+    }
+
     return deletedFiles;
 }
 
@@ -318,7 +354,8 @@ bool UsnJournalReader::ScanWithCallback(
     READ_USN_JOURNAL_DATA_V0 readData;
     ZeroMemory(&readData, sizeof(readData));
     readData.StartUsn = journalData.FirstUsn;
-    readData.ReasonMask = USN_REASON_FILE_DELETE | USN_REASON_RENAME_OLD_NAME;
+    // 读取所有记录，在应用程序级过滤
+    readData.ReasonMask = 0xFFFFFFFF;
     readData.ReturnOnlyOnClose = FALSE;
     readData.Timeout = 0;
     readData.BytesToWaitFor = 0;
