@@ -158,7 +158,6 @@ Filerestore_CLI/
 | `SIGNATURE_SCAN_THREADPOOL_ANALYSIS.md` | 线程池优化方案分析 |
 | `NVME_IO_IMPACT_ANALYSIS.md` | NVMe I/O影响评估 |
 | `THREADPOOL_CODE_REVIEW.md` | 线程池代码审查 |
-| `LANGUAGE_MIGRATION_ANALYSIS.md` | C++ vs Rust分析 |
 
 ---
 
