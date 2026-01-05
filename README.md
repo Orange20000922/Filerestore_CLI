@@ -3,7 +3,7 @@
 [![Version](https://img.shields.io/badge/version-v0.2.0-blue.svg)](https://github.com/yourusername/Filerestore_CLI)
 [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
 [![Language](https://img.shields.io/badge/language-C%2B%2B20-orange.svg)](https://isocpp.org/)
-[![License](https://img.shields.io/badge/license-Research%20Only-red.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > NTFS 文件恢复工具，支持 MFT 扫描、签名搜索恢复、智能覆盖检测和多线程优化
 
@@ -186,7 +186,7 @@ Filerestore_CLI/
 
 ## 许可证
 
-本项目仅用于**个人研究和学习目的**。
+本项目基于 [MIT 许可证](LICENSE) 开源。
 
 ---
 
