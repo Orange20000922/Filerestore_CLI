@@ -57,7 +57,7 @@
 - 🛠️ 完整的项目模板代码
 #### 🔗 获取可执行文件
 这是项目最新版本的Action Workflow构建链接，可以直接获取到已编译的.exe文件
-https://github.com/Orange20000922/Filerestore_CLI/actions/runs/20696194318/artifacts/5018350053
+https://github.com/Orange20000922/Filerestore_CLI/actions/runs/20705645936/artifacts/5020932600
 
 ----
 
