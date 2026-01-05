@@ -10,6 +10,7 @@
 #include <mutex>
 #include <condition_variable>
 #include "MFTReader.h"
+#include "SignatureScanThreadPool.h"
 
 using namespace std;
 
@@ -152,6 +153,16 @@ private:
                                   vector<CarvedFileInfo>& results,
                                   ULONGLONG maxResults);
 
+    // ==================== 线程池相关 ====================
+    SignatureScanThreadPool* scanThreadPool;
+    bool useThreadPool;
+    ScanThreadPoolConfig threadPoolConfig;
+
+    // 将缓冲区分块并提交给线程池
+    void SubmitBufferToThreadPool(const BYTE* buffer, size_t bufferSize,
+                                   ULONGLONG baseLCN, ULONGLONG bytesPerCluster,
+                                   int& taskIdCounter);
+
 public:
     FileCarver(MFTReader* mftReader);
     ~FileCarver();
@@ -196,4 +207,28 @@ public:
     vector<CarvedFileInfo> ScanForFileTypesAsync(const vector<string>& fileTypes,
                                                  CarvingMode mode = CARVE_SMART,
                                                  ULONGLONG maxResults = 1000);
+
+    // ==================== 线程池扫描（新增） ====================
+
+    // 线程池设置
+    void SetThreadPoolMode(bool enabled) { useThreadPool = enabled; }
+    bool IsThreadPoolMode() const { return useThreadPool; }
+
+    // 设置线程池配置
+    void SetThreadPoolConfig(const ScanThreadPoolConfig& config);
+    const ScanThreadPoolConfig& GetThreadPoolConfig() const { return threadPoolConfig; }
+
+    // 使用线程池并行扫描（阶段1实现）
+    // 特点：I/O线程读取 + 多Worker线程并行扫描
+    vector<CarvedFileInfo> ScanForFileTypesThreadPool(const vector<string>& fileTypes,
+                                                       CarvingMode mode = CARVE_SMART,
+                                                       ULONGLONG maxResults = 10000);
+
+    // 获取签名索引（供线程池使用）
+    const unordered_map<BYTE, vector<const FileSignature*>>& GetSignatureIndex() const {
+        return signatureIndex;
+    }
+
+    // 获取活动签名集合（供线程池使用）
+    const set<string>& GetActiveSignatures() const { return activeSignatures; }
 };

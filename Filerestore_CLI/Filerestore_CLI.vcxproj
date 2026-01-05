@@ -161,6 +161,7 @@
     <ClCompile Include="src\fileRestore\OverwriteDetector.cpp" />
     <ClCompile Include="src\fileRestore\PathResolver.cpp" />
     <ClCompile Include="src\utils\ProgressBar.cpp" />
+    <ClCompile Include="src\fileRestore\SignatureScanThreadPool.cpp" />
     <ClCompile Include="src\fileRestore\UsnJournalReader.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -183,6 +184,7 @@
     <ClInclude Include="src\fileRestore\OverwriteDetector.h" />
     <ClInclude Include="src\fileRestore\PathResolver.h" />
     <ClInclude Include="src\utils\ProgressBar.h" />
+    <ClInclude Include="src\fileRestore\SignatureScanThreadPool.h" />
     <ClInclude Include="src\fileRestore\UsnJournalReader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

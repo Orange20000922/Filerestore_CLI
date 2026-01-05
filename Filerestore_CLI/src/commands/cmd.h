@@ -134,6 +134,8 @@ DECLARE_COMMAND(CarveTypesCommand);
 // 恢复 carved 文件
 DECLARE_COMMAND(CarveRecoverCommand);
 
+DECLARE_COMMAND(CarveCommandAsync);
+DECLARE_COMMAND(CarveCommandThreadPool);
 // ============================================================================
 // 已移除的命令 (公开版本不包含)
 // ============================================================================

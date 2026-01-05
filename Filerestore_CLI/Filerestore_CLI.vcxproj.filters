@@ -81,6 +81,9 @@
     <ClCompile Include="src\fileRestore\FileCarver.cpp">
       <Filter>源文件\FileAnalyze</Filter>
     </ClCompile>
+    <ClCompile Include="src\fileRestore\SignatureScanThreadPool.cpp">
+      <Filter>源文件\FileAnalyze</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\cli.h">
@@ -141,6 +144,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\fileRestore\FileCarver.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\SignatureScanThreadPool.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

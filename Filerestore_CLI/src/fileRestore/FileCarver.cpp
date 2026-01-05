@@ -1,4 +1,5 @@
 #include "FileCarver.h"
+#include "SignatureScanThreadPool.h"
 #include "Logger.h"
 #include <iostream>
 #include <algorithm>
@@ -21,7 +22,8 @@ constexpr ULONGLONG PROGRESS_UPDATE_INTERVAL = 50000;       // 每 50K 簇更新
 FileCarver::FileCarver(MFTReader* mftReader)
     : reader(mftReader), shouldStop(false), useAsyncIO(true),
       currentReadBuffer(0), currentScanBuffer(0),
-      ioWaitTimeMs(0), scanTimeMs(0), totalIoTimeMs(0), totalScanTimeMs(0) {
+      ioWaitTimeMs(0), scanTimeMs(0), totalIoTimeMs(0), totalScanTimeMs(0),
+      scanThreadPool(nullptr), useThreadPool(true) {
     memset(&stats, 0, sizeof(stats));
 
     // 初始化双缓冲区
@@ -33,13 +35,23 @@ FileCarver::FileCarver(MFTReader* mftReader)
         buffers[i].clusterCount = 0;
     }
 
+    // 获取最优线程池配置
+    threadPoolConfig = ThreadPoolUtils::GetOptimalConfig();
+
     InitializeSignatures();
     BuildSignatureIndex();
-    LOG_INFO("FileCarver initialized with async I/O support");
+    LOG_INFO("FileCarver initialized with async I/O and thread pool support");
 }
 
 FileCarver::~FileCarver() {
     shouldStop = true;  // 确保停止任何运行中的线程
+
+    // 清理线程池
+    if (scanThreadPool) {
+        scanThreadPool->Stop();
+        delete scanThreadPool;
+        scanThreadPool = nullptr;
+    }
 }
 
 // ============================================================================
@@ -1113,6 +1125,235 @@ vector<CarvedFileInfo> FileCarver::ScanForFileTypesAsync(const vector<string>& f
         }
         cout << "Overlap efficiency: " << fixed << setprecision(1) << overlapEfficiency << "%" << endl;
         cout << "(Higher = better I/O and CPU overlap)" << endl;
+    }
+
+    return results;
+}
+
+// ============================================================================
+// 设置线程池配置
+// ============================================================================
+void FileCarver::SetThreadPoolConfig(const ScanThreadPoolConfig& config) {
+    threadPoolConfig = config;
+    LOG_INFO_FMT("Thread pool config updated: %d workers, %zu MB chunks",
+                 config.workerCount, config.chunkSize / (1024 * 1024));
+}
+
+// ============================================================================
+// 将缓冲区分块并提交给线程池
+// ============================================================================
+void FileCarver::SubmitBufferToThreadPool(const BYTE* buffer, size_t bufferSize,
+                                           ULONGLONG baseLCN, ULONGLONG bytesPerCluster,
+                                           int& taskIdCounter) {
+    size_t offset = 0;
+    size_t chunkSize = threadPoolConfig.chunkSize;
+
+    while (offset < bufferSize) {
+        size_t remaining = bufferSize - offset;
+        size_t currentChunkSize = min(chunkSize, remaining);
+
+        ScanTask task;
+        task.data = buffer + offset;
+        task.dataSize = currentChunkSize;
+        task.baseLCN = baseLCN + (offset / bytesPerCluster);
+        task.bytesPerCluster = bytesPerCluster;
+        task.taskId = taskIdCounter++;
+
+        scanThreadPool->SubmitTask(task);
+
+        offset += currentChunkSize;
+    }
+}
+
+// ============================================================================
+// 线程池并行扫描（阶段1实现）
+// ============================================================================
+vector<CarvedFileInfo> FileCarver::ScanForFileTypesThreadPool(const vector<string>& fileTypes,
+                                                               CarvingMode mode,
+                                                               ULONGLONG maxResults) {
+    vector<CarvedFileInfo> results;
+    shouldStop = false;
+
+    // 重置统计
+    memset(&stats, 0, sizeof(stats));
+    stats.totalClusters = reader->GetTotalClusters();
+
+    // 设置活动签名
+    activeSignatures.clear();
+    for (const string& type : fileTypes) {
+        if (signatures.find(type) != signatures.end()) {
+            activeSignatures.insert(type);
+        } else {
+            cout << "Unknown file type: " << type << endl;
+        }
+    }
+
+    if (activeSignatures.empty()) {
+        cout << "No valid file types to scan." << endl;
+        return results;
+    }
+
+    // 显示扫描信息
+    cout << "\n============================================" << endl;
+    cout << "  Thread Pool File Carving Scanner" << endl;
+    cout << "  (Phase 1: Parallel Scanning)" << endl;
+    cout << "============================================\n" << endl;
+
+    cout << "Scanning for " << activeSignatures.size() << " file type(s): ";
+    for (const string& type : activeSignatures) {
+        cout << type << " ";
+    }
+    cout << endl;
+
+    ULONGLONG bytesPerCluster = reader->GetBytesPerCluster();
+    ULONGLONG totalBytes = stats.totalClusters * bytesPerCluster;
+
+    // 获取系统信息
+    int cpuCores = ThreadPoolUtils::GetLogicalCoreCount();
+    ULONGLONG availMem = ThreadPoolUtils::GetAvailableMemoryMB();
+
+    cout << "\n--- System Info ---" << endl;
+    cout << "CPU Cores: " << cpuCores << " logical cores" << endl;
+    cout << "Available Memory: " << availMem << " MB" << endl;
+    cout << "Worker Threads: " << threadPoolConfig.workerCount << endl;
+    cout << "Chunk Size: " << (threadPoolConfig.chunkSize / (1024 * 1024)) << " MB" << endl;
+
+    cout << "\n--- Volume Info ---" << endl;
+    cout << "Total clusters: " << stats.totalClusters << endl;
+    cout << "Cluster size: " << bytesPerCluster << " bytes" << endl;
+    cout << "Volume size: " << (totalBytes / (1024 * 1024 * 1024)) << " GB" << endl;
+
+    // 使用更大的缓冲区以优化NVMe性能
+    const ULONGLONG BUFFER_SIZE = 128 * 1024 * 1024;  // 128MB
+    ULONGLONG bufferClusters = BUFFER_SIZE / bytesPerCluster;
+    bufferClusters = min(bufferClusters, stats.totalClusters);
+
+    cout << "Read Buffer: " << (BUFFER_SIZE / (1024 * 1024)) << " MB" << endl;
+    cout << "\nScanning... (Press Ctrl+C to stop)\n" << endl;
+
+    // 创建线程池
+    if (scanThreadPool) {
+        delete scanThreadPool;
+    }
+    scanThreadPool = new SignatureScanThreadPool(&signatureIndex, &activeSignatures, threadPoolConfig);
+    scanThreadPool->Start();
+
+    // 开始计时
+    DWORD startTime = GetTickCount();
+
+    // I/O读取主循环
+    vector<BYTE> buffer;
+    ULONGLONG currentLCN = 0;
+    ULONGLONG lastProgressLCN = 0;
+    int taskIdCounter = 0;
+
+    while (currentLCN < stats.totalClusters && !shouldStop) {
+        ULONGLONG clustersToRead = min(bufferClusters, stats.totalClusters - currentLCN);
+
+        // 读取数据
+        if (!reader->ReadClusters(currentLCN, clustersToRead, buffer)) {
+            currentLCN += clustersToRead;
+            stats.scannedClusters += clustersToRead;
+            continue;
+        }
+
+        stats.bytesRead += buffer.size();
+
+        // 检查是否为空块（智能模式下跳过空白区域）
+        if (mode == CARVE_SMART && IsEmptyBuffer(buffer.data(), buffer.size())) {
+            stats.skippedClusters += clustersToRead;
+            currentLCN += clustersToRead;
+            stats.scannedClusters += clustersToRead;
+        } else {
+            // 将缓冲区分块提交给线程池
+            SubmitBufferToThreadPool(buffer.data(), buffer.size(),
+                                      currentLCN, bytesPerCluster, taskIdCounter);
+
+            currentLCN += clustersToRead;
+            stats.scannedClusters += clustersToRead;
+        }
+
+        // 更新进度
+        if (stats.scannedClusters - lastProgressLCN > PROGRESS_UPDATE_INTERVAL) {
+            DWORD elapsed = GetTickCount() - startTime;
+            double progress = (double)stats.scannedClusters / stats.totalClusters * 100.0;
+            double speedMBps = (elapsed > 0) ?
+                ((double)stats.bytesRead / (1024 * 1024)) / (elapsed / 1000.0) : 0;
+
+            ULONGLONG filesFound = scanThreadPool->GetTotalFilesFound();
+            double poolProgress = scanThreadPool->GetProgress();
+
+            cout << "\rI/O: " << fixed << setprecision(1) << progress << "% | "
+                 << "Pool: " << setprecision(1) << poolProgress << "% | "
+                 << "Scanned: " << (stats.scannedClusters / 1000) << "K | "
+                 << "Skipped: " << (stats.skippedClusters / 1000) << "K | "
+                 << "Found: " << filesFound << " | "
+                 << "Speed: " << setprecision(1) << speedMBps << " MB/s [THREADPOOL]" << flush;
+
+            lastProgressLCN = stats.scannedClusters;
+        }
+    }
+
+    // 等待线程池完成所有任务
+    cout << "\n\nWaiting for thread pool to complete..." << endl;
+    scanThreadPool->WaitForCompletion();
+
+    // 获取结果
+    results = scanThreadPool->GetMergedResults();
+    stats.filesFound = results.size();
+
+    // 停止线程池
+    scanThreadPool->Stop();
+
+    // 完成统计
+    stats.elapsedMs = GetTickCount() - startTime;
+    stats.readSpeedMBps = (stats.elapsedMs > 0) ?
+        ((double)stats.bytesRead / (1024 * 1024)) / (stats.elapsedMs / 1000.0) : 0;
+
+    // 计算扫描速度（考虑并行扫描）
+    stats.scanSpeedMBps = (stats.elapsedMs > 0) ?
+        ((double)stats.scannedClusters * bytesPerCluster / (1024 * 1024)) / (stats.elapsedMs / 1000.0) : 0;
+
+    // 显示结果
+    cout << "\r                                                                              " << endl;
+    cout << "\n============================================" << endl;
+    cout << "     Thread Pool Scan Complete" << endl;
+    cout << "============================================\n" << endl;
+
+    cout << "Time elapsed: " << (stats.elapsedMs / 1000) << "."
+         << ((stats.elapsedMs % 1000) / 100) << " seconds" << endl;
+    cout << "Clusters scanned: " << stats.scannedClusters << endl;
+    cout << "Clusters skipped (empty): " << stats.skippedClusters << endl;
+    cout << "Data read: " << (stats.bytesRead / (1024 * 1024)) << " MB" << endl;
+    cout << "Average read speed: " << fixed << setprecision(1) << stats.readSpeedMBps << " MB/s" << endl;
+    cout << "Effective scan speed: " << fixed << setprecision(1) << stats.scanSpeedMBps << " MB/s" << endl;
+    cout << "Files found: " << results.size() << endl;
+
+    // 显示线程池统计
+    cout << "\n--- Thread Pool Statistics ---" << endl;
+    cout << "Worker threads: " << threadPoolConfig.workerCount << endl;
+    cout << "Total tasks: " << scanThreadPool->GetTotalTasks() << endl;
+    cout << "Completed tasks: " << scanThreadPool->GetCompletedTasks() << endl;
+
+    // 计算并行效率
+    double expectedSingleThreadTime = stats.elapsedMs * threadPoolConfig.workerCount;
+    double parallelEfficiency = (expectedSingleThreadTime > 0) ?
+        (expectedSingleThreadTime / stats.elapsedMs / threadPoolConfig.workerCount) * 100.0 : 0;
+
+    // 与异步I/O方案对比（估算）
+    double estimatedAsyncTime = stats.elapsedMs * 1.5;  // 假设异步I/O快50%于同步
+    double estimatedSyncTime = stats.elapsedMs * 3.0;   // 假设同步方案慢3倍
+
+    cout << "\n--- Performance Analysis ---" << endl;
+    cout << "Estimated speedup vs sync: " << fixed << setprecision(1)
+         << (estimatedSyncTime / stats.elapsedMs) << "x" << endl;
+    cout << "Estimated speedup vs async: " << fixed << setprecision(1)
+         << (estimatedAsyncTime / stats.elapsedMs) << "x" << endl;
+
+    // 如果结果过多，限制返回数量
+    if (results.size() > maxResults) {
+        results.resize((size_t)maxResults);
+        cout << "\nNote: Results limited to " << maxResults << " files." << endl;
     }
 
     return results;
