@@ -162,7 +162,12 @@
     <ClCompile Include="src\fileRestore\PathResolver.cpp" />
     <ClCompile Include="src\utils\ProgressBar.cpp" />
     <ClCompile Include="src\fileRestore\SignatureScanThreadPool.cpp" />
+    <ClCompile Include="src\fileRestore\TimestampExtractor.cpp" />
+    <ClCompile Include="src\fileRestore\MFTLCNIndex.cpp" />
     <ClCompile Include="src\fileRestore\UsnJournalReader.cpp" />
+    <ClCompile Include="src\fileRestore\FileIntegrityValidator.cpp" />
+    <ClCompile Include="src\fileRestore\CarvedResultsCache.cpp" />
+    <ClCompile Include="src\fileRestore\MemoryMappedResults.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\cli.h" />
@@ -185,7 +190,13 @@
     <ClInclude Include="src\fileRestore\PathResolver.h" />
     <ClInclude Include="src\utils\ProgressBar.h" />
     <ClInclude Include="src\fileRestore\SignatureScanThreadPool.h" />
+    <ClInclude Include="src\fileRestore\TimestampExtractor.h" />
+    <ClInclude Include="src\fileRestore\MFTLCNIndex.h" />
     <ClInclude Include="src\fileRestore\UsnJournalReader.h" />
+    <ClInclude Include="src\fileRestore\FileIntegrityValidator.h" />
+    <ClInclude Include="src\fileRestore\CarvedFileTypes.h" />
+    <ClInclude Include="src\fileRestore\CarvedResultsCache.h" />
+    <ClInclude Include="src\fileRestore\MemoryMappedResults.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -84,6 +84,21 @@
     <ClCompile Include="src\fileRestore\SignatureScanThreadPool.cpp">
       <Filter>源文件\FileAnalyze</Filter>
     </ClCompile>
+    <ClCompile Include="src\fileRestore\FileIntegrityValidator.cpp">
+      <Filter>源文件\FileAnalyze</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\MFTLCNIndex.cpp">
+      <Filter>源文件\FileAnalyze</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\TimestampExtractor.cpp">
+      <Filter>源文件\FileAnalyze</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\MemoryMappedResults.cpp">
+      <Filter>源文件\FileAnalyze</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\CarvedResultsCache.cpp">
+      <Filter>源文件\FileAnalyze</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\cli.h">
@@ -147,6 +162,24 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\fileRestore\SignatureScanThreadPool.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\TimestampExtractor.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\MFTLCNIndex.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\FileIntegrityValidator.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\CarvedResultsCache.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\MemoryMappedResults.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\CarvedFileTypes.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

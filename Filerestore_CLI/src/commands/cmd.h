@@ -136,11 +136,7 @@ DECLARE_COMMAND(CarveRecoverCommand);
 
 DECLARE_COMMAND(CarveCommandAsync);
 DECLARE_COMMAND(CarveCommandThreadPool);
-// ============================================================================
-// 已移除的命令 (公开版本不包含)
-// ============================================================================
-// IATHookDLLCommand - IAT Hook 功能
-// IATHookByNameCommand - IAT Hook 功能
-// IATHookByCreateProc - IAT Hook 功能
-// ElevateAdminPrivilegeCommand - 权限提升功能
-// ElevateSystemPrivilegeCommand - 权限提升功能
+DECLARE_COMMAND(CarveTimestampCommand);
+DECLARE_COMMAND(CarveListCommand);
+DECLARE_COMMAND(CarveValidateCommand);
+DECLARE_COMMAND(CarveIntegrityCommand);

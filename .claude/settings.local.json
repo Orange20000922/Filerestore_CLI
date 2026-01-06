@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(powershell.exe:*)",
-      "Bash(xxd:*)"
+      "Bash(xxd:*)",
+      "Bash(move:*)"
     ]
   }
 }

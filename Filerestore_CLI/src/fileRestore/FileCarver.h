@@ -11,6 +11,10 @@
 #include <condition_variable>
 #include "MFTReader.h"
 #include "SignatureScanThreadPool.h"
+#include "TimestampExtractor.h"
+#include "MFTLCNIndex.h"
+#include "FileIntegrityValidator.h"
+#include "CarvedFileTypes.h"
 
 using namespace std;
 
@@ -26,16 +30,7 @@ struct FileSignature {
     BYTE firstByte;             // 签名第一个字节（用于快速查找）
 };
 
-// Carving 结果
-struct CarvedFileInfo {
-    ULONGLONG startLCN;         // 起始逻辑簇号
-    ULONGLONG startOffset;      // 簇内偏移
-    ULONGLONG fileSize;         // 文件大小（估计或精确）
-    string extension;           // 文件类型
-    string description;         // 文件类型描述
-    bool hasValidFooter;        // 是否找到有效的文件尾
-    double confidence;          // 置信度 (0.0-1.0)
-};
+// TimestampSource 和 CarvedFileInfo 已移至 CarvedFileTypes.h
 
 // 扫描模式
 enum CarvingMode {
@@ -163,6 +158,14 @@ private:
                                    ULONGLONG baseLCN, ULONGLONG bytesPerCluster,
                                    int& taskIdCounter);
 
+    // ==================== 时间戳提取相关 ====================
+    MFTLCNIndex* lcnIndex;
+    bool timestampExtractionEnabled;
+    bool mftIndexBuilt;
+
+    // 为单个文件提取时间戳
+    void ExtractTimestampForFile(CarvedFileInfo& info, const BYTE* fileData, size_t dataSize);
+
 public:
     FileCarver(MFTReader* mftReader);
     ~FileCarver();
@@ -231,4 +234,67 @@ public:
 
     // 获取活动签名集合（供线程池使用）
     const set<string>& GetActiveSignatures() const { return activeSignatures; }
+
+    // ==================== 时间戳提取（新增） ====================
+
+    // 启用/禁用时间戳提取
+    void SetTimestampExtraction(bool enabled) { timestampExtractionEnabled = enabled; }
+    bool IsTimestampExtractionEnabled() const { return timestampExtractionEnabled; }
+
+    // 构建 MFT LCN 索引（用于时间戳交叉匹配）
+    // 在扫描前调用一次，可显著提高时间戳匹配效率
+    bool BuildMFTIndex(bool includeActiveFiles = false);
+
+    // 为扫描结果批量提取时间戳
+    // 会自动尝试：1. 内嵌元数据提取  2. MFT 记录匹配
+    void ExtractTimestampsForResults(vector<CarvedFileInfo>& results, bool showProgress = true);
+
+    // 获取 MFT 索引状态
+    bool IsMFTIndexBuilt() const { return mftIndexBuilt; }
+    size_t GetMFTIndexSize() const { return lcnIndex ? lcnIndex->GetIndexSize() : 0; }
+
+    // ==================== 完整性验证（新增） ====================
+
+    // 启用/禁用完整性验证
+    void SetIntegrityValidation(bool enabled) { integrityValidationEnabled = enabled; }
+    bool IsIntegrityValidationEnabled() const { return integrityValidationEnabled; }
+
+    // 为单个文件验证完整性
+    FileIntegrityScore ValidateFileIntegrity(const CarvedFileInfo& info);
+
+    // 为扫描结果批量验证完整性
+    void ValidateIntegrityForResults(vector<CarvedFileInfo>& results, bool showProgress = true);
+
+    // 过滤出可能损坏的文件
+    vector<CarvedFileInfo> FilterCorruptedFiles(const vector<CarvedFileInfo>& results,
+                                                 double minIntegrityScore = 0.5);
+
+    // 获取完整性验证统计
+    size_t GetValidatedCount() const { return validatedCount; }
+    size_t GetCorruptedCount() const { return corruptedCount; }
+
+    // ==================== 删除状态检查（新增） ====================
+
+    // 检查单个文件的删除状态
+    // 通过 MFT LCN 索引交叉验证，判断文件是否为已删除状态
+    void CheckDeletionStatus(CarvedFileInfo& info);
+
+    // 批量检查删除状态
+    void CheckDeletionStatusForResults(vector<CarvedFileInfo>& results, bool showProgress = true);
+
+    // 过滤出已删除的文件
+    vector<CarvedFileInfo> FilterDeletedOnly(const vector<CarvedFileInfo>& results);
+
+    // 过滤出活动文件（未删除）
+    vector<CarvedFileInfo> FilterActiveOnly(const vector<CarvedFileInfo>& results);
+
+    // 获取已删除文件数量统计
+    size_t CountDeletedFiles(const vector<CarvedFileInfo>& results);
+    size_t CountActiveFiles(const vector<CarvedFileInfo>& results);
+
+private:
+    // 完整性验证相关成员
+    bool integrityValidationEnabled;
+    size_t validatedCount;
+    size_t corruptedCount;
 };

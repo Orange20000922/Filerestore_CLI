@@ -10,12 +10,12 @@
 #include <unordered_map>
 #include <functional>
 #include <string>
+#include "CarvedFileTypes.h"
 
 using namespace std;
 
 // 前向声明
 struct FileSignature;
-struct CarvedFileInfo;
 
 // ============================================================================
 // 扫描任务结构
