@@ -20,7 +20,7 @@ inline WORD ExtractSequenceNumber(DWORDLONG fileRefNumber) {
     return (WORD)(fileRefNumber >> 48);
 }
 
-// USN Journal 删除文件信息
+// USN 日志删除文件信息结构
 struct UsnDeletedFileInfo {
     DWORDLONG FileReferenceNumber;      // 文件引用号 (包含序列号+MFT记录号)
     DWORDLONG ParentFileReferenceNumber; // 父目录引用号
@@ -41,7 +41,7 @@ struct UsnDeletedFileInfo {
     }
 };
 
-// USN Journal 统计信息
+// USN 日志统计信息结构
 struct UsnJournalStats {
     USN FirstUsn;
     USN NextUsn;
@@ -55,7 +55,7 @@ public:
     UsnJournalReader();
     ~UsnJournalReader();
 
-    // 打开指定驱动器的 USN Journal
+    // 打开指定驱动器的 USN 日志
     bool Open(char driveLetter);
 
     // 关闭
@@ -64,7 +64,7 @@ public:
     // 检查是否已打开
     bool IsOpen() const { return hVolume != INVALID_HANDLE_VALUE; }
 
-    // 获取 USN Journal 统计信息
+    // 获取 USN 日志统计信息
     // forceRefresh: true = 强制刷新获取实时数据, false = 使用缓存数据（如果可用）
     bool GetJournalStats(UsnJournalStats& stats, bool forceRefresh = false);
 

@@ -60,14 +60,14 @@ vector<wstring> PathResolver::ParsePath(const string& path) {
 ULONGLONG PathResolver::FindInDirectory(ULONGLONG dirRecordNumber, const wstring& name) {
     vector<BYTE> dirRecord;
     if (!reader->ReadMFT(dirRecordNumber, dirRecord)) {
-        cout << "Failed to read directory record " << dirRecordNumber << endl;
+        cout << "读取目录记录失败: " << dirRecordNumber << endl;
         return 0;
     }
 
     // 获取索引根
     vector<BYTE> indexData;
     if (!parser->GetIndexRoot(dirRecord, indexData)) {
-        cout << "No index root found in directory." << endl;
+        cout << "目录中未找到索引根。" << endl;
         return 0;
     }
 
@@ -107,31 +107,31 @@ ULONGLONG PathResolver::FindFileRecordByPath(const string& filePath) {
     vector<wstring> pathComponents = ParsePath(filePath);
 
     if (pathComponents.empty()) {
-        cout << "Invalid path or root directory." << endl;
+        cout << "无效路径或根目录。" << endl;
         return 5; // 根目录的记录号是5
     }
 
     // 从根目录开始
     ULONGLONG currentRecord = 5;
 
-    cout << "Searching for file in path..." << endl;
+    cout << "正在路径中搜索文件..." << endl;
 
     // 逐级查找
     for (size_t i = 0; i < pathComponents.size(); i++) {
-        wcout << L"Looking for: " << pathComponents[i] << endl;
+        wcout << L"正在查找: " << pathComponents[i] << endl;
 
         ULONGLONG nextRecord = FindInDirectory(currentRecord, pathComponents[i]);
 
         if (nextRecord == 0) {
-            wcout << L"Not found: " << pathComponents[i] << endl;
+            wcout << L"未找到: " << pathComponents[i] << endl;
             return 0;
         }
 
-        wcout << L"Found at MFT record: " << nextRecord << endl;
+        wcout << L"在MFT记录中找到: " << nextRecord << endl;
         currentRecord = nextRecord;
     }
 
-    cout << "Final MFT record number: " << currentRecord << endl;
+    cout << "最终MFT记录号: " << currentRecord << endl;
     return currentRecord;
 }
 

@@ -2,8 +2,13 @@
 #include <Windows.h>
 #include <vector>
 #include "MFTStructures.h"
+#include "Result.h"
+#include "ErrorCodes.h"
 
 using namespace std;
+using FR::Result;
+using FR::ErrorInfo;
+using FR::ErrorCode;
 
 // NTFS引导扇区结构
 #pragma pack(push, 1)
@@ -67,6 +72,18 @@ public:
     // 基础读取操作
     bool ReadClusters(ULONGLONG startLCN, ULONGLONG clusterCount, vector<BYTE>& buffer);
     bool ReadMFT(ULONGLONG fileRecordNumber, vector<BYTE>& record);
+
+    // ========== 新的错误处理 API ==========
+    // 使用 Result<T> 的新方法，提供更好的错误处理
+
+    // 打开卷（新版本，返回详细错误信息）
+    Result<void> OpenVolumeNew(char driveLetter);
+
+    // 读取簇（新版本，返回数据或错误）
+    Result<vector<BYTE>> ReadClustersNew(ULONGLONG startLCN, ULONGLONG clusterCount);
+
+    // 读取 MFT 记录（新版本）
+    Result<vector<BYTE>> ReadMFTNew(ULONGLONG fileRecordNumber);
 
     // 批量读取 MFT 记录（性能优化）
     bool ReadMFTBatch(ULONGLONG startRecordNumber, ULONGLONG recordCount, vector<vector<BYTE>>& records);

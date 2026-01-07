@@ -9,12 +9,14 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <memory>
 #include "MFTReader.h"
 #include "SignatureScanThreadPool.h"
 #include "TimestampExtractor.h"
 #include "MFTLCNIndex.h"
 #include "FileIntegrityValidator.h"
 #include "CarvedFileTypes.h"
+#include "MLClassifier.h"
 
 using namespace std;
 
@@ -39,18 +41,48 @@ enum CarvingMode {
     CARVE_SMART         // 智能扫描：跳过系统区域和已知文件
 };
 
+// 混合扫描配置（签名 + ML）
+struct HybridScanConfig {
+    bool enableSignatureScan = true;     // 启用签名扫描
+    bool enableMLScan = true;            // 启用 ML 扫描
+    float mlConfidenceThreshold = 0.75f; // ML 置信度阈值
+    size_t mlScanStep = 512;             // ML 扫描步长（字节）
+    size_t mlBatchSize = 64;             // ML 批量推理大小
+    bool prefilterEmpty = true;          // 预过滤空簇（熵检测）
+    set<string> mlOnlyTypes;             // 仅用 ML 扫描的类型（txt, html, xml）
+
+    // 默认构造函数：设置无签名类型
+    HybridScanConfig() {
+        mlOnlyTypes = {"txt", "html", "xml"};
+    }
+};
+
 // 扫描统计信息
 struct CarvingStats {
-    ULONGLONG totalClusters;
-    ULONGLONG scannedClusters;
-    ULONGLONG skippedClusters;      // 跳过的空簇
-    ULONGLONG filesFound;
-    ULONGLONG bytesRead;
-    DWORD elapsedMs;                // 耗时（毫秒）
-    double readSpeedMBps;           // 读取速度 MB/s
-    double scanSpeedMBps;           // 扫描速度 MB/s
-    double ioBusyPercent;           // I/O 忙碌百分比
-    double cpuBusyPercent;          // CPU 忙碌百分比
+    atomic<ULONGLONG> totalClusters{0};
+    atomic<ULONGLONG> scannedClusters{0};
+    atomic<ULONGLONG> skippedClusters{0};      // 跳过的空簇
+    atomic<ULONGLONG> filesFound{0};
+    atomic<ULONGLONG> bytesRead{0};
+    atomic<DWORD> elapsedMs{0};                // 耗时（毫秒）
+    atomic<double> readSpeedMBps{0.0};         // 读取速度 MB/s
+    atomic<double> scanSpeedMBps{0.0};         // 扫描速度 MB/s
+    atomic<double> ioBusyPercent{0.0};         // I/O 忙碌百分比
+    atomic<double> cpuBusyPercent{0.0};        // CPU 忙碌百分比
+
+    // 重置方法
+    void reset() {
+        totalClusters = 0;
+        scannedClusters = 0;
+        skippedClusters = 0;
+        filesFound = 0;
+        bytesRead = 0;
+        elapsedMs = 0;
+        readSpeedMBps = 0.0;
+        scanSpeedMBps = 0.0;
+        ioBusyPercent = 0.0;
+        cpuBusyPercent = 0.0;
+    }
 };
 
 // 双缓冲区结构（用于异步I/O）
@@ -149,7 +181,7 @@ private:
                                   ULONGLONG maxResults);
 
     // ==================== 线程池相关 ====================
-    SignatureScanThreadPool* scanThreadPool;
+    unique_ptr<SignatureScanThreadPool> scanThreadPool;
     bool useThreadPool;
     ScanThreadPoolConfig threadPoolConfig;
 
@@ -159,7 +191,7 @@ private:
                                    int& taskIdCounter);
 
     // ==================== 时间戳提取相关 ====================
-    MFTLCNIndex* lcnIndex;
+    unique_ptr<MFTLCNIndex> lcnIndex;
     bool timestampExtractionEnabled;
     bool mftIndexBuilt;
 
@@ -227,6 +259,23 @@ public:
                                                        CarvingMode mode = CARVE_SMART,
                                                        ULONGLONG maxResults = 10000);
 
+    // ==================== 混合扫描模式（签名 + ML）====================
+
+    // 混合扫描：签名扫描 + ML 扫描
+    // - 有签名的类型（jpg, png, pdf...）使用签名扫描
+    // - 无签名的类型（txt, html, xml）使用 ML 扫描
+    // - 结果自动融合去重
+    vector<CarvedFileInfo> ScanHybridMode(const vector<string>& fileTypes,
+                                          const HybridScanConfig& config,
+                                          CarvingMode mode = CARVE_SMART,
+                                          ULONGLONG maxResults = 10000);
+
+    // 估算文本文件大小（用于 ML 检测的无签名文件）
+    static ULONGLONG EstimateFileSizeML(const BYTE* data, size_t maxSize, const string& type);
+
+    // 快速熵计算（用于预过滤）
+    static float QuickEntropy(const BYTE* data, size_t size);
+
     // 获取签名索引（供线程池使用）
     const unordered_map<BYTE, vector<const FileSignature*>>& GetSignatureIndex() const {
         return signatureIndex;
@@ -292,9 +341,49 @@ public:
     size_t CountDeletedFiles(const vector<CarvedFileInfo>& results);
     size_t CountActiveFiles(const vector<CarvedFileInfo>& results);
 
+    // ==================== ML 分类（新增） ====================
+
+    // 启用/禁用 ML 分类
+    void SetMLClassification(bool enabled) { mlClassificationEnabled = enabled; }
+    bool IsMLClassificationEnabled() const { return mlClassificationEnabled; }
+
+    // 加载 ML 模型
+    bool LoadMLModel(const wstring& modelPath);
+
+    // 检查 ML 模型是否可用
+    bool IsMLModelLoaded() const;
+
+    // 使用 ML 分类单个文件片段
+    // 返回: 预测的文件类型和置信度
+    optional<ML::ClassificationResult> ClassifyWithML(
+        const BYTE* data, size_t dataSize);
+
+    // 为扫描结果补充 ML 分类
+    // 当签名检测置信度较低时，使用 ML 提供辅助判断
+    void EnhanceResultsWithML(vector<CarvedFileInfo>& results, bool showProgress = true);
+
+    // 使用纯 ML 扫描（无签名扫描，直接使用 ML 分类）
+    // 适用于检测签名库不支持的文件类型
+    vector<CarvedFileInfo> ScanWithMLOnly(CarvingMode mode = CARVE_SMART,
+                                          ULONGLONG maxResults = 1000,
+                                          float minConfidence = 0.7f);
+
+    // 获取 ML 支持的文件类型
+    vector<string> GetMLSupportedTypes() const;
+
+    // 获取默认ML模型搜索路径
+    static vector<wstring> GetDefaultMLModelPaths();
+
 private:
     // 完整性验证相关成员
     bool integrityValidationEnabled;
     size_t validatedCount;
     size_t corruptedCount;
+
+    // ML 分类相关成员
+    bool mlClassificationEnabled;
+    unique_ptr<ML::MLClassifier> mlClassifier;
+
+    // 自动加载ML模型（在构造函数中调用）
+    void AutoLoadMLModel();
 };

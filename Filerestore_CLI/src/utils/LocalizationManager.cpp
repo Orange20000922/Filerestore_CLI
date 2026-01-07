@@ -46,6 +46,35 @@ wstring LocalizationManager::Get(const wstring& key, const wstring& defaultValue
     return defaultValue;
 }
 
+// wstring 转 UTF-8 string 辅助函数
+static string WideToUtf8(const wstring& wide) {
+    if (wide.empty()) return "";
+
+    int len = WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), -1, NULL, 0, NULL, NULL);
+    if (len <= 0) return "";
+
+    string utf8(len - 1, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), -1, &utf8[0], len, NULL, NULL);
+    return utf8;
+}
+
+string LocalizationManager::GetUtf8(const wstring& key) const {
+    auto it = translations.find(key);
+    if (it != translations.end()) {
+        return WideToUtf8(it->second);
+    }
+    // 如果找不到翻译，返回键本身（方便调试）
+    return "[" + WideToUtf8(key) + "]";
+}
+
+string LocalizationManager::GetUtf8(const wstring& key, const string& defaultValue) const {
+    auto it = translations.find(key);
+    if (it != translations.end()) {
+        return WideToUtf8(it->second);
+    }
+    return defaultValue;
+}
+
 bool LocalizationManager::IsLanguageSupported(const wstring& languageCode) const {
     for (int i = 0; i < LANGUAGE_COUNT; i++) {
         if (SUPPORTED_LANGUAGES[i] == languageCode) {

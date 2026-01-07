@@ -7,31 +7,31 @@
 using namespace std;
 
 // ============================================================================
-// File Integrity Validation Module
+// 文件完整性验证模块
 //
-// Purpose: Detect corrupted or damaged files during signature-based recovery
-// Methods: Entropy analysis, structure validation, statistical analysis
+// 用途: 在基于签名恢复过程中检测损坏或受损的文件
+// 方法: 熵分析、结构验证、统计分析
 // ============================================================================
 
-// Validation result for a single file
+// 单个文件的验证结果
 struct FileIntegrityScore {
-    double entropyScore;        // Entropy analysis score (0-1)
-    double structureScore;      // Structure validation score (0-1)
-    double statisticalScore;    // Statistical analysis score (0-1)
-    double footerScore;         // Footer validation score (0-1)
-    double overallScore;        // Combined overall score (0-1)
+    double entropyScore;        // 熵分析得分 (0-1)
+    double structureScore;      // 结构验证得分 (0-1)
+    double statisticalScore;    // 统计分析得分 (0-1)
+    double footerScore;         // 文件尾验证得分 (0-1)
+    double overallScore;        // 综合总分 (0-1)
 
-    string diagnosis;           // Human-readable diagnosis
-    bool isLikelyCorrupted;     // Quick check result
+    string diagnosis;           // 可读的诊断信息
+    bool isLikelyCorrupted;     // 快速检查结果
 
-    // Detailed info
-    double entropy;             // Raw entropy value (0-8)
-    double zeroRatio;           // Zero byte ratio (0-1)
-    double chiSquare;           // Chi-square value
-    bool hasValidHeader;        // Header validation result
-    bool hasValidFooter;        // Footer validation result
-    bool hasEntropyAnomaly;     // Entropy anomaly detected
-    size_t anomalyOffset;       // Offset where anomaly detected (if any)
+    // 详细信息
+    double entropy;             // 原始熵值 (0-8)
+    double zeroRatio;           // 零字节比率 (0-1)
+    double chiSquare;           // 卡方值
+    bool hasValidHeader;        // 文件头验证结果
+    bool hasValidFooter;        // 文件尾验证结果
+    bool hasEntropyAnomaly;     // 是否检测到熵异常
+    size_t anomalyOffset;       // 检测到异常的偏移量（如果有）
 
     FileIntegrityScore() : entropyScore(0), structureScore(0), statisticalScore(0),
                            footerScore(0), overallScore(0), isLikelyCorrupted(false),
@@ -40,109 +40,109 @@ struct FileIntegrityScore {
                            hasEntropyAnomaly(false), anomalyOffset(0) {}
 };
 
-// Entropy characteristics for different file types
+// 不同文件类型的熵特征
 struct EntropyProfile {
     string extension;
-    double expectedMin;         // Minimum expected entropy
-    double expectedMax;         // Maximum expected entropy
-    double anomalyThreshold;    // Entropy variance threshold for anomaly
-    bool isCompressed;          // Whether file is typically compressed
+    double expectedMin;         // 最小预期熵值
+    double expectedMax;         // 最大预期熵值
+    double anomalyThreshold;    // 异常检测的熵方差阈值
+    bool isCompressed;          // 文件是否通常是压缩的
 };
 
-// JPEG structure validation result
+// JPEG结构验证结果
 struct JPEGValidation {
-    bool hasSOI;                // Start of Image (FFD8)
-    bool hasEOI;                // End of Image (FFD9)
-    bool hasValidMarkers;       // Valid segment markers
-    bool hasValidDHT;           // Huffman table
-    bool hasValidDQT;           // Quantization table
-    bool hasSOF;                // Start of Frame
-    bool hasSOS;                // Start of Scan
-    int markerCount;            // Total marker count
-    double confidence;          // Overall confidence
+    bool hasSOI;                // 图像起始标记 (FFD8)
+    bool hasEOI;                // 图像结束标记 (FFD9)
+    bool hasValidMarkers;       // 有效的段标记
+    bool hasValidDHT;           // 霍夫曼表
+    bool hasValidDQT;           // 量化表
+    bool hasSOF;                // 帧起始标记
+    bool hasSOS;                // 扫描起始标记
+    int markerCount;            // 标记总数
+    double confidence;          // 整体置信度
 };
 
-// PNG structure validation result
+// PNG结构验证结果
 struct PNGValidation {
-    bool hasValidSignature;     // 8-byte PNG signature
-    bool hasIHDR;               // Image Header chunk
-    bool hasIEND;               // Image End chunk
-    bool hasValidCRC;           // CRC checks passed
-    int chunkCount;             // Total chunk count
-    double confidence;          // Overall confidence
+    bool hasValidSignature;     // 8字节PNG签名
+    bool hasIHDR;               // 图像头部块
+    bool hasIEND;               // 图像结束块
+    bool hasValidCRC;           // CRC校验通过
+    int chunkCount;             // 块总数
+    double confidence;          // 整体置信度
 };
 
-// ZIP structure validation result
+// ZIP结构验证结果
 struct ZIPValidation {
-    bool hasValidLocalHeader;   // Local file header (PK..)
-    bool hasValidCentralDir;    // Central directory
-    bool hasEndOfCentralDir;    // End of central directory
-    DWORD declaredFileCount;    // Declared file count
-    DWORD actualFileCount;      // Actual file count found
-    double confidence;          // Overall confidence
+    bool hasValidLocalHeader;   // 本地文件头 (PK..)
+    bool hasValidCentralDir;    // 中央目录
+    bool hasEndOfCentralDir;    // 中央目录结束记录
+    DWORD declaredFileCount;    // 声明的文件数量
+    DWORD actualFileCount;      // 实际找到的文件数量
+    double confidence;          // 整体置信度
 };
 
-// PDF structure validation result
+// PDF结构验证结果
 struct PDFValidation {
-    bool hasValidHeader;        // %PDF-x.x header
-    bool hasEOF;                // %%EOF marker
-    bool hasXRef;               // Cross-reference table
-    bool hasTrailer;            // Trailer dictionary
-    int objectCount;            // Object count found
-    double confidence;          // Overall confidence
+    bool hasValidHeader;        // %PDF-x.x 头部
+    bool hasEOF;                // %%EOF 标记
+    bool hasXRef;               // 交叉引用表
+    bool hasTrailer;            // 尾部字典
+    int objectCount;            // 找到的对象数量
+    double confidence;          // 整体置信度
 };
 
 class FileIntegrityValidator {
 private:
-    // Entropy profiles for different file types
+    // 不同文件类型的熵特征配置
     static const EntropyProfile entropyProfiles[];
     static const int entropyProfileCount;
 
-    // Get entropy profile for file type
+    // 获取文件类型的熵特征配置
     static const EntropyProfile* GetEntropyProfile(const string& extension);
 
-    // Entropy calculation helpers
+    // 熵计算辅助函数
     static double CalculateEntropy(const BYTE* data, size_t size);
     static vector<double> CalculateEntropyBlocks(const BYTE* data, size_t size, size_t blockSize);
     static bool DetectEntropyAnomaly(const vector<double>& entropies, double threshold, size_t& anomalyOffset);
 
-    // Statistical analysis helpers
+    // 统计分析辅助函数
     static double CalculateChiSquare(const BYTE* data, size_t size);
     static double CalculateZeroRatio(const BYTE* data, size_t size);
     static bool IsLikelyRandom(const BYTE* data, size_t size);
 
-    // Structure validation for specific formats
+    // 特定格式的结构验证
     static JPEGValidation ValidateJPEG(const BYTE* data, size_t size);
     static PNGValidation ValidatePNG(const BYTE* data, size_t size);
     static ZIPValidation ValidateZIP(const BYTE* data, size_t size);
     static PDFValidation ValidatePDF(const BYTE* data, size_t size);
 
-    // Score calculation helpers
+    // 得分计算辅助函数
     static double EvaluateEntropyForType(double entropy, const string& extension);
     static double EvaluateStatistics(double zeroRatio, double chiSquare, const string& extension);
     static double ValidateFooter(const BYTE* data, size_t size, const string& extension);
     static double ValidateFileStructure(const BYTE* data, size_t size, const string& extension);
 
-    // CRC32 calculation for PNG validation
+    // PNG验证用的CRC32计算
     static DWORD CalculateCRC32(const BYTE* data, size_t size);
     static DWORD ReadBigEndian32(const BYTE* data);
 
 public:
-    // Main validation function
+    // 主验证函数
     static FileIntegrityScore Validate(const BYTE* data, size_t size, const string& extension);
 
-    // Quick check for likely corruption
+    // 快速损坏检查
     static bool IsLikelyCorrupted(const BYTE* data, size_t size, const string& extension);
 
-    // Individual component scores
+    // 单项得分函数
     static double GetEntropyScore(const BYTE* data, size_t size, const string& extension);
     static double GetStructureScore(const BYTE* data, size_t size, const string& extension);
     static double GetStatisticalScore(const BYTE* data, size_t size, const string& extension);
 
-    // Thresholds
-    static constexpr double MIN_INTEGRITY_SCORE = 0.5;      // Minimum acceptable score
-    static constexpr double HIGH_CONFIDENCE_SCORE = 0.8;    // High confidence threshold
-    static constexpr double ENTROPY_VARIANCE_THRESHOLD = 1.5; // Entropy anomaly threshold
-    static constexpr double MAX_ZERO_RATIO_COMPRESSED = 0.05; // Max zero ratio for compressed
-    static constexpr double MAX_ZERO_RATIO_GENERAL = 0.15;    // Max zero ratio general
+    // 阈值常量
+    static constexpr double MIN_INTEGRITY_SCORE = 0.5;      // 最低可接受得分
+    static constexpr double HIGH_CONFIDENCE_SCORE = 0.8;    // 高置信度阈值
+    static constexpr double ENTROPY_VARIANCE_THRESHOLD = 1.5; // 熵异常阈值
+    static constexpr double MAX_ZERO_RATIO_COMPRESSED = 0.05; // 压缩文件最大零字节比率
+    static constexpr double MAX_ZERO_RATIO_GENERAL = 0.15;    // 一般文件最大零字节比率
 };

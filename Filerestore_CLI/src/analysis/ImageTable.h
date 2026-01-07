@@ -5,7 +5,7 @@
 #include <string>
 using namespace std;
 
-// Note: ZwCreateThreadEx typedefs removed - not needed for read-only PE analysis
+// 注意：ZwCreateThreadEx 类型定义已移除 - 只读 PE 分析不需要
 
 class ImageTableAnalyzer
 {
@@ -17,7 +17,7 @@ public:
 	HANDLE hFile = NULL;
 	HANDLE hFileMapping = NULL;
 public:
-	// ==================== Read-only PE Analysis Methods ====================
+	// ==================== 只读 PE 分析方法 ====================
 	vector<string> AnalyzeTableForDLL(string file);
 	map<string, vector<string>> AnalyzeTableForFunctions(string file);
 	ULONGLONG GetFuncaddressByName(string name,string file);
@@ -26,8 +26,8 @@ public:
 	DWORD RVAtoFOA(DWORD rva, LPVOID lpBuffer);
 	BOOL CheckIsAdmin();
 
-	// ==================== REMOVED METHODS ====================
-	// The following methods have been removed from public version:
+	// ==================== 已移除的方法 ====================
+	// 以下方法已从公开版本中移除：
 	// - bool IATHooked(string dllfile,int PID);
 	// - BOOL ElevatePrivilegeForAdmin(string path);
 	// - BOOL ElevatePrivilegeForSystem(wstring Privilege);

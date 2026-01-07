@@ -3,31 +3,31 @@
 #include <cstring>
 
 // ============================================================================
-// Entropy Profiles for Different File Types
+// 不同文件类型的熵特征配置
 // ============================================================================
 const EntropyProfile FileIntegrityValidator::entropyProfiles[] = {
-    {"jpg",    7.0, 7.95, 1.5, true},   // JPEG: high entropy, compressed
+    {"jpg",    7.0, 7.95, 1.5, true},   // JPEG: 高熵值，压缩格式
     {"jpeg",   7.0, 7.95, 1.5, true},
-    {"png",    6.5, 7.9,  1.5, true},   // PNG: high entropy, compressed
-    {"gif",    5.0, 7.5,  1.5, true},   // GIF: variable, LZW compressed
-    {"pdf",    4.0, 7.8,  2.0, false},  // PDF: mixed content
-    {"zip",    7.2, 7.98, 1.0, true},   // ZIP: very high entropy
-    {"7z",     7.5, 7.99, 0.8, true},   // 7z: extremely high entropy
-    {"rar",    7.3, 7.98, 1.0, true},   // RAR: very high entropy
-    {"mp3",    6.5, 7.9,  1.5, true},   // MP3: compressed audio
-    {"mp4",    6.0, 7.9,  1.5, true},   // MP4: compressed video
-    {"avi",    5.0, 7.5,  2.0, false},  // AVI: variable compression
-    {"wav",    3.0, 7.0,  2.5, false},  // WAV: often uncompressed
-    {"exe",    5.0, 7.5,  2.0, false},  // EXE: mixed code and data
+    {"png",    6.5, 7.9,  1.5, true},   // PNG: 高熵值，压缩格式
+    {"gif",    5.0, 7.5,  1.5, true},   // GIF: 可变熵值，LZW压缩
+    {"pdf",    4.0, 7.8,  2.0, false},  // PDF: 混合内容
+    {"zip",    7.2, 7.98, 1.0, true},   // ZIP: 非常高的熵值
+    {"7z",     7.5, 7.99, 0.8, true},   // 7z: 极高熵值
+    {"rar",    7.3, 7.98, 1.0, true},   // RAR: 非常高的熵值
+    {"mp3",    6.5, 7.9,  1.5, true},   // MP3: 压缩音频
+    {"mp4",    6.0, 7.9,  1.5, true},   // MP4: 压缩视频
+    {"avi",    5.0, 7.5,  2.0, false},  // AVI: 可变压缩
+    {"wav",    3.0, 7.0,  2.5, false},  // WAV: 通常未压缩
+    {"exe",    5.0, 7.5,  2.0, false},  // EXE: 混合代码和数据
     {"dll",    5.0, 7.5,  2.0, false},
-    {"bmp",    2.0, 6.0,  2.5, false},  // BMP: usually uncompressed
-    {"sqlite", 4.0, 7.5,  2.0, false},  // SQLite: database
+    {"bmp",    2.0, 6.0,  2.5, false},  // BMP: 通常未压缩
+    {"sqlite", 4.0, 7.5,  2.0, false},  // SQLite: 数据库
 };
 
 const int FileIntegrityValidator::entropyProfileCount = sizeof(entropyProfiles) / sizeof(EntropyProfile);
 
 // ============================================================================
-// Get Entropy Profile
+// 获取熵特征配置
 // ============================================================================
 const EntropyProfile* FileIntegrityValidator::GetEntropyProfile(const string& extension) {
     string ext = extension;
@@ -42,7 +42,7 @@ const EntropyProfile* FileIntegrityValidator::GetEntropyProfile(const string& ex
 }
 
 // ============================================================================
-// Shannon Entropy Calculation
+// 香农熵计算
 // ============================================================================
 double FileIntegrityValidator::CalculateEntropy(const BYTE* data, size_t size) {
     if (size == 0) return 0.0;
@@ -59,11 +59,11 @@ double FileIntegrityValidator::CalculateEntropy(const BYTE* data, size_t size) {
             entropy -= p * log2(p);
         }
     }
-    return entropy;  // 0-8 bits per byte
+    return entropy;  // 0-8 比特/字节
 }
 
 // ============================================================================
-// Block-wise Entropy Calculation (for anomaly detection)
+// 分块熵计算（用于异常检测）
 // ============================================================================
 vector<double> FileIntegrityValidator::CalculateEntropyBlocks(const BYTE* data, size_t size, size_t blockSize) {
     vector<double> entropies;
@@ -75,7 +75,7 @@ vector<double> FileIntegrityValidator::CalculateEntropyBlocks(const BYTE* data, 
 }
 
 // ============================================================================
-// Detect Entropy Anomaly (sudden changes indicating corruption)
+// 检测熵异常（突变表示可能损坏）
 // ============================================================================
 bool FileIntegrityValidator::DetectEntropyAnomaly(const vector<double>& entropies,
                                                    double threshold, size_t& anomalyOffset) {
@@ -111,7 +111,7 @@ double FileIntegrityValidator::CalculateChiSquare(const BYTE* data, size_t size)
 }
 
 // ============================================================================
-// Zero Byte Ratio Calculation
+// 零字节比率计算
 // ============================================================================
 double FileIntegrityValidator::CalculateZeroRatio(const BYTE* data, size_t size) {
     if (size == 0) return 0.0;
@@ -125,7 +125,7 @@ double FileIntegrityValidator::CalculateZeroRatio(const BYTE* data, size_t size)
 
 bool FileIntegrityValidator::IsLikelyRandom(const BYTE* data, size_t size) {
     double chi = CalculateChiSquare(data, min(size, (size_t)65536));
-    // Chi-square critical value for df=255, p=0.05 is ~293
+    // 自由度df=255，p=0.05时的卡方临界值约为293
     return chi < 350;
 }
 static const DWORD crcTable[256] = {
@@ -188,7 +188,7 @@ DWORD FileIntegrityValidator::ReadBigEndian32(const BYTE* data) {
 }
 
 // ============================================================================
-// JPEG Structure Validation
+// JPEG结构验证
 // ============================================================================
 JPEGValidation FileIntegrityValidator::ValidateJPEG(const BYTE* data, size_t size) {
     JPEGValidation result = {0};
@@ -207,32 +207,32 @@ JPEGValidation FileIntegrityValidator::ValidateJPEG(const BYTE* data, size_t siz
 
         BYTE marker = data[pos + 1];
 
-        // Skip padding FF bytes
+        // 跳过填充的FF字节
         if (marker == 0xFF) {
             pos++;
             continue;
         }
 
-        // EOI - End of Image
+        // EOI - 图像结束
         if (marker == 0xD9) {
             result.hasEOI = true;
             result.hasValidMarkers = true;
             break;
         }
 
-        // Check key markers
-        if (marker == 0xC4) result.hasValidDHT = true;  // Huffman table
-        if (marker == 0xDB) result.hasValidDQT = true;  // Quantization table
+        // 检查关键标记
+        if (marker == 0xC4) result.hasValidDHT = true;  // 霍夫曼表
+        if (marker == 0xDB) result.hasValidDQT = true;  // 量化表
         if (marker >= 0xC0 && marker <= 0xCF && marker != 0xC4 && marker != 0xC8 && marker != 0xCC) {
-            result.hasSOF = true;  // Start of Frame
+            result.hasSOF = true;  // 帧起始
         }
-        if (marker == 0xDA) result.hasSOS = true;  // Start of Scan
+        if (marker == 0xDA) result.hasSOS = true;  // 扫描起始
 
         result.markerCount++;
 
-        // Skip segment
+        // 跳过段
         if (marker >= 0xD0 && marker <= 0xD9) {
-            pos += 2;  // Standalone markers
+            pos += 2;  // 独立标记
         } else if (pos + 4 < size) {
             WORD segLen = ((WORD)data[pos + 2] << 8) | data[pos + 3];
             pos += 2 + segLen;
@@ -241,7 +241,7 @@ JPEGValidation FileIntegrityValidator::ValidateJPEG(const BYTE* data, size_t siz
         }
     }
 
-    // Calculate confidence
+    // 计算置信度
     result.confidence = 0.0;
     if (result.hasSOI) result.confidence += 0.2;
     if (result.hasEOI) result.confidence += 0.3;
@@ -254,38 +254,38 @@ JPEGValidation FileIntegrityValidator::ValidateJPEG(const BYTE* data, size_t siz
 }
 
 // ============================================================================
-// PNG Structure Validation
+// PNG结构验证
 // ============================================================================
 PNGValidation FileIntegrityValidator::ValidatePNG(const BYTE* data, size_t size) {
     PNGValidation result = {0};
 
-    // Check PNG signature
+    // 检查PNG签名
     const BYTE pngSig[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
     if (size < 8 || memcmp(data, pngSig, 8) != 0) {
         return result;
     }
     result.hasValidSignature = true;
 
-    // Parse chunks
+    // 解析块
     size_t pos = 8;
     while (pos + 12 <= size) {
         DWORD length = ReadBigEndian32(data + pos);
         const BYTE* chunkType = data + pos + 4;
 
         if (length > size - pos - 12) {
-            break;  // Invalid chunk length
+            break;  // 无效的块长度
         }
 
-        // Check chunk type
+        // 检查块类型
         if (memcmp(chunkType, "IHDR", 4) == 0) {
             result.hasIHDR = true;
         } else if (memcmp(chunkType, "IEND", 4) == 0) {
             result.hasIEND = true;
         }
 
-        // Validate CRC (for first few chunks only to save time)
+        // 验证CRC（仅对前几个块进行验证以节省时间）
         if (result.chunkCount < 5) {
-            const BYTE* chunkData = data + pos + 4;  // type + data
+            const BYTE* chunkData = data + pos + 4;  // 类型 + 数据
             size_t chunkDataLen = 4 + length;
             DWORD calculatedCRC = CalculateCRC32(chunkData, chunkDataLen);
             DWORD storedCRC = ReadBigEndian32(data + pos + 8 + length);
@@ -295,10 +295,10 @@ PNGValidation FileIntegrityValidator::ValidatePNG(const BYTE* data, size_t size)
         }
 
         result.chunkCount++;
-        pos += 12 + length;  // length(4) + type(4) + data + crc(4)
+        pos += 12 + length;  // 长度(4) + 类型(4) + 数据 + CRC(4)
     }
 
-    // Calculate confidence
+    // 计算置信度
     result.confidence = 0.0;
     if (result.hasValidSignature) result.confidence += 0.3;
     if (result.hasIHDR) result.confidence += 0.2;
@@ -309,25 +309,25 @@ PNGValidation FileIntegrityValidator::ValidatePNG(const BYTE* data, size_t size)
 }
 
 // ============================================================================
-// ZIP Structure Validation
+// ZIP结构验证
 // ============================================================================
 ZIPValidation FileIntegrityValidator::ValidateZIP(const BYTE* data, size_t size) {
     ZIPValidation result = {0};
 
-    // Check Local File Header
+    // 检查本地文件头
     if (size < 30 || data[0] != 0x50 || data[1] != 0x4B ||
         data[2] != 0x03 || data[3] != 0x04) {
         return result;
     }
     result.hasValidLocalHeader = true;
 
-    // Count local file headers
+    // 统计本地文件头数量
     size_t pos = 0;
     while (pos + 30 < size) {
         if (data[pos] == 0x50 && data[pos + 1] == 0x4B) {
             if (data[pos + 2] == 0x03 && data[pos + 3] == 0x04) {
                 result.actualFileCount++;
-                // Skip to next header
+                // 跳到下一个头部
                 WORD nameLen = *(WORD*)(data + pos + 26);
                 WORD extraLen = *(WORD*)(data + pos + 28);
                 DWORD compSize = *(DWORD*)(data + pos + 18);
@@ -343,7 +343,7 @@ ZIPValidation FileIntegrityValidator::ValidateZIP(const BYTE* data, size_t size)
         }
     }
 
-    // Search for End of Central Directory (from end)
+    // 从末尾搜索中央目录结束记录
     for (size_t i = size - 22; i > 0 && i > size - 65536; i--) {
         if (data[i] == 0x50 && data[i + 1] == 0x4B &&
             data[i + 2] == 0x05 && data[i + 3] == 0x06) {
@@ -353,8 +353,8 @@ ZIPValidation FileIntegrityValidator::ValidateZIP(const BYTE* data, size_t size)
         }
     }
 
-    // Calculate confidence
-    result.confidence = 0.3;  // Valid header
+    // 计算置信度
+    result.confidence = 0.3;  // 有效头部
     if (result.hasValidCentralDir) result.confidence += 0.2;
     if (result.hasEndOfCentralDir) result.confidence += 0.3;
     if (result.actualFileCount > 0) result.confidence += 0.2;
@@ -363,18 +363,18 @@ ZIPValidation FileIntegrityValidator::ValidateZIP(const BYTE* data, size_t size)
 }
 
 // ============================================================================
-// PDF Structure Validation
+// PDF结构验证
 // ============================================================================
 PDFValidation FileIntegrityValidator::ValidatePDF(const BYTE* data, size_t size) {
     PDFValidation result = {0};
 
-    // Check PDF header
+    // 检查PDF头部
     if (size < 8 || memcmp(data, "%PDF-", 5) != 0) {
         return result;
     }
     result.hasValidHeader = true;
 
-    // Search for %%EOF (from end)
+    // 从末尾搜索%%EOF
     const char* eofMarker = "%%EOF";
     size_t eofLen = strlen(eofMarker);
     for (size_t i = size - eofLen; i > size - 1024 && i > 0; i--) {
@@ -384,7 +384,7 @@ PDFValidation FileIntegrityValidator::ValidatePDF(const BYTE* data, size_t size)
         }
     }
 
-    // Search for xref
+    // 搜索xref
     const char* xrefMarker = "xref";
     for (size_t i = 0; i < size - 4 && i < 100000; i++) {
         if (memcmp(data + i, xrefMarker, 4) == 0) {
@@ -393,7 +393,7 @@ PDFValidation FileIntegrityValidator::ValidatePDF(const BYTE* data, size_t size)
         }
     }
 
-    // Search for trailer
+    // 搜索trailer
     const char* trailerMarker = "trailer";
     for (size_t i = size > 10000 ? size - 10000 : 0; i < size - 7; i++) {
         if (memcmp(data + i, trailerMarker, 7) == 0) {
@@ -402,7 +402,7 @@ PDFValidation FileIntegrityValidator::ValidatePDF(const BYTE* data, size_t size)
         }
     }
 
-    // Count objects (rough estimate)
+    // 统计对象数量（粗略估计）
     const char* objMarker = " obj";
     for (size_t i = 0; i < size - 4; i++) {
         if (memcmp(data + i, objMarker, 4) == 0) {
@@ -410,7 +410,7 @@ PDFValidation FileIntegrityValidator::ValidatePDF(const BYTE* data, size_t size)
         }
     }
 
-    // Calculate confidence
+    // 计算置信度
     result.confidence = 0.0;
     if (result.hasValidHeader) result.confidence += 0.25;
     if (result.hasEOF) result.confidence += 0.25;
@@ -422,25 +422,25 @@ PDFValidation FileIntegrityValidator::ValidatePDF(const BYTE* data, size_t size)
 }
 
 // ============================================================================
-// Evaluate Entropy Score for File Type
+// 评估文件类型的熵得分
 // ============================================================================
 double FileIntegrityValidator::EvaluateEntropyForType(double entropy, const string& extension) {
     const EntropyProfile* profile = GetEntropyProfile(extension);
 
     if (!profile) {
-        // Default evaluation for unknown types
+        // 未知类型的默认评估
         if (entropy >= 3.0 && entropy <= 7.8) {
             return 0.7;
         }
         return 0.5;
     }
 
-    // Check if entropy is within expected range
+    // 检查熵值是否在预期范围内
     if (entropy >= profile->expectedMin && entropy <= profile->expectedMax) {
         return 1.0;
     }
 
-    // Penalize deviation
+    // 惩罚偏差
     double deviation = 0;
     if (entropy < profile->expectedMin) {
         deviation = profile->expectedMin - entropy;
@@ -448,32 +448,32 @@ double FileIntegrityValidator::EvaluateEntropyForType(double entropy, const stri
         deviation = entropy - profile->expectedMax;
     }
 
-    // Score decreases with deviation
+    // 得分随偏差减少
     double score = max(0.0, 1.0 - deviation * 0.2);
     return score;
 }
 
 // ============================================================================
-// Evaluate Statistical Score
+// 评估统计得分
 // ============================================================================
 double FileIntegrityValidator::EvaluateStatistics(double zeroRatio, double chiSquare,
                                                    const string& extension) {
     double score = 1.0;
     const EntropyProfile* profile = GetEntropyProfile(extension);
 
-    // Check zero ratio
+    // 检查零字节比率
     double maxZeroRatio = (profile && profile->isCompressed) ?
                            MAX_ZERO_RATIO_COMPRESSED : MAX_ZERO_RATIO_GENERAL;
 
     if (zeroRatio > maxZeroRatio) {
         double excess = zeroRatio - maxZeroRatio;
-        score -= excess * 2.0;  // Penalize heavily
+        score -= excess * 2.0;  // 严重惩罚
     }
 
-    // Check chi-square (for compressed files, should be low)
+    // 检查卡方值（对于压缩文件，应该较低）
     if (profile && profile->isCompressed) {
         if (chiSquare > 500) {
-            score -= 0.2;  // Not random enough for compressed data
+            score -= 0.2;  // 对于压缩数据来说不够随机
         }
     }
 
@@ -481,7 +481,7 @@ double FileIntegrityValidator::EvaluateStatistics(double zeroRatio, double chiSq
 }
 
 // ============================================================================
-// Validate File Structure
+// 验证文件结构
 // ============================================================================
 double FileIntegrityValidator::ValidateFileStructure(const BYTE* data, size_t size,
                                                       const string& extension) {
@@ -505,10 +505,10 @@ double FileIntegrityValidator::ValidateFileStructure(const BYTE* data, size_t si
         return v.confidence;
     }
 
-    // Default: check basic structure
+    // 默认：检查基本结构
     if (size < 10) return 0.3;
 
-    // Check for obvious corruption (large zero blocks at start)
+    // 检查明显的损坏（开头有大量零字节块）
     size_t zeroStart = 0;
     for (size_t i = 0; i < min(size, (size_t)1024); i++) {
         if (data[i] == 0) zeroStart++;
@@ -516,11 +516,11 @@ double FileIntegrityValidator::ValidateFileStructure(const BYTE* data, size_t si
     }
     if (zeroStart > 100) return 0.3;
 
-    return 0.6;  // Neutral score for unknown formats
+    return 0.6;  // 未知格式的中性得分
 }
 
 // ============================================================================
-// Validate Footer
+// 验证文件尾
 // ============================================================================
 double FileIntegrityValidator::ValidateFooter(const BYTE* data, size_t size,
                                                const string& extension) {
@@ -529,7 +529,7 @@ double FileIntegrityValidator::ValidateFooter(const BYTE* data, size_t size,
 
     // JPEG EOI
     if (ext == "jpg" || ext == "jpeg") {
-        // Search for FFD9 near end
+        // 在末尾附近搜索FFD9
         for (size_t i = size > 100 ? size - 100 : 0; i < size - 1; i++) {
             if (data[i] == 0xFF && data[i + 1] == 0xD9) {
                 return 1.0;
@@ -560,7 +560,7 @@ double FileIntegrityValidator::ValidateFooter(const BYTE* data, size_t size,
         return 0.3;
     }
 
-    // ZIP End of Central Directory
+    // ZIP中央目录结束记录
     if (ext == "zip") {
         for (size_t i = size > 65536 ? size - 65536 : 0; i < size - 4; i++) {
             if (data[i] == 0x50 && data[i + 1] == 0x4B &&
@@ -571,89 +571,89 @@ double FileIntegrityValidator::ValidateFooter(const BYTE* data, size_t size,
         return 0.4;
     }
 
-    // Default: no specific footer expected
+    // 默认：没有特定的文件尾预期
     return 0.7;
 }
 
 // ============================================================================
-// Main Validation Function
+// 主验证函数
 // ============================================================================
 FileIntegrityScore FileIntegrityValidator::Validate(const BYTE* data, size_t size,
                                                      const string& extension) {
     FileIntegrityScore score;
 
     if (size == 0) {
-        score.diagnosis = "Empty file";
+        score.diagnosis = "空文件";
         score.isLikelyCorrupted = true;
         return score;
     }
 
-    // 1. Entropy Analysis (weight: 25%)
-    score.entropy = CalculateEntropy(data, min(size, (size_t)1048576));  // Max 1MB
+    // 1. 熵分析（权重：25%）
+    score.entropy = CalculateEntropy(data, min(size, (size_t)1048576));  // 最大1MB
     score.entropyScore = EvaluateEntropyForType(score.entropy, extension);
 
-    // Check for entropy anomalies
+    // 检查熵异常
     if (size > 8192) {
         vector<double> blockEntropies = CalculateEntropyBlocks(data, min(size, (size_t)1048576), 4096);
         score.hasEntropyAnomaly = DetectEntropyAnomaly(blockEntropies, ENTROPY_VARIANCE_THRESHOLD,
                                                         score.anomalyOffset);
         if (score.hasEntropyAnomaly) {
-            score.entropyScore *= 0.7;  // Penalize anomaly
+            score.entropyScore *= 0.7;  // 惩罚异常
         }
     }
 
-    // 2. Structure Validation (weight: 35%)
+    // 2. 结构验证（权重：35%）
     score.structureScore = ValidateFileStructure(data, size, extension);
     score.hasValidHeader = (score.structureScore > 0.5);
 
-    // 3. Statistical Analysis (weight: 20%)
+    // 3. 统计分析（权重：20%）
     size_t statSize = min(size, (size_t)65536);
     score.zeroRatio = CalculateZeroRatio(data, statSize);
     score.chiSquare = CalculateChiSquare(data, statSize);
     score.statisticalScore = EvaluateStatistics(score.zeroRatio, score.chiSquare, extension);
 
-    // 4. Footer Validation (weight: 20%)
+    // 4. 文件尾验证（权重：20%）
     score.footerScore = ValidateFooter(data, size, extension);
     score.hasValidFooter = (score.footerScore > 0.8);
 
-    // Calculate overall score
+    // 计算综合得分
     score.overallScore =
         score.entropyScore * 0.25 +
         score.structureScore * 0.35 +
         score.statisticalScore * 0.20 +
         score.footerScore * 0.20;
 
-    // Generate diagnosis
+    // 生成诊断信息
     if (score.overallScore >= HIGH_CONFIDENCE_SCORE) {
-        score.diagnosis = "High confidence - likely intact";
+        score.diagnosis = "高置信度 - 可能完整";
         score.isLikelyCorrupted = false;
     } else if (score.overallScore >= 0.6) {
-        score.diagnosis = "Medium confidence - may have minor issues";
+        score.diagnosis = "中等置信度 - 可能有轻微问题";
         score.isLikelyCorrupted = false;
     } else if (score.overallScore >= MIN_INTEGRITY_SCORE) {
-        score.diagnosis = "Low confidence - likely damaged";
+        score.diagnosis = "低置信度 - 可能已损坏";
         score.isLikelyCorrupted = true;
     } else {
-        score.diagnosis = "Very low confidence - probably corrupted";
+        score.diagnosis = "极低置信度 - 很可能已损坏";
         score.isLikelyCorrupted = true;
     }
 
-    // Add details to diagnosis
+    // 在诊断信息中添加详细信息
     if (score.hasEntropyAnomaly) {
-        score.diagnosis += " [Entropy anomaly detected]";
+        score.diagnosis += " [检测到熵异常]";
     }
     if (!score.hasValidFooter && (extension == "jpg" || extension == "png" || extension == "pdf")) {
-        score.diagnosis += " [Missing footer]";
+        score.diagnosis += " [缺少文件尾]";
     }
     if (score.zeroRatio > 0.2) {
-        score.diagnosis += " [High zero ratio]";
+        score.diagnosis += " [零字节比率过高]";
     }
 
     return score;
 }
 
 // ============================================================================
-// Quick Corruption Check
+// 快速损坏检查
 // ============================================================================
 bool FileIntegrityValidator::IsLikelyCorrupted(const BYTE* data, size_t size,
                                                 const string& extension) {
@@ -662,7 +662,7 @@ bool FileIntegrityValidator::IsLikelyCorrupted(const BYTE* data, size_t size,
 }
 
 // ============================================================================
-// Individual Score Functions
+// 单项得分函数
 // ============================================================================
 double FileIntegrityValidator::GetEntropyScore(const BYTE* data, size_t size,
                                                 const string& extension) {

@@ -13,24 +13,24 @@ ULONGLONG ImageTableAnalyzer::GetFuncaddressByName(string name,string file)
 {
 	ImageTableAnalyzer::hFile = CreateFileA(file.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
-		cout << "Open file failed!" << endl;
+		cout << "打开文件失败！" << endl;
 		return 0;
 	}
 	ImageTableAnalyzer::hFileMapping = CreateFileMappingA(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
 	if (hFileMapping == NULL) {
-		cout << "Create file mapping failed!" << GetLastError() << endl;
+		cout << "创建文件映射失败！" << GetLastError() << endl;
 		CloseHandle(hFile);
 		return 0;
 	}
 	ImageTableAnalyzer::lpBuffer = MapViewOfFile(hFileMapping, FILE_MAP_READ, 0, 0, 0);
 	if (!lpBuffer) {
-		cout << "Map view of file failed!" << endl;
+		cout << "映射文件视图失败！" << endl;
 		CloseHandle(hFileMapping);
 		CloseHandle(hFile);
 		return 0;
 	}
 	if (!IsImagineTable(lpBuffer) ){
-		cout << "This is not a valid PE file!" << endl;
+		cout << "这不是一个有效的 PE 文件！" << endl;
 		UnmapViewOfFile(lpBuffer);
 		CloseHandle(hFileMapping);
 		CloseHandle(hFile);
@@ -43,7 +43,7 @@ ULONGLONG ImageTableAnalyzer::GetFuncaddressByName(string name,string file)
 		PIMAGE_OPTIONAL_HEADER64 pOptionalHeader64 = &pNtHeaders64->OptionalHeader;
 		DWORD importDirRVA = pOptionalHeader64->DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress;
 		if (importDirRVA == 0) {
-			cout << "No import directory!" << endl;
+			cout << "没有导入目录！" << endl;
 			UnmapViewOfFile(lpBuffer);
 			CloseHandle(hFileMapping);
 			CloseHandle(hFile);
@@ -72,12 +72,12 @@ vector<string> ImageTableAnalyzer::AnalyzeTableForDLL(string file)
 {
 	ImageTableAnalyzer::hFile = CreateFileA(file.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
-		cout << "Open file failed!" << endl;
+		cout << "打开文件失败！" << endl;
 		return vector<string>();
 	}
 	ImageTableAnalyzer::hFileMapping = CreateFileMappingA(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
 	if (hFileMapping == NULL) {
-		cout << "Create file mapping failed!" << GetLastError() << endl;
+		cout << "创建文件映射失败！" << GetLastError() << endl;
 		CloseHandle(hFile);
 		return vector<string>();
 	}
@@ -88,7 +88,7 @@ vector<string> ImageTableAnalyzer::AnalyzeTableForDLL(string file)
 		return vector<string>();
 	}
 	if (!IsImagineTable(lpBuffer)) {
-		cout << "This is not a valid PE file!" << endl;
+		cout << "这不是一个有效的 PE 文件！" << endl;
 		UnmapViewOfFile(lpBuffer);
 		CloseHandle(hFileMapping);
 		CloseHandle(hFile);
@@ -116,7 +116,7 @@ vector<string> ImageTableAnalyzer::AnalyzeTableForDLL(string file)
 	}
 
 	if (importDirRVA == 0) {
-		cout << "No import directory!" << endl;
+		cout << "没有导入目录！" << endl;
 		UnmapViewOfFile(lpBuffer);
 		CloseHandle(hFileMapping);
 		CloseHandle(hFile);
@@ -136,12 +136,12 @@ map<string, vector<string>> ImageTableAnalyzer::AnalyzeTableForFunctions(string 
 	vector<string> funcNames;
 	ImageTableAnalyzer::hFile = CreateFileA(file.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	if (hFile == INVALID_HANDLE_VALUE) {
-		cout << "Open file failed!" << endl;
+		cout << "打开文件失败！" << endl;
 		return map<string, vector<string>>();
 	}
 	ImageTableAnalyzer::hFileMapping = CreateFileMappingA(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
 	if (hFileMapping == NULL) {
-		cout << "Create file mapping failed!" << GetLastError() << endl;
+		cout << "创建文件映射失败！" << GetLastError() << endl;
 		CloseHandle(hFile);
 		return map<string, vector<string>>();
 	}
@@ -152,7 +152,7 @@ map<string, vector<string>> ImageTableAnalyzer::AnalyzeTableForFunctions(string 
 		return map<string, vector<string>>();
 	}
 	if (!IsImagineTable(lpBuffer)) {
-		cout << "This is not a valid PE file!" << endl;
+		cout << "这不是一个有效的 PE 文件！" << endl;
 		UnmapViewOfFile(lpBuffer);
 		CloseHandle(hFileMapping);
 		CloseHandle(hFile);
@@ -183,7 +183,7 @@ map<string, vector<string>> ImageTableAnalyzer::AnalyzeTableForFunctions(string 
 	}
 
 	if (importDirRVA == 0) {
-		cout << "No import directory!" << endl;
+		cout << "没有导入目录！" << endl;
 		UnmapViewOfFile(lpBuffer);
 		CloseHandle(hFileMapping);
 		CloseHandle(hFile);
@@ -284,13 +284,13 @@ DWORD ImageTableAnalyzer::RVAtoFOA(DWORD rva, LPVOID lpBuffer)
 	}
 	return 0;
 }
-// ==================== ElevatePrivilegeForAdmin REMOVED ====================
-// Privilege elevation exploit has been removed from public version
-// Original implementation: UAC bypass using fodhelper.exe
+// ==================== ElevatePrivilegeForAdmin 已移除 ====================
+// 权限提升漏洞利用已从公开版本中移除
+// 原实现：使用 fodhelper.exe 进行 UAC 绕过
 
-// ==================== ElevatePrivilegeForSystem REMOVED ====================
-// Privilege elevation has been removed from public version
-// Original implementation: AdjustTokenPrivileges
+// ==================== ElevatePrivilegeForSystem 已移除 ====================
+// 权限提升功能已从公开版本中移除
+// 原实现：AdjustTokenPrivileges
 
 BOOL ImageTableAnalyzer::CheckIsAdmin()
 {
@@ -325,9 +325,9 @@ BOOL ImageTableAnalyzer::CheckIsAdmin()
 }
 
 //针对系统进程的IAT注入
-// ==================== DLLImplantForSystemProcess REMOVED ====================
-// DLL injection functionality has been removed from public version
-// Original implementation: Remote DLL injection using ZwCreateThreadEx
+// ==================== DLLImplantForSystemProcess 已移除 ====================
+// DLL 注入功能已从公开版本中移除
+// 原实现：使用 ZwCreateThreadEx 进行远程 DLL 注入
 
 ImageTableAnalyzer::ImageTableAnalyzer() {
 }

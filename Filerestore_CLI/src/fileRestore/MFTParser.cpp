@@ -68,7 +68,7 @@ bool MFTParser::ParseDataRuns(BYTE* dataRun, vector<pair<ULONGLONG, ULONGLONG>>&
         // 验证LCN是否合理（不能为负数）
         if (currentLCN < 0) {
             LOG_ERROR_FMT("Invalid LCN calculated: %lld (negative)", currentLCN);
-            cout << "Error: Data run points to invalid location (negative LCN)" << endl;
+            cout << "错误：数据运行指向无效位置（负数 LCN）" << endl;
             return false;
         }
 
@@ -109,7 +109,7 @@ bool MFTParser::ParseDataRuns(BYTE* dataRun, vector<pair<ULONGLONG, ULONGLONG>>&
 bool MFTParser::ExtractFileData(vector<BYTE>& mftRecord, vector<BYTE>& fileData) {
     // 边界检查
     if (mftRecord.size() < sizeof(FILE_RECORD_HEADER)) {
-        cout << "Error: MFT record too small." << endl;
+        cout << "错误：MFT 记录太小。" << endl;
         return false;
     }
 
@@ -122,7 +122,7 @@ bool MFTParser::ExtractFileData(vector<BYTE>& mftRecord, vector<BYTE>& fileData)
 
     // 检查签名（宽松 - 仅警告）
     if (header->Signature != 'ELIF') {
-        cout << "Warning: MFT record signature invalid (0x" << hex << header->Signature << dec << ")" << endl;
+        cout << "警告：MFT 记录签名无效 (0x" << hex << header->Signature << dec << ")" << endl;
         headerCorrupted = true;
     }
 
@@ -131,13 +131,13 @@ bool MFTParser::ExtractFileData(vector<BYTE>& mftRecord, vector<BYTE>& fileData)
 
     // UsedSize 验证（宽松）
     if (header->UsedSize == 0) {
-        cout << "Error: MFT record UsedSize is 0, record appears wiped." << endl;
+        cout << "错误：MFT 记录的 UsedSize 为 0，记录似乎已被清除。" << endl;
         return false;
     }
 
     if (header->UsedSize > mftRecord.size()) {
-        cout << "Warning: UsedSize (" << header->UsedSize << ") > record size ("
-             << mftRecord.size() << "), using actual size." << endl;
+        cout << "警告：UsedSize (" << header->UsedSize << ") > 记录大小 ("
+             << mftRecord.size() << ")，使用实际大小。" << endl;
         headerCorrupted = true;
         // 使用实际记录大小而不是 UsedSize
     } else {
@@ -146,22 +146,22 @@ bool MFTParser::ExtractFileData(vector<BYTE>& mftRecord, vector<BYTE>& fileData)
 
     // FirstAttributeOffset 验证（严格 - 必须在有效范围内）
     if (header->FirstAttributeOffset < sizeof(FILE_RECORD_HEADER)) {
-        cout << "Error: FirstAttributeOffset too small, record severely corrupted." << endl;
+        cout << "错误：FirstAttributeOffset 太小，记录严重损坏。" << endl;
         return false;
     }
 
     if (header->FirstAttributeOffset >= effectiveRecordEnd) {
-        cout << "Error: FirstAttributeOffset out of bounds, record severely corrupted." << endl;
+        cout << "错误：FirstAttributeOffset 超出边界，记录严重损坏。" << endl;
         return false;
     }
 
     if (headerCorrupted) {
-        cout << "Attempting to extract data despite header corruption..." << endl;
+        cout << "尝试在头部损坏的情况下提取数据..." << endl;
     }
 
     // 检查文件是否已被删除
     if (!(header->Flags & 0x01)) {
-        cout << "File record is marked as deleted." << endl;
+        cout << "文件记录已标记为删除。" << endl;
     }
 
     // 遍历属性找到DATA属性
@@ -190,7 +190,7 @@ bool MFTParser::ExtractFileData(vector<BYTE>& mftRecord, vector<BYTE>& fileData)
                 // 常驻属性 - 数据直接存储在MFT记录中
                 // 安全检查：确保有足够空间读取 RESIDENT_ATTRIBUTE
                 if (attrPtr + sizeof(ATTRIBUTE_HEADER) + sizeof(RESIDENT_ATTRIBUTE) > recordEnd) {
-                    cout << "Error: Not enough space for RESIDENT_ATTRIBUTE structure" << endl;
+                    cout << "错误：没有足够空间读取 RESIDENT_ATTRIBUTE 结构" << endl;
                     return false;
                 }
 
@@ -198,43 +198,43 @@ bool MFTParser::ExtractFileData(vector<BYTE>& mftRecord, vector<BYTE>& fileData)
 
                 // 安全检查：验证 ValueOffset 和 ValueLength 在有效范围内
                 if (resAttr->ValueLength == 0) {
-                    cout << "Warning: Resident attribute has zero length" << endl;
+                    cout << "警告：常驻属性长度为零" << endl;
                     fileData.clear();
                     return true;  // 空文件，但不算错误
                 }
 
                 // 检查数据是否越界
                 if (attrPtr + resAttr->ValueOffset + resAttr->ValueLength > recordEnd) {
-                    cout << "Error: Resident data extends beyond record boundary" << endl;
+                    cout << "错误：常驻数据超出记录边界" << endl;
                     cout << "  ValueOffset: " << resAttr->ValueOffset << endl;
                     cout << "  ValueLength: " << resAttr->ValueLength << endl;
-                    cout << "  Available space: " << (recordEnd - attrPtr) << endl;
+                    cout << "  可用空间: " << (recordEnd - attrPtr) << endl;
                     return false;
                 }
 
                 BYTE* data = attrPtr + resAttr->ValueOffset;
                 fileData.resize(resAttr->ValueLength);
                 memcpy(fileData.data(), data, resAttr->ValueLength);
-                cout << "File data is resident. Size: " << resAttr->ValueLength << " bytes" << endl;
+                cout << "文件数据是常驻的。大小: " << resAttr->ValueLength << " 字节" << endl;
                 return true;
             } else {
                 // 非常驻属性 - 数据存储在集群中
                 PNONRESIDENT_ATTRIBUTE nonResAttr = (PNONRESIDENT_ATTRIBUTE)(attrPtr + sizeof(ATTRIBUTE_HEADER));
                 BYTE* dataRun = attrPtr + nonResAttr->DataRunOffset;
 
-                cout << "File data is non-resident. Real size: " << nonResAttr->RealSize << " bytes" << endl;
+                cout << "文件数据是非常驻的。实际大小: " << nonResAttr->RealSize << " 字节" << endl;
 
                 // 解析数据运行
                 vector<pair<ULONGLONG, ULONGLONG>> runs;
                 if (!ParseDataRuns(dataRun, runs)) {
-                    cout << "Error: Failed to parse data runs." << endl;
-                    cout << "Possible causes:" << endl;
-                    cout << "  - Data run information is corrupted" << endl;
-                    cout << "  - File metadata has been overwritten" << endl;
+                    cout << "错误：解析数据运行失败。" << endl;
+                    cout << "可能的原因：" << endl;
+                    cout << "  - 数据运行信息已损坏" << endl;
+                    cout << "  - 文件元数据已被覆盖" << endl;
                     return false;
                 }
 
-                cout << "Found " << runs.size() << " data run(s) to read." << endl;
+                cout << "找到 " << runs.size() << " 个数据运行需要读取。" << endl;
 
                 // 读取所有数据运行
                 fileData.clear();
@@ -245,37 +245,37 @@ bool MFTParser::ExtractFileData(vector<BYTE>& mftRecord, vector<BYTE>& fileData)
 
                 for (size_t i = 0; i < runs.size(); i++) {
                     auto& run = runs[i];
-                    cout << "Reading data run " << (i + 1) << "/" << runs.size()
-                         << ": LCN=" << run.first << ", Clusters=" << run.second << endl;
+                    cout << "正在读取数据运行 " << (i + 1) << "/" << runs.size()
+                         << ": LCN=" << run.first << ", 簇数=" << run.second << endl;
 
                     vector<BYTE> clusterData;
                     if (reader->ReadClusters(run.first, run.second, clusterData)) {
                         fileData.insert(fileData.end(), clusterData.begin(), clusterData.end());
                         totalReadSize += clusterData.size();
                         successfulRuns++;
-                        cout << "  Success: Read " << clusterData.size() << " bytes" << endl;
+                        cout << "  成功：读取了 " << clusterData.size() << " 字节" << endl;
                     } else {
                         failedRuns++;
-                        cout << "  ERROR: Failed to read cluster run at LCN " << run.first << endl;
-                        cout << "  Possible causes:" << endl;
-                        cout << "    - Clusters have been overwritten by new files" << endl;
-                        cout << "    - LCN is out of volume range" << endl;
-                        cout << "    - Physical disk read error" << endl;
+                        cout << "  错误：无法读取 LCN " << run.first << " 处的簇运行" << endl;
+                        cout << "  可能的原因：" << endl;
+                        cout << "    - 簇已被新文件覆盖" << endl;
+                        cout << "    - LCN 超出卷范围" << endl;
+                        cout << "    - 物理磁盘读取错误" << endl;
                     }
                 }
 
                 cout << endl;
-                cout << "Data run summary:" << endl;
-                cout << "  Successful: " << successfulRuns << "/" << runs.size() << endl;
-                cout << "  Failed: " << failedRuns << "/" << runs.size() << endl;
-                cout << "  Total read: " << totalReadSize << " bytes" << endl;
-                cout << "  Expected: " << totalExpectedSize << " bytes" << endl;
+                cout << "数据运行摘要:" << endl;
+                cout << "  成功: " << successfulRuns << "/" << runs.size() << endl;
+                cout << "  失败: " << failedRuns << "/" << runs.size() << endl;
+                cout << "  总读取: " << totalReadSize << " 字节" << endl;
+                cout << "  预期: " << totalExpectedSize << " 字节" << endl;
 
                 // 如果有任何数据运行失败，返回失败
                 if (failedRuns > 0) {
                     cout << endl;
-                    cout << "Recovery failed: Unable to read all data runs." << endl;
-                    cout << "The file data has likely been overwritten." << endl;
+                    cout << "恢复失败：无法读取所有数据运行。" << endl;
+                    cout << "文件数据可能已被覆盖。" << endl;
                     return false;
                 }
 
@@ -285,7 +285,7 @@ bool MFTParser::ExtractFileData(vector<BYTE>& mftRecord, vector<BYTE>& fileData)
                 }
 
                 if (fileData.empty()) {
-                    cout << "Error: No data was recovered." << endl;
+                    cout << "错误：没有恢复到任何数据。" << endl;
                     return false;
                 }
 
@@ -296,8 +296,8 @@ bool MFTParser::ExtractFileData(vector<BYTE>& mftRecord, vector<BYTE>& fileData)
         attrPtr += attr->Length;
     }
 
-    cout << "Error: No DATA attribute found in MFT record." << endl;
-    cout << "This file may be a directory or have no data stream." << endl;
+    cout << "错误：在 MFT 记录中未找到 DATA 属性。" << endl;
+    cout << "这个文件可能是目录或没有数据流。" << endl;
     return false;
 }
 
@@ -366,7 +366,7 @@ wstring MFTParser::GetFileNameFromRecord(vector<BYTE>& mftRecord, ULONGLONG& par
 
     // 边界检查: 确保记录大小足够
     if (mftRecord.size() < sizeof(FILE_RECORD_HEADER)) {
-        if (enableDebug) LOG_DEBUG("Record size too small");
+        if (enableDebug) LOG_DEBUG("记录大小太小");
         return L"";
     }
 
@@ -381,8 +381,8 @@ wstring MFTParser::GetFileNameFromRecord(vector<BYTE>& mftRecord, ULONGLONG& par
 
     // 放宽签名检查：对于已删除的文件，签名可能不完整
     // 只要记录头的其他字段看起来合理，就尝试提取文件名
-    if (header->Signature != 'ELIF') {  // 'FILE' in little-endian
-        if (enableDebug) LOG_DEBUG_FMT("Warning: Invalid signature 0x%08X, but continuing...", header->Signature);
+    if (header->Signature != 'ELIF') {  // 小端序的 'FILE'
+        if (enableDebug) LOG_DEBUG_FMT("警告：无效的签名 0x%08X，但继续处理...", header->Signature);
         // 不再直接返回，而是继续尝试提取文件名
     }
 
@@ -395,20 +395,20 @@ wstring MFTParser::GetFileNameFromRecord(vector<BYTE>& mftRecord, ULONGLONG& par
     while (attrPtr < recordEnd) {
         // 边界检查: 确保有足够空间读取属性头
         if (attrPtr + sizeof(ATTRIBUTE_HEADER) > recordEnd) {
-            if (enableDebug) LOG_DEBUG_FMT("Not enough space for attribute header (attr %d)", attrCount);
+            if (enableDebug) LOG_DEBUG_FMT("没有足够空间读取属性头 (属性 %d)", attrCount);
             break;
         }
 
         PATTRIBUTE_HEADER attr = (PATTRIBUTE_HEADER)attrPtr;
 
         if (attr->Type == AttributeEndOfList) {
-            if (enableDebug) LOG_DEBUG_FMT("Reached end of attributes (total %d attributes)", attrCount);
+            if (enableDebug) LOG_DEBUG_FMT("到达属性列表末尾（共 %d 个属性）", attrCount);
             break;
         }
 
         // 安全检查：确保不会无限循环和越界
         if (attr->Length == 0 || attr->Length > (DWORD)(recordEnd - attrPtr)) {
-            if (enableDebug) LOG_DEBUG_FMT("Invalid attribute length: %u at attr %d", attr->Length, attrCount);
+            if (enableDebug) LOG_DEBUG_FMT("无效的属性长度：%u 在属性 %d 处", attr->Length, attrCount);
             break;
         }
 
@@ -420,7 +420,7 @@ wstring MFTParser::GetFileNameFromRecord(vector<BYTE>& mftRecord, ULONGLONG& par
 
             // 边界检查: 确保有足够空间读取FileName属性
             if (attrPtr + sizeof(ATTRIBUTE_HEADER) + sizeof(RESIDENT_ATTRIBUTE) > recordEnd) {
-                if (enableDebug) LOG_DEBUG("Not enough space for RESIDENT_ATTRIBUTE");
+                if (enableDebug) LOG_DEBUG("没有足够空间读取 RESIDENT_ATTRIBUTE");
                 attrPtr += attr->Length;
                 attrCount++;
                 continue;
@@ -428,12 +428,12 @@ wstring MFTParser::GetFileNameFromRecord(vector<BYTE>& mftRecord, ULONGLONG& par
 
             PRESIDENT_ATTRIBUTE resAttr = (PRESIDENT_ATTRIBUTE)(attrPtr + sizeof(ATTRIBUTE_HEADER));
 
-            if (enableDebug) LOG_DEBUG_FMT("FileName attr: ValueOffset=%u, ValueLength=%u",
+            if (enableDebug) LOG_DEBUG_FMT("FileName 属性: ValueOffset=%u, ValueLength=%u",
                                            resAttr->ValueOffset, resAttr->ValueLength);
 
             // 检查ValueOffset是否在有效范围内
             if (attrPtr + resAttr->ValueOffset + sizeof(FILE_NAME_ATTRIBUTE) > recordEnd) {
-                if (enableDebug) LOG_DEBUG("ValueOffset out of range");
+                if (enableDebug) LOG_DEBUG("ValueOffset 超出范围");
                 attrPtr += attr->Length;
                 attrCount++;
                 continue;
@@ -453,15 +453,15 @@ wstring MFTParser::GetFileNameFromRecord(vector<BYTE>& mftRecord, ULONGLONG& par
                     parentDir = fileNameAttr->ParentDirectory & 0xFFFFFFFFFFFF;
                     wstring fileName(fileNameAttr->FileName, fileNameAttr->FileNameLength);
 
-                    if (enableDebug) LOG_DEBUG_FMT("Successfully extracted filename, length=%u",
+                    if (enableDebug) LOG_DEBUG_FMT("成功提取文件名，长度=%u",
                                                    fileNameAttr->FileNameLength);
 
                     return fileName;
                 } else {
-                    if (enableDebug) LOG_DEBUG("FileName array out of range");
+                    if (enableDebug) LOG_DEBUG("FileName 数组超出范围");
                 }
             } else {
-                if (enableDebug) LOG_DEBUG_FMT("Invalid FileNameLength: %u", fileNameAttr->FileNameLength);
+                if (enableDebug) LOG_DEBUG_FMT("无效的 FileNameLength: %u", fileNameAttr->FileNameLength);
             }
         }
 
@@ -470,13 +470,13 @@ wstring MFTParser::GetFileNameFromRecord(vector<BYTE>& mftRecord, ULONGLONG& par
 
         // 防止无限循环
         if (attrCount > 100) {
-            if (enableDebug) LOG_WARNING("Too many attributes (>100), breaking");
+            if (enableDebug) LOG_WARNING("属性太多（>100），中断处理");
             break;
         }
     }
 
     if (enableDebug && !foundFileName) {
-        LOG_DEBUG_FMT("No FileName attribute found in %d attributes", attrCount);
+        LOG_DEBUG_FMT("在 %d 个属性中未找到 FileName 属性", attrCount);
     }
 
     return L"";

@@ -24,6 +24,12 @@ SignatureScanThreadPool::SignatureScanThreadPool(
     , totalTasks(0)
     , totalFilesFound(0)
     , totalBytesScanned(0)
+    , mlClassifier(nullptr)
+    , mlEnhancedCount(0)
+    , mlMatchCount(0)
+    , mlMismatchCount(0)
+    , mlSkippedCount(0)
+    , mlUnknownCount(0)
 {
     // 如果启用自动检测，计算最优线程数
     if (config.autoDetectThreads) {
@@ -239,6 +245,14 @@ void SignatureScanThreadPool::ScanChunk(const ScanTask& task,
                         }
                     }
 
+                    // 特殊检查：OLE Compound Document (doc/xls/ppt 共享相同魔数)
+                    // 只检测为 "doc"，由 ML 分类器区分具体类型
+                    if ((sig->extension == "xls" || sig->extension == "ppt") && remaining >= 8) {
+                        // 跳过 xls/ppt 签名，让 doc 签名处理所有 OLE 文件
+                        // ML 分类器会在后续正确识别文件类型
+                        continue;
+                    }
+
                     // 估算文件大小
                     ULONGLONG estimatedSize = EstimateFileSize(data + offset, remaining, *sig);
 
@@ -260,6 +274,12 @@ void SignatureScanThreadPool::ScanChunk(const ScanTask& task,
                         info.description = sig->description;
                         info.hasValidFooter = false;  // 简化版不查找footer
                         info.confidence = confidence;
+
+                        // 使用ML增强验证（如果启用）
+                        if (IsMLEnabled()) {
+                            size_t mlDataSize = (size_t)(std::min)(remaining, (size_t)4096);
+                            EnhanceWithML(data + offset, mlDataSize, info);
+                        }
 
                         localResults.push_back(info);
 
@@ -292,7 +312,7 @@ bool SignatureScanThreadPool::MatchSignature(const BYTE* data, size_t dataSize,
 // ============================================================================
 ULONGLONG SignatureScanThreadPool::EstimateFileSize(const BYTE* data, size_t dataSize,
                                                      const FileSignature& sig) {
-    // 特殊格式处理
+    // 特殊格式处理（BMP/AVI/WAV从文件头读取大小）
     if (sig.extension == "bmp" && dataSize >= 6) {
         DWORD size = *(DWORD*)(data + 2);
         if (size > sig.minSize && size <= sig.maxSize && size <= dataSize) {
@@ -318,7 +338,7 @@ ULONGLONG SignatureScanThreadPool::EstimateFileSize(const BYTE* data, size_t dat
         }
     }
 
-    // 默认：使用保守估计（可用数据大小的一部分或最大大小）
+    // 默认：使用保守估计（取可用数据大小和最大大小的较小值）
     return min((ULONGLONG)dataSize, sig.maxSize);
 }
 
@@ -329,7 +349,7 @@ double SignatureScanThreadPool::ValidateFile(const BYTE* data, size_t dataSize,
                                               const FileSignature& sig) {
     double confidence = 0.8;  // 基础置信度（签名已匹配）
 
-    // 特定格式额外验证
+    // 特定格式额外验证（检查各格式特有结构）
     if (sig.extension == "jpg" && dataSize >= 10) {
         if ((data[3] == 0xE0 || data[3] == 0xE1) && data[6] == 0x4A) {
             confidence += 0.1;
@@ -359,6 +379,76 @@ double SignatureScanThreadPool::ValidateFile(const BYTE* data, size_t dataSize,
     }
 
     return min(1.0, confidence);
+}
+
+// ============================================================================
+// ML增强验证
+// ============================================================================
+void SignatureScanThreadPool::EnhanceWithML(const BYTE* data, size_t dataSize,
+                                             CarvedFileInfo& info) {
+    if (!mlClassifier || !mlClassifier->isLoaded()) {
+        return;
+    }
+
+    // 检查签名检测到的类型是否在ML模型支持范围内
+    // 特殊处理：OLE文件(doc)需要检查xls/ppt是否也支持
+    bool isOleFile = (info.extension == "doc");
+    if (!isOleFile && !mlClassifier->isTypeSupported(info.extension)) {
+        // 类型不被ML支持，跳过分类，不计入统计
+        mlSkippedCount++;
+        return;
+    }
+
+    try {
+        auto result = mlClassifier->classify(data, dataSize);
+        if (result && result->isValid()) {
+            // 保存ML分类结果
+            info.mlClassification = result->predictedType;
+            info.mlConfidence = result->confidence;
+
+            // 如果ML标记为unknown（低置信度），不参与匹配统计
+            if (result->isUnknown) {
+                mlUnknownCount++;
+                return;
+            }
+
+            // 特殊处理：OLE文件类型细化
+            // 如果签名检测为doc，但ML高置信度判断为xls/ppt，则更新类型
+            if (isOleFile && result->confidence > config.mlConfidenceThreshold) {
+                if (result->predictedType == "xls" || result->predictedType == "ppt") {
+                    info.extension = result->predictedType;
+                    info.description = (result->predictedType == "xls") ?
+                        "Microsoft Excel Spreadsheet (ML refined)" :
+                        "Microsoft PowerPoint Presentation (ML refined)";
+                    info.confidence = (std::min)(1.0, info.confidence + 0.15 * result->confidence);
+                    mlMatchCount++;
+                    mlEnhancedCount++;
+                    return;
+                } else if (result->predictedType == "doc") {
+                    info.confidence = (std::min)(1.0, info.confidence + 0.1 * result->confidence);
+                    mlMatchCount++;
+                    mlEnhancedCount++;
+                    return;
+                }
+            }
+
+            // 如果ML预测与签名检测一致，提高置信度
+            if (result->predictedType == info.extension) {
+                info.confidence = (std::min)(1.0, info.confidence + 0.1 * result->confidence);
+                mlMatchCount++;
+            }
+            // 如果ML高置信度预测与签名不一致，轻微降低置信度
+            else if (result->confidence > config.mlConfidenceThreshold) {
+                info.confidence *= 0.9;  // 轻微降低置信度
+                mlMismatchCount++;
+            }
+
+            mlEnhancedCount++;
+        }
+    }
+    catch (const std::exception& e) {
+        LOG_DEBUG_FMT("ML classification error: %s", e.what());
+    }
 }
 
 // ============================================================================
@@ -458,10 +548,10 @@ double SignatureScanThreadPool::GetProgress() const {
 int SignatureScanThreadPool::GetOptimalThreadCount() {
     int cores = ThreadPoolUtils::GetLogicalCoreCount();
 
-    // 对于高端CPU（16线程及以上），使用 cores - 4
-    // 对于中端CPU（8-15线程），使用 cores - 2
-    // 对于低端CPU（4-7线程），使用 cores - 1
-    // 最少使用2个线程
+    // 高端CPU（16线程及以上）：使用 cores - 4，留4个给系统和I/O
+    // 中端CPU（8-15线程）：使用 cores - 2
+    // 低端CPU（4-7线程）：使用 cores - 1
+    // 最少使用2个工作线程
 
     int optimalCount;
     if (cores >= 16) {
@@ -491,7 +581,7 @@ int GetLogicalCoreCount() {
 }
 
 int GetPhysicalCoreCount() {
-    // 简化实现：假设超线程比例为2:1
+    // 简化实现：假设超线程比例为2:1（物理核心数约为逻辑核心数的一半）
     return max(1, GetLogicalCoreCount() / 2);
 }
 
@@ -501,7 +591,7 @@ ULONGLONG GetAvailableMemoryMB() {
     if (GlobalMemoryStatusEx(&memStatus)) {
         return memStatus.ullAvailPhys / (1024 * 1024);
     }
-    return 4096;  // 默认4GB
+    return 4096;  // 获取失败时默认返回4GB
 }
 
 ScanThreadPoolConfig GetOptimalConfig() {
@@ -510,7 +600,7 @@ ScanThreadPoolConfig GetOptimalConfig() {
     int cores = GetLogicalCoreCount();
     ULONGLONG availMem = GetAvailableMemoryMB();
 
-    // 根据CPU核心数设置工作线程
+    // 根据CPU核心数设置工作线程数和相关参数
     if (cores >= 16) {
         config.workerCount = 12;
         config.chunkSize = 8 * 1024 * 1024;   // 8MB
@@ -530,11 +620,11 @@ ScanThreadPoolConfig GetOptimalConfig() {
     }
 
     // 根据可用内存调整队列大小
-    // 每个任务最多占用 chunkSize 内存
-    ULONGLONG maxMemoryForQueue = availMem / 4;  // 最多使用25%可用内存
+    // 每个任务最多占用 chunkSize 内存，限制使用25%可用内存
+    ULONGLONG maxMemoryForQueue = availMem / 4;
     size_t maxQueueByMem = (size_t)(maxMemoryForQueue * 1024 * 1024 / config.chunkSize);
     config.maxQueueSize = min(config.maxQueueSize, maxQueueByMem);
-    config.maxQueueSize = max(config.maxQueueSize, (size_t)4);  // 至少4个任务
+    config.maxQueueSize = max(config.maxQueueSize, (size_t)4);  // 队列至少保持4个任务
 
     LOG_INFO_FMT("Optimal config: %d workers, %zu MB chunks, %zu max queue (Cores: %d, Mem: %llu MB)",
                  config.workerCount, config.chunkSize / (1024 * 1024),

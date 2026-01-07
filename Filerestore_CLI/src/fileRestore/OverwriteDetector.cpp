@@ -1,6 +1,7 @@
 ﻿#include "OverwriteDetector.h"
 #include "OverwriteDetectionThreadPool.h"
 #include "Logger.h"
+#include "../utils/LocalizationManager.h"
 #include <iostream>
 #include <iomanip>
 #include <cmath>
@@ -19,7 +20,7 @@ OverwriteDetector::OverwriteDetector(MFTReader* mftReader)
       threadPool(nullptr) {
     bytesPerCluster = reader->GetBytesPerSector() * reader->GetSectorsPerCluster();
     threadPool = new OverwriteDetectionThreadPool(this);
-    LOG_DEBUG("OverwriteDetector initialized with multi-threading support");
+    LOG_DEBUG("OverwriteDetector 已初始化，支持多线程");
 }
 
 OverwriteDetector::~OverwriteDetector() {
@@ -70,81 +71,81 @@ bool OverwriteDetector::HasValidFileStructure(const vector<BYTE>& data) {
     if (data.size() < 16) return false;
 
     // 检查常见文件签名
-    // JPEG: FF D8 FF
+    // JPEG: FF D8 FF（JPEG图像）
     if (data.size() >= 3 && data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF) {
         return true;
     }
 
-    // PNG: 89 50 4E 47
+    // PNG: 89 50 4E 47（PNG图像）
     if (data.size() >= 4 && data[0] == 0x89 && data[1] == 0x50 &&
         data[2] == 0x4E && data[3] == 0x47) {
         return true;
     }
 
-    // PDF: 25 50 44 46 (%PDF)
+    // PDF: 25 50 44 46 (%PDF)（PDF文档）
     if (data.size() >= 4 && data[0] == 0x25 && data[1] == 0x50 &&
         data[2] == 0x44 && data[3] == 0x46) {
         return true;
     }
 
-    // ZIP/DOCX/XLSX/PPTX: 50 4B 03 04
+    // ZIP/DOCX/XLSX/PPTX: 50 4B 03 04（ZIP压缩包/Office文档）
     if (data.size() >= 4 && data[0] == 0x50 && data[1] == 0x4B &&
         data[2] == 0x03 && data[3] == 0x04) {
         return true;
     }
 
-    // 7z: 37 7A BC AF 27 1C
+    // 7z: 37 7A BC AF 27 1C（7-Zip压缩包）
     if (data.size() >= 6 && data[0] == 0x37 && data[1] == 0x7A &&
         data[2] == 0xBC && data[3] == 0xAF && data[4] == 0x27 && data[5] == 0x1C) {
         return true;
     }
 
-    // RAR: 52 61 72 21 1A 07
+    // RAR: 52 61 72 21 1A 07（RAR压缩包）
     if (data.size() >= 6 && data[0] == 0x52 && data[1] == 0x61 &&
         data[2] == 0x72 && data[3] == 0x21 && data[4] == 0x1A && data[5] == 0x07) {
         return true;
     }
 
-    // GZ: 1F 8B
+    // GZ: 1F 8B（Gzip压缩）
     if (data.size() >= 2 && data[0] == 0x1F && data[1] == 0x8B) {
         return true;
     }
 
-    // BZ2: 42 5A 68 (BZh)
+    // BZ2: 42 5A 68 (BZh)（Bzip2压缩）
     if (data.size() >= 3 && data[0] == 0x42 && data[1] == 0x5A && data[2] == 0x68) {
         return true;
     }
 
-    // XZ: FD 37 7A 58 5A 00
+    // XZ: FD 37 7A 58 5A 00（XZ压缩）
     if (data.size() >= 6 && data[0] == 0xFD && data[1] == 0x37 &&
         data[2] == 0x7A && data[3] == 0x58 && data[4] == 0x5A && data[5] == 0x00) {
         return true;
     }
 
-    // EXE/DLL: 4D 5A (MZ)
+    // EXE/DLL: 4D 5A (MZ)（Windows可执行文件）
     if (data.size() >= 2 && data[0] == 0x4D && data[1] == 0x5A) {
         return true;
     }
 
-    // MP4/MOV: 00 00 00 xx 66 74 79 70 (ftyp)
+    // MP4/MOV: 00 00 00 xx 66 74 79 70 (ftyp)（MP4/MOV视频）
     if (data.size() >= 8 && data[4] == 0x66 && data[5] == 0x74 &&
         data[6] == 0x79 && data[7] == 0x70) {
         return true;
     }
 
-    // AVI: 52 49 46 46 ... 41 56 49 20 (RIFF...AVI )
+    // AVI: 52 49 46 46 ... 41 56 49 20 (RIFF...AVI )（AVI视频）
     if (data.size() >= 12 && data[0] == 0x52 && data[1] == 0x49 &&
         data[2] == 0x46 && data[3] == 0x46 && data[8] == 0x41 &&
         data[9] == 0x56 && data[10] == 0x49 && data[11] == 0x20) {
         return true;
     }
 
-    // MP3: FF FB, FF FA, FF F3, FF F2, or ID3
+    // MP3: FF FB, FF FA, FF F3, FF F2, 或 ID3（MP3音频）
     if (data.size() >= 3) {
         if ((data[0] == 0xFF && (data[1] & 0xE0) == 0xE0)) {
             return true;
         }
-        if (data[0] == 0x49 && data[1] == 0x44 && data[2] == 0x33) { // ID3
+        if (data[0] == 0x49 && data[1] == 0x44 && data[2] == 0x33) { // ID3标签
             return true;
         }
     }
@@ -170,7 +171,7 @@ bool OverwriteDetector::HasValidFileStructure(const vector<BYTE>& data) {
 // 检查簇是否已分配给其他文件（通过读取$Bitmap）
 bool OverwriteDetector::CheckClusterAllocation(ULONGLONG clusterNumber) {
     // TODO: 实现$Bitmap读取功能
-    // 这需要读取MFT记录#6 ($Bitmap)，检查对应位是否为1
+    // 这需要读取MFT记录#6（$Bitmap），检查对应位是否为1
     // 暂时返回false（假设未分配）
     return false;
 }
@@ -209,13 +210,13 @@ bool OverwriteDetector::ExtractDataRuns(const vector<BYTE>& mftRecord,
     runs.clear();
 
     if (mftRecord.size() < sizeof(FILE_RECORD_HEADER)) {
-        LOG_ERROR("MFT record too small");
+        LOG_ERROR("MFT记录太小");
         return false;
     }
 
     PFILE_RECORD_HEADER header = (PFILE_RECORD_HEADER)mftRecord.data();
 
-    // 遍历属性，查找$DATA属性
+    // 遍历属性，查找$DATA（数据）属性
     BYTE* attrPtr = (BYTE*)mftRecord.data() + header->FirstAttributeOffset;
     BYTE* recordEnd = (BYTE*)mftRecord.data() + header->UsedSize;
 
@@ -234,11 +235,11 @@ bool OverwriteDetector::ExtractDataRuns(const vector<BYTE>& mftRecord,
             break;
         }
 
-        // 找到$DATA属性且为非常驻
+        // 找到$DATA属性且为非常驻（数据存储在簇中而非MFT记录内）
         if (attr->Type == AttributeData && attr->NonResident) {
             PNONRESIDENT_ATTRIBUTE nonResAttr = (PNONRESIDENT_ATTRIBUTE)(attrPtr + sizeof(ATTRIBUTE_HEADER));
 
-            // 解析Data Runs
+            // 解析数据运行列表（Data Runs）
             BYTE* runList = attrPtr + sizeof(ATTRIBUTE_HEADER) + nonResAttr->DataRunOffset;
             ULONGLONG currentLCN = 0;
 
@@ -256,11 +257,11 @@ bool OverwriteDetector::ExtractDataRuns(const vector<BYTE>& mftRecord,
                     break;
                 }
 
-                // 读取簇数量
+                // 读取连续簇的数量
                 ULONGLONG runLength = ReadVariableLength(runList, lengthBytes);
                 runList += lengthBytes;
 
-                // 读取LCN偏移
+                // 读取逻辑簇号（LCN）偏移
                 LONGLONG lcnOffset = ReadVariableLengthSigned(runList, offsetBytes);
                 runList += offsetBytes;
 
@@ -285,14 +286,14 @@ ClusterStatus OverwriteDetector::CheckCluster(ULONGLONG clusterNumber) {
     status.isOverwritten = false;
     status.isAllocated = false;
     status.dataEntropy = 0.0;
-    status.overwriteReason = "Unknown";
+    status.overwriteReason = "未知";
 
     // 读取簇数据
     vector<BYTE> clusterData;
     if (!reader->ReadClusters(clusterNumber, 1, clusterData)) {
         status.isOverwritten = true;
-        status.overwriteReason = "Failed to read cluster";
-        LOG_WARNING_FMT("Failed to read cluster %llu", clusterNumber);
+        status.overwriteReason = "无法读取簇";
+        LOG_WARNING_FMT("无法读取簇 %llu", clusterNumber);
         return status;
     }
 
@@ -300,7 +301,7 @@ ClusterStatus OverwriteDetector::CheckCluster(ULONGLONG clusterNumber) {
     if (IsAllZeros(clusterData)) {
         status.isOverwritten = true;
         status.dataEntropy = 0.0;
-        status.overwriteReason = "All zeros (formatted or wiped)";
+        status.overwriteReason = "全为零（已格式化或已擦除）";
         return status;
     }
 
@@ -308,7 +309,7 @@ ClusterStatus OverwriteDetector::CheckCluster(ULONGLONG clusterNumber) {
     if (IsAllSameValue(clusterData)) {
         status.isOverwritten = true;
         status.dataEntropy = 0.0;
-        status.overwriteReason = "All same value (wiped)";
+        status.overwriteReason = "全为相同值（已擦除）";
         return status;
     }
 
@@ -337,44 +338,44 @@ ClusterStatus OverwriteDetector::CheckCluster(ULONGLONG clusterNumber) {
         // 极高的熵值（接近理论最大值8.0），极可能是真正的随机数据
         if (!hasValidStructure) {
             status.isOverwritten = true;
-            status.overwriteReason = "Extremely high entropy (>7.95), likely random/encrypted data";
+            status.overwriteReason = "极高熵值(>7.95)，可能是随机/加密数据";
         } else {
             status.isOverwritten = false;
-            status.overwriteReason = "Very high entropy but has valid structure (compressed/encrypted file)";
+            status.overwriteReason = "极高熵值但有有效结构（压缩/加密文件）";
         }
     } else if (status.dataEntropy > 7.5) {
         // 非常高的熵值（典型的压缩/加密文件范围）
         // 在这个范围内，优先考虑为合法的压缩/加密数据
         if (hasValidStructure) {
             status.isOverwritten = false;
-            status.overwriteReason = "High entropy with valid structure (compressed/encrypted file)";
+            status.overwriteReason = "高熵值且有有效结构（压缩/加密文件）";
         } else {
             // 即使没有识别的文件结构，也不能确定是覆盖
             // 可能是：1) 碎片化文件的中间簇 2) 未识别的压缩格式
             status.isOverwritten = false;
-            status.overwriteReason = "High entropy (7.5-7.95), likely compressed/encrypted data";
+            status.overwriteReason = "高熵值(7.5-7.95)，可能是压缩/加密数据";
         }
     } else if (status.dataEntropy < 1.0) {
         // 非常低的熵值，可能被清零或填充
         status.isOverwritten = true;
-        status.overwriteReason = "Very low entropy (<1.0), likely wiped";
+        status.overwriteReason = "极低熵值(<1.0)，可能已被擦除";
     } else if (status.isAllocated) {
         // 已分配给其他文件
         status.isOverwritten = true;
-        status.overwriteReason = "Cluster allocated to another file";
+        status.overwriteReason = "簇已分配给其他文件";
     } else if (hasValidStructure) {
         // 包含有效的文件结构
         status.isOverwritten = false;
-        status.overwriteReason = "Contains valid file structure";
+        status.overwriteReason = "包含有效的文件结构";
     } else {
         // 中等熵值 (1.0 - 7.5)
         // 只有在熵值非常高 (>7.2) 且无任何文件特征时才判定为覆盖
         if (status.dataEntropy > 7.2) {
             status.isOverwritten = true;
-            status.overwriteReason = "High entropy (>7.2) without recognizable structure";
+            status.overwriteReason = "高熵值(>7.2)且无可识别结构";
         } else {
             status.isOverwritten = false;
-            status.overwriteReason = "Medium entropy, possibly original data";
+            status.overwriteReason = "中等熵值，可能是原始数据";
         }
     }
 
@@ -397,84 +398,103 @@ vector<ClusterStatus> OverwriteDetector::CheckClusters(const vector<ULONGLONG>& 
 string OverwriteDetector::GetDetectionReport(const OverwriteDetectionResult& result) {
     ostringstream report;
 
-    report << "=== Overwrite Detection Report ===" << endl;
+    report << LOC_STR("overwrite.report_title") << endl;
 
     // 特殊情况：MFT记录无效
     if (result.totalClusters == 1 && result.overwrittenClusters == 1 && result.overwritePercentage == 100.0) {
-        report << "Status: [ERROR] Invalid MFT Record" << endl;
-        report << "The MFT record header is corrupted or invalid." << endl;
-        report << "This record may have been overwritten or never contained valid data." << endl;
+        report << LOC_STR("overwrite.status_error_invalid") << endl;
+        report << LOC_STR("overwrite.mft_corrupted") << endl;
+        report << LOC_STR("overwrite.may_overwritten") << endl;
         report << "===================================" << endl;
         return report.str();
     }
 
     // 特殊情况：常驻文件
     if (result.totalClusters == 0 && result.isFullyAvailable) {
-        report << "File Type: Resident File (data stored in MFT)" << endl;
-        report << "Total Clusters: 0 (no external data clusters)" << endl;
-        report << "Status: FULLY AVAILABLE - Data is in MFT record" << endl;
-        report << "Detection Time: " << fixed << setprecision(2) << result.detectionTimeMs << " ms" << endl;
+        report << LOC_STR("overwrite.file_type_resident") << endl;
+        report << LOC_STR("overwrite.total_clusters_zero") << endl;
+        report << LOC_STR("overwrite.status_fully_available_mft") << endl;
+        char timeBuffer[64];
+        snprintf(timeBuffer, sizeof(timeBuffer),
+                 LOC_STR("overwrite.detection_time").c_str(), result.detectionTimeMs);
+        report << timeBuffer << endl;
         report << "===================================" << endl;
         return report.str();
     }
 
     // 正常情况：非常驻文件
-    report << "Total Clusters: " << result.totalClusters << endl;
+    char buffer[256];
+    snprintf(buffer, sizeof(buffer), LOC_STR("overwrite.total_clusters").c_str(), result.totalClusters);
+    report << buffer << endl;
 
     // 显示采样信息
     if (result.usedSampling) {
-        report << "Sampled Clusters: " << result.sampledClusters
-               << " (" << (result.sampledClusters * 100 / max(1ULL, result.totalClusters)) << "% sampled)" << endl;
+        snprintf(buffer, sizeof(buffer), LOC_STR("overwrite.sampled_clusters").c_str(),
+                 result.sampledClusters, (result.sampledClusters * 100 / max(1ULL, result.totalClusters)));
+        report << buffer << endl;
     }
 
-    report << "Available Clusters: " << result.availableClusters << endl;
-    report << "Overwritten Clusters: " << result.overwrittenClusters << endl;
-    report << "Overwrite Percentage: " << fixed << setprecision(2) << result.overwritePercentage << "%" << endl;
+    snprintf(buffer, sizeof(buffer), LOC_STR("overwrite.available_clusters").c_str(), result.availableClusters);
+    report << buffer << endl;
+    snprintf(buffer, sizeof(buffer), LOC_STR("overwrite.overwritten_clusters").c_str(), result.overwrittenClusters);
+    report << buffer << endl;
+    snprintf(buffer, sizeof(buffer), LOC_STR("overwrite.overwrite_percentage").c_str(), result.overwritePercentage);
+    report << buffer << endl;
 
     // 显示存储类型
-    report << "Storage Type: " << GetStorageTypeName(result.detectedStorageType) << endl;
+    snprintf(buffer, sizeof(buffer), LOC_STR("overwrite.storage_type").c_str(),
+             GetStorageTypeName(result.detectedStorageType).c_str());
+    report << buffer << endl;
 
     // 显示多线程信息
     if (result.usedMultiThreading) {
-        report << "Multi-Threading: Enabled (" << result.threadCount << " threads)" << endl;
+        snprintf(buffer, sizeof(buffer), LOC_STR("overwrite.multi_threading_enabled").c_str(), result.threadCount);
+        report << buffer << endl;
     } else {
-        report << "Multi-Threading: Disabled" << endl;
+        report << LOC_STR("overwrite.multi_threading_disabled") << endl;
     }
 
     // 显示检测耗时
-    report << "Detection Time: " << fixed << setprecision(2) << result.detectionTimeMs << " ms" << endl;
+    snprintf(buffer, sizeof(buffer), LOC_STR("overwrite.detection_time").c_str(), result.detectionTimeMs);
+    report << buffer << endl;
 
     report << endl;
 
     if (result.isFullyAvailable) {
-        report << "Status: FULLY AVAILABLE - All data can be recovered" << endl;
+        report << LOC_STR("overwrite.status_fully_available") << endl;
     } else if (result.isPartiallyAvailable) {
-        report << "Status: PARTIALLY AVAILABLE - Some data can be recovered" << endl;
-        report << "Recovery Possibility: " << fixed << setprecision(1)
-               << (100.0 - result.overwritePercentage) << "%" << endl;
+        report << LOC_STR("overwrite.status_partially_available") << endl;
+        snprintf(buffer, sizeof(buffer), LOC_STR("overwrite.recovery_possibility").c_str(),
+                 (100.0 - result.overwritePercentage));
+        report << buffer << endl;
     } else {
-        report << "Status: NOT AVAILABLE - Data has been completely overwritten" << endl;
+        report << LOC_STR("overwrite.status_not_available") << endl;
     }
 
     report << endl;
 
     // 显示前10个簇的详细信息
     if (!result.clusterStatuses.empty()) {
-        report << "Cluster Details (first 10):" << endl;
+        report << LOC_STR("overwrite.cluster_details") << endl;
         size_t displayCount = min((size_t)10, result.clusterStatuses.size());
         for (size_t i = 0; i < displayCount; i++) {
             const ClusterStatus& status = result.clusterStatuses[i];
-            report << "  Cluster " << status.clusterNumber << ": ";
-            report << (status.isOverwritten ? "OVERWRITTEN" : "AVAILABLE");
-            report << " (Entropy: " << fixed << setprecision(2) << status.dataEntropy << ")";
-            report << " - " << status.overwriteReason << endl;
+            snprintf(buffer, sizeof(buffer), LOC_STR("overwrite.cluster_info").c_str(),
+                     status.clusterNumber,
+                     (status.isOverwritten ? LOC_STR("overwrite.cluster_overwritten").c_str()
+                                           : LOC_STR("overwrite.cluster_available").c_str()),
+                     status.dataEntropy,
+                     status.overwriteReason.c_str());
+            report << buffer << endl;
         }
 
         if (result.clusterStatuses.size() > 10) {
-            report << "  ... and " << (result.clusterStatuses.size() - 10) << " more clusters" << endl;
+            snprintf(buffer, sizeof(buffer), LOC_STR("overwrite.more_clusters").c_str(),
+                     result.clusterStatuses.size() - 10);
+            report << buffer << endl;
         }
     } else if (result.usedSampling) {
-        report << "Note: Detailed cluster information not available in sampling mode" << endl;
+        report << LOC_STR("overwrite.sampling_note") << endl;
     }
 
     report << "===================================" << endl;
@@ -526,27 +546,27 @@ bool OverwriteDetector::IsAllSameValueFromPointer(const BYTE* data, size_t size)
 bool OverwriteDetector::HasValidFileStructureFromPointer(const BYTE* data, size_t size) {
     if (size < 16) return false;
 
-    // 检查常见文件签名 (与 HasValidFileStructure 保持一致)
-    if (size >= 3 && data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF) return true;  // JPEG
-    if (size >= 4 && data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47) return true;  // PNG
-    if (size >= 4 && data[0] == 0x25 && data[1] == 0x50 && data[2] == 0x44 && data[3] == 0x46) return true;  // PDF
-    if (size >= 4 && data[0] == 0x50 && data[1] == 0x4B && data[2] == 0x03 && data[3] == 0x04) return true;  // ZIP
+    // 检查常见文件签名（与HasValidFileStructure保持一致）
+    if (size >= 3 && data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF) return true;  // JPEG图像
+    if (size >= 4 && data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47) return true;  // PNG图像
+    if (size >= 4 && data[0] == 0x25 && data[1] == 0x50 && data[2] == 0x44 && data[3] == 0x46) return true;  // PDF文档
+    if (size >= 4 && data[0] == 0x50 && data[1] == 0x4B && data[2] == 0x03 && data[3] == 0x04) return true;  // ZIP压缩包
     if (size >= 6 && data[0] == 0x37 && data[1] == 0x7A && data[2] == 0xBC &&
-        data[3] == 0xAF && data[4] == 0x27 && data[5] == 0x1C) return true;  // 7z
+        data[3] == 0xAF && data[4] == 0x27 && data[5] == 0x1C) return true;  // 7z压缩包
     if (size >= 6 && data[0] == 0x52 && data[1] == 0x61 && data[2] == 0x72 &&
-        data[3] == 0x21 && data[4] == 0x1A && data[5] == 0x07) return true;  // RAR
-    if (size >= 2 && data[0] == 0x1F && data[1] == 0x8B) return true;  // GZ
-    if (size >= 3 && data[0] == 0x42 && data[1] == 0x5A && data[2] == 0x68) return true;  // BZ2
+        data[3] == 0x21 && data[4] == 0x1A && data[5] == 0x07) return true;  // RAR压缩包
+    if (size >= 2 && data[0] == 0x1F && data[1] == 0x8B) return true;  // GZ压缩
+    if (size >= 3 && data[0] == 0x42 && data[1] == 0x5A && data[2] == 0x68) return true;  // BZ2压缩
     if (size >= 6 && data[0] == 0xFD && data[1] == 0x37 && data[2] == 0x7A &&
-        data[3] == 0x58 && data[4] == 0x5A && data[5] == 0x00) return true;  // XZ
-    if (size >= 2 && data[0] == 0x4D && data[1] == 0x5A) return true;  // EXE/DLL
+        data[3] == 0x58 && data[4] == 0x5A && data[5] == 0x00) return true;  // XZ压缩
+    if (size >= 2 && data[0] == 0x4D && data[1] == 0x5A) return true;  // EXE/DLL可执行文件
     if (size >= 8 && data[4] == 0x66 && data[5] == 0x74 &&
-        data[6] == 0x79 && data[7] == 0x70) return true;  // MP4/MOV
+        data[6] == 0x79 && data[7] == 0x70) return true;  // MP4/MOV视频
     if (size >= 12 && data[0] == 0x52 && data[1] == 0x49 && data[2] == 0x46 && data[3] == 0x46 &&
-        data[8] == 0x41 && data[9] == 0x56 && data[10] == 0x49 && data[11] == 0x20) return true;  // AVI
+        data[8] == 0x41 && data[9] == 0x56 && data[10] == 0x49 && data[11] == 0x20) return true;  // AVI视频
     if (size >= 3) {
-        if (data[0] == 0xFF && (data[1] & 0xE0) == 0xE0) return true;  // MP3
-        if (data[0] == 0x49 && data[1] == 0x44 && data[2] == 0x33) return true;  // ID3
+        if (data[0] == 0xFF && (data[1] & 0xE0) == 0xE0) return true;  // MP3音频
+        if (data[0] == 0x49 && data[1] == 0x44 && data[2] == 0x33) return true;  // ID3标签
     }
 
     // 检查可打印文本
@@ -564,12 +584,12 @@ bool OverwriteDetector::HasValidFileStructureFromPointer(const BYTE* data, size_
 
 // 存储类型检测
 StorageType OverwriteDetector::DetectStorageType() {
-    LOG_INFO("Detecting storage type...");
+    LOG_INFO("正在检测存储类型...");
 
     HANDLE volumeHandle = reader->GetVolumeHandle();
     if (volumeHandle == INVALID_HANDLE_VALUE) {
-        LOG_ERROR("Volume handle is invalid");
-        return STORAGE_SSD;  // 默认返回 SSD
+        LOG_ERROR("卷句柄无效");
+        return STORAGE_SSD;  // 默认返回SSD
     }
 
     // 第一步：从卷句柄获取物理驱动器号
@@ -590,26 +610,26 @@ StorageType OverwriteDetector::DetectStorageType() {
 
     if (!result) {
         DWORD error = GetLastError();
-        LOG_WARNING_FMT("Failed to get physical drive number (Error: %lu), defaulting to SSD", error);
+        LOG_WARNING_FMT("获取物理驱动器号失败（错误: %lu），默认使用SSD", error);
         return STORAGE_SSD;
     }
 
     if (diskExtents.NumberOfDiskExtents == 0) {
-        LOG_WARNING("No disk extents found, defaulting to SSD");
+        LOG_WARNING("未找到磁盘扩展，默认使用SSD");
         return STORAGE_SSD;
     }
 
     DWORD physicalDriveNumber = diskExtents.Extents[0].DiskNumber;
-    LOG_INFO_FMT("Physical drive number: %lu", physicalDriveNumber);
+    LOG_INFO_FMT("物理驱动器号: %lu", physicalDriveNumber);
 
     // 第二步：打开物理驱动器
     char physicalDrivePath[MAX_PATH];
     sprintf_s(physicalDrivePath, "\\\\.\\PhysicalDrive%lu", physicalDriveNumber);
-    LOG_DEBUG_FMT("Opening physical drive: %s", physicalDrivePath);
+    LOG_DEBUG_FMT("正在打开物理驱动器: %s", physicalDrivePath);
 
     HANDLE hPhysicalDrive = CreateFileA(
         physicalDrivePath,
-        0,  // 不需要读写权限，只需要查询
+        0,  // 不需要读写权限，只需要查询权限
         FILE_SHARE_READ | FILE_SHARE_WRITE,
         NULL,
         OPEN_EXISTING,
@@ -619,7 +639,7 @@ StorageType OverwriteDetector::DetectStorageType() {
 
     if (hPhysicalDrive == INVALID_HANDLE_VALUE) {
         DWORD error = GetLastError();
-        LOG_WARNING_FMT("Failed to open physical drive (Error: %lu), defaulting to SSD", error);
+        LOG_WARNING_FMT("打开物理驱动器失败（错误: %lu），默认使用SSD", error);
         return STORAGE_SSD;
     }
 
@@ -644,27 +664,27 @@ StorageType OverwriteDetector::DetectStorageType() {
         nullptr
     );
 
-    StorageType type = STORAGE_SSD;  // 默认 SSD
+    StorageType type = STORAGE_SSD;  // 默认SSD
 
     if (result && bytesReturned >= sizeof(DEVICE_SEEK_PENALTY_DESCRIPTOR)) {
         if (seekPenaltyDesc.IncursSeekPenalty) {
             type = STORAGE_HDD;
-            LOG_INFO("Storage Type Detected: HDD (mechanical hard drive)");
+            LOG_INFO("检测到存储类型: HDD（机械硬盘）");
         } else {
             // 进一步区分SATA SSD和NVMe SSD
             double latencyMs = MeasureRandomReadLatency();
-            LOG_INFO_FMT("Measured random read latency: %.2f ms", latencyMs);
+            LOG_INFO_FMT("测量的随机读取延迟: %.2f 毫秒", latencyMs);
             if (latencyMs < 1.0) {
                 type = STORAGE_NVME;
-                LOG_INFO("Storage Type Detected: NVMe SSD");
+                LOG_INFO("检测到存储类型: NVMe SSD");
             } else {
                 type = STORAGE_SSD;
-                LOG_INFO("Storage Type Detected: SATA SSD");
+                LOG_INFO("检测到存储类型: SATA SSD");
             }
         }
     } else {
         DWORD error = GetLastError();
-        LOG_WARNING_FMT("Failed to query storage properties (Error: %lu), defaulting to SSD", error);
+        LOG_WARNING_FMT("查询存储属性失败（错误: %lu），默认使用SSD", error);
         type = STORAGE_SSD;
     }
 
@@ -680,13 +700,13 @@ double OverwriteDetector::MeasureRandomReadLatency() {
     // 获取MFT总记录数
     ULONGLONG totalRecords = reader->GetTotalMFTRecords();
     if (totalRecords < 1000) {
-        LOG_WARNING("Too few MFT records for accurate storage detection");
+        LOG_WARNING("MFT记录数过少，无法准确检测存储类型");
         return 1.0; // 默认假设为SSD
     }
 
     // 随机读取10个MFT记录，测量延迟
     for (int i = 0; i < TEST_COUNT; i++) {
-        // 随机选择一个记录号（避开前16个系统记录）
+        // 随机选择一个记录号（跳过前16个系统记录）
         ULONGLONG recordNum = 16 + (rand() % (totalRecords - 16));
 
         vector<BYTE> record;
@@ -701,7 +721,7 @@ double OverwriteDetector::MeasureRandomReadLatency() {
     }
 
     if (latencies.empty()) {
-        LOG_WARNING("Failed to measure storage latency");
+        LOG_WARNING("无法测量存储延迟");
         return 1.0;
     }
 
@@ -717,10 +737,10 @@ double OverwriteDetector::MeasureRandomReadLatency() {
 // 获取存储类型名称
 string OverwriteDetector::GetStorageTypeName(StorageType type) {
     switch (type) {
-        case STORAGE_HDD: return "HDD (Mechanical Hard Drive)";
-        case STORAGE_SSD: return "SATA SSD";
-        case STORAGE_NVME: return "NVMe SSD";
-        default: return "Unknown";
+        case STORAGE_HDD: return LOC_STR("storage.hdd");
+        case STORAGE_SSD: return LOC_STR("storage.ssd");
+        case STORAGE_NVME: return LOC_STR("storage.nvme");
+        default: return LOC_STR("storage.unknown");
     }
 }
 
@@ -740,13 +760,13 @@ ClusterStatus OverwriteDetector::CheckClusterFromMemory(const BYTE* clusterData,
     status.isOverwritten = false;
     status.isAllocated = false;
     status.dataEntropy = 0.0;
-    status.overwriteReason = "Unknown";
+    status.overwriteReason = "未知";
 
     // 检查1: 全为0
     if (IsAllZerosFromPointer(clusterData, bytesPerCluster)) {
         status.isOverwritten = true;
         status.dataEntropy = 0.0;
-        status.overwriteReason = "All zeros (formatted or wiped)";
+        status.overwriteReason = "全为零（已格式化或已擦除）";
         return status;
     }
 
@@ -754,7 +774,7 @@ ClusterStatus OverwriteDetector::CheckClusterFromMemory(const BYTE* clusterData,
     if (IsAllSameValueFromPointer(clusterData, bytesPerCluster)) {
         status.isOverwritten = true;
         status.dataEntropy = 0.0;
-        status.overwriteReason = "All same value (wiped)";
+        status.overwriteReason = "全为相同值（已擦除）";
         return status;
     }
 
@@ -764,40 +784,40 @@ ClusterStatus OverwriteDetector::CheckClusterFromMemory(const BYTE* clusterData,
     // 检查4: 是否包含有效的文件结构
     bool hasValidStructure = HasValidFileStructureFromPointer(clusterData, bytesPerCluster);
 
-    // ========== 改进的综合判断逻辑 (与 CheckCluster 保持一致) ==========
+    // ========== 改进的综合判断逻辑（与CheckCluster保持一致）==========
     if (status.dataEntropy > 7.95) {
         // 极高的熵值（接近理论最大值8.0）
         if (!hasValidStructure) {
             status.isOverwritten = true;
-            status.overwriteReason = "Extremely high entropy (>7.95), likely random/encrypted data";
+            status.overwriteReason = "极高熵值(>7.95)，可能是随机/加密数据";
         } else {
             status.isOverwritten = false;
-            status.overwriteReason = "Very high entropy but has valid structure (compressed/encrypted file)";
+            status.overwriteReason = "极高熵值但有有效结构（压缩/加密文件）";
         }
     } else if (status.dataEntropy > 7.5) {
         // 非常高的熵值（典型的压缩/加密文件范围）
         if (hasValidStructure) {
             status.isOverwritten = false;
-            status.overwriteReason = "High entropy with valid structure (compressed/encrypted file)";
+            status.overwriteReason = "高熵值且有有效结构（压缩/加密文件）";
         } else {
             // 优先假设为合法的压缩/加密数据
             status.isOverwritten = false;
-            status.overwriteReason = "High entropy (7.5-7.95), likely compressed/encrypted data";
+            status.overwriteReason = "高熵值(7.5-7.95)，可能是压缩/加密数据";
         }
     } else if (status.dataEntropy < 1.0) {
         status.isOverwritten = true;
-        status.overwriteReason = "Very low entropy (<1.0), likely wiped";
+        status.overwriteReason = "极低熵值(<1.0)，可能已被擦除";
     } else if (hasValidStructure) {
         status.isOverwritten = false;
-        status.overwriteReason = "Contains valid file structure";
+        status.overwriteReason = "包含有效的文件结构";
     } else {
         // 中等熵值 (1.0 - 7.5)
         if (status.dataEntropy > 7.2) {
             status.isOverwritten = true;
-            status.overwriteReason = "High entropy (>7.2) without recognizable structure";
+            status.overwriteReason = "高熵值(>7.2)且无可识别结构";
         } else {
             status.isOverwritten = false;
-            status.overwriteReason = "Medium entropy, possibly original data";
+            status.overwriteReason = "中等熵值，可能是原始数据";
         }
     }
 
@@ -809,24 +829,24 @@ vector<ClusterStatus> OverwriteDetector::BatchCheckClusters(const vector<pair<UL
     vector<ClusterStatus> results;
     ULONGLONG totalChecked = 0;
 
-    LOG_INFO("Starting batch cluster checking...");
+    LOG_INFO("开始批量簇检测...");
 
     for (const auto& run : dataRuns) {
         ULONGLONG startLCN = run.first;
         ULONGLONG clusterCount = run.second;
 
-        LOG_DEBUG_FMT("Processing run: LCN=%llu, Count=%llu", startLCN, clusterCount);
+        LOG_DEBUG_FMT("处理数据运行: LCN=%llu, 数量=%llu", startLCN, clusterCount);
 
-        // 批量读取整个run
+        // 批量读取整个数据运行
         vector<BYTE> batchData;
         if (!reader->ReadClusters(startLCN, clusterCount, batchData)) {
-            LOG_WARNING_FMT("Failed to read clusters at LCN %llu", startLCN);
+            LOG_WARNING_FMT("无法读取LCN %llu处的簇", startLCN);
             // 标记这些簇为读取失败
             for (ULONGLONG i = 0; i < clusterCount; i++) {
                 ClusterStatus status;
                 status.clusterNumber = startLCN + i;
                 status.isOverwritten = true;
-                status.overwriteReason = "Failed to read cluster";
+                status.overwriteReason = "无法读取簇";
                 results.push_back(status);
             }
             continue;
@@ -842,13 +862,13 @@ vector<ClusterStatus> OverwriteDetector::BatchCheckClusters(const vector<pair<UL
 
             // 智能跳过：如果连续10个簇都被覆盖，可能整个文件都被覆盖了
             if (ShouldSkipRemaining(results)) {
-                LOG_INFO_FMT("Smart skip triggered after %llu clusters", totalChecked);
+                LOG_INFO_FMT("智能跳过已触发，已检测 %llu 个簇", totalChecked);
                 // 标记剩余簇为可能被覆盖
                 for (ULONGLONG j = i + 1; j < clusterCount; j++) {
                     ClusterStatus skipStatus;
                     skipStatus.clusterNumber = startLCN + j;
                     skipStatus.isOverwritten = true;
-                    skipStatus.overwriteReason = "Skipped (likely overwritten based on pattern)";
+                    skipStatus.overwriteReason = "已跳过（根据模式判断可能已被覆盖）";
                     results.push_back(skipStatus);
                 }
                 return results; // 提前返回
@@ -856,7 +876,7 @@ vector<ClusterStatus> OverwriteDetector::BatchCheckClusters(const vector<pair<UL
         }
     }
 
-    LOG_INFO_FMT("Batch checking completed: %llu clusters checked", totalChecked);
+    LOG_INFO_FMT("批量检测完成: 已检测 %llu 个簇", totalChecked);
     return results;
 }
 
@@ -869,8 +889,8 @@ vector<ClusterStatus> OverwriteDetector::SamplingCheckClusters(const vector<pair
     ULONGLONG sampleCount = max(10ULL, min(1000ULL, totalClusters / 100));
     ULONGLONG sampleInterval = max(1ULL, totalClusters / sampleCount);
 
-    LOG_INFO_FMT("Sampling mode: checking %llu out of %llu clusters (interval: %llu)",
-                 sampleCount, totalClusters, sampleInterval);
+    LOG_INFO_FMT("采样模式: 从 %llu 个簇中检测 %llu 个（间隔: %llu）",
+                 totalClusters, sampleCount, sampleInterval);
 
     ULONGLONG currentCluster = 0;
     ULONGLONG nextSampleAt = 0;
@@ -888,7 +908,7 @@ vector<ClusterStatus> OverwriteDetector::SamplingCheckClusters(const vector<pair
                 nextSampleAt += sampleInterval;
 
                 if (results.size() >= sampleCount) {
-                    LOG_INFO_FMT("Sampling completed: %llu samples collected", results.size());
+                    LOG_INFO_FMT("采样完成: 已收集 %llu 个样本", results.size());
                     return results;
                 }
             }
@@ -896,7 +916,7 @@ vector<ClusterStatus> OverwriteDetector::SamplingCheckClusters(const vector<pair
         }
     }
 
-    LOG_INFO_FMT("Sampling completed: %llu samples collected", results.size());
+    LOG_INFO_FMT("采样完成: 已收集 %llu 个样本", results.size());
     return results;
 }
 
@@ -930,37 +950,37 @@ bool OverwriteDetector::ShouldUseMultiThreading(ULONGLONG clusterCount, StorageT
     }
 
     // THREADING_AUTO: 自动决定
-    // 1. 簇数量太少，不值得多线程
+    // 1. 簇数量太少，不值得使用多线程
     if (clusterCount < 100) {
-        LOG_DEBUG("Cluster count too small for multi-threading");
+        LOG_DEBUG("簇数量过少，不启用多线程");
         return false;
     }
 
     // 2. 根据存储类型决定
     switch (storageType) {
         case STORAGE_HDD:
-            // HDD不使用多线程（会导致随机I/O）
-            LOG_DEBUG("HDD detected: multi-threading disabled");
+            // HDD不使用多线程（会导致随机I/O性能下降）
+            LOG_DEBUG("检测到HDD: 禁用多线程");
             return false;
 
         case STORAGE_SSD:
-            // SSD：中等文件使用多线程
+            // SSD：中等及以上大小的文件使用多线程
             if (clusterCount >= 1000) {
-                LOG_DEBUG("SSD detected with sufficient clusters: multi-threading enabled");
+                LOG_DEBUG("检测到SSD且簇数量足够: 启用多线程");
                 return true;
             }
             return false;
 
         case STORAGE_NVME:
-            // NVMe：小文件也可以使用多线程
+            // NVMe：较小的文件也可以使用多线程
             if (clusterCount >= 500) {
-                LOG_DEBUG("NVMe detected with sufficient clusters: multi-threading enabled");
+                LOG_DEBUG("检测到NVMe且簇数量足够: 启用多线程");
                 return true;
             }
             return false;
 
         default:
-            // 未知存储类型，保守处理
+            // 未知存储类型，采用保守策略
             return (clusterCount >= 2000);
     }
 }
@@ -999,7 +1019,7 @@ int OverwriteDetector::GetOptimalThreadCount(ULONGLONG clusterCount, StorageType
     int maxThreadsByClusterCount = max(1, (int)(clusterCount / 50));
     optimalThreads = min(optimalThreads, maxThreadsByClusterCount);
 
-    LOG_INFO_FMT("Optimal thread count: %d (CPU cores: %d, Storage: %s, Clusters: %llu)",
+    LOG_INFO_FMT("最优线程数: %d（CPU核心数: %d, 存储类型: %s, 簇数: %llu）",
                  optimalThreads, cpuCores, GetStorageTypeName(storageType).c_str(), clusterCount);
 
     return optimalThreads;
@@ -1009,18 +1029,18 @@ int OverwriteDetector::GetOptimalThreadCount(ULONGLONG clusterCount, StorageType
 vector<ClusterStatus> OverwriteDetector::MultiThreadedCheckClusters(
     const vector<ULONGLONG>& clusterNumbers, int threadCount) {
 
-    LOG_INFO_FMT("Starting multi-threaded detection with %d threads for %zu clusters",
+    LOG_INFO_FMT("启动多线程检测: %d 个线程处理 %zu 个簇",
                  threadCount, clusterNumbers.size());
 
     // 使用线程池执行检测
     vector<ClusterStatus> results = threadPool->DetectClusters(clusterNumbers, threadCount);
 
-    LOG_INFO_FMT("Multi-threaded detection completed: %zu clusters processed", results.size());
+    LOG_INFO_FMT("多线程检测完成: 已处理 %zu 个簇", results.size());
 
     return results;
 }
 
-// 更新主检测函数以支持多线程
+// 主检测函数（支持多线程）
 OverwriteDetectionResult OverwriteDetector::DetectOverwrite(const vector<BYTE>& mftRecord) {
     auto startTime = high_resolution_clock::now();
 
@@ -1038,11 +1058,11 @@ OverwriteDetectionResult OverwriteDetector::DetectOverwrite(const vector<BYTE>& 
     result.detectedStorageType = STORAGE_UNKNOWN;
     result.detectionTimeMs = 0.0;
 
-    LOG_DEBUG("Starting optimized overwrite detection with multi-threading support");
+    LOG_DEBUG("启动优化的覆盖检测（支持多线程）");
 
     // 首先验证MFT记录头
     if (mftRecord.size() < sizeof(FILE_RECORD_HEADER)) {
-        LOG_ERROR("MFT record too small");
+        LOG_ERROR("MFT记录太小");
         result.isFullyAvailable = false;
         result.isPartiallyAvailable = false;
         result.overwritePercentage = 100.0;
@@ -1061,16 +1081,16 @@ OverwriteDetectionResult OverwriteDetector::DetectOverwrite(const vector<BYTE>& 
     string corruptionWarning;
 
     // 检查1：签名验证（宽松）
-    if (header->Signature != 'ELIF') {  // "FILE" in little-endian
+    if (header->Signature != 'ELIF') {  // "FILE"的小端序表示
         headerPartiallyCorrupted = true;
-        corruptionWarning = "MFT record signature invalid, but attempting to continue";
-        LOG_WARNING_FMT("MFT signature: 0x%08X (expected 0x454C4946)", header->Signature);
+        corruptionWarning = "MFT记录签名无效，但尝试继续";
+        LOG_WARNING_FMT("MFT签名: 0x%08X（期望值: 0x454C4946）", header->Signature);
     }
 
-    // 检查2：UsedSize 合理性验证
+    // 检查2：UsedSize合理性验证
     if (header->UsedSize == 0) {
         // UsedSize为0，记录完全为空或被清零
-        LOG_ERROR("MFT record UsedSize is 0, record appears to be wiped");
+        LOG_ERROR("MFT记录的UsedSize为0，记录可能已被擦除");
         result.isFullyAvailable = false;
         result.overwritePercentage = 100.0;
         result.overwrittenClusters = 1;
@@ -1082,15 +1102,15 @@ OverwriteDetectionResult OverwriteDetector::DetectOverwrite(const vector<BYTE>& 
         // UsedSize超出记录大小，可能是损坏
         // 但尝试使用记录的实际大小继续
         headerPartiallyCorrupted = true;
-        corruptionWarning += "; UsedSize exceeds record size, using actual size";
-        LOG_WARNING_FMT("UsedSize (%u) > actual size (%zu), attempting recovery",
+        corruptionWarning += "; UsedSize超出记录大小，使用实际大小";
+        LOG_WARNING_FMT("UsedSize (%u) > 实际大小 (%zu)，尝试恢复",
                        header->UsedSize, mftRecord.size());
         // 不返回，继续尝试
     }
 
-    // 检查3：FirstAttributeOffset 合理性验证
+    // 检查3：FirstAttributeOffset合理性验证
     if (header->FirstAttributeOffset < sizeof(FILE_RECORD_HEADER)) {
-        LOG_ERROR_FMT("FirstAttributeOffset (%u) too small, record severely corrupted",
+        LOG_ERROR_FMT("FirstAttributeOffset (%u) 过小，记录严重损坏",
                      header->FirstAttributeOffset);
         result.isFullyAvailable = false;
         result.overwritePercentage = 100.0;
@@ -1100,7 +1120,7 @@ OverwriteDetectionResult OverwriteDetector::DetectOverwrite(const vector<BYTE>& 
     }
 
     if (header->FirstAttributeOffset >= mftRecord.size()) {
-        LOG_ERROR("FirstAttributeOffset out of bounds, record severely corrupted");
+        LOG_ERROR("FirstAttributeOffset超出边界，记录严重损坏");
         result.isFullyAvailable = false;
         result.overwritePercentage = 100.0;
         result.overwrittenClusters = 1;
@@ -1110,16 +1130,16 @@ OverwriteDetectionResult OverwriteDetector::DetectOverwrite(const vector<BYTE>& 
 
     // 如果检测到部分损坏，记录警告但继续尝试
     if (headerPartiallyCorrupted) {
-        LOG_WARNING("MFT record header partially corrupted, but attempting data recovery");
+        LOG_WARNING("MFT记录头部分损坏，但尝试数据恢复");
         LOG_WARNING(corruptionWarning);
-        cout << "Warning: " << corruptionWarning << endl;
-        cout << "Attempting to recover data despite header corruption..." << endl;
+        cout << "警告: " << corruptionWarning << endl;
+        cout << "尽管记录头损坏，仍尝试恢复数据..." << endl;
     }
 
-    // 提取Data Runs
+    // 提取数据运行列表（Data Runs）
     vector<pair<ULONGLONG, ULONGLONG>> dataRuns;
     if (!ExtractDataRuns(mftRecord, dataRuns)) {
-        LOG_WARNING("No data runs found - file is resident (data stored in MFT)");
+        LOG_WARNING("未找到数据运行 - 文件为常驻文件（数据存储在MFT中）");
         // 对于常驻文件，数据在MFT记录中，检查记录是否有效即可
         result.isFullyAvailable = true;
         result.totalClusters = 0;
@@ -1134,11 +1154,11 @@ OverwriteDetectionResult OverwriteDetector::DetectOverwrite(const vector<BYTE>& 
         result.totalClusters += run.second;
     }
 
-    LOG_INFO_FMT("Total clusters to check: %llu", result.totalClusters);
+    LOG_INFO_FMT("待检测总簇数: %llu", result.totalClusters);
 
     // 检测存储类型
     result.detectedStorageType = GetStorageType();
-    LOG_INFO_FMT("Storage type: %s", GetStorageTypeName(result.detectedStorageType).c_str());
+    LOG_INFO_FMT("存储类型: %s", GetStorageTypeName(result.detectedStorageType).c_str());
 
     // 根据检测模式和文件大小选择策略
     bool useSampling = false;
@@ -1168,11 +1188,11 @@ OverwriteDetectionResult OverwriteDetector::DetectOverwrite(const vector<BYTE>& 
         result.usedMultiThreading = true;
     }
 
-    LOG_INFO_FMT("Detection strategy: Sampling=%s, MultiThreading=%s (threads=%d), BatchReading=%s",
-                 useSampling ? "Yes" : "No",
-                 useMultiThreading ? "Yes" : "No",
+    LOG_INFO_FMT("检测策略: 采样=%s, 多线程=%s（线程数=%d）, 批量读取=%s",
+                 useSampling ? "是" : "否",
+                 useMultiThreading ? "是" : "否",
                  result.threadCount,
-                 useBatchReading ? "Yes" : "No");
+                 useBatchReading ? "是" : "否");
 
     // 执行检测
     vector<ClusterStatus> clusterStatuses;
@@ -1241,10 +1261,10 @@ OverwriteDetectionResult OverwriteDetector::DetectOverwrite(const vector<BYTE>& 
     auto endTime = high_resolution_clock::now();
     result.detectionTimeMs = duration_cast<milliseconds>(endTime - startTime).count();
 
-    LOG_INFO_FMT("Detection completed in %.2f ms: Total=%llu, Available=%llu, Overwritten=%llu (%.2f%%), MultiThreading=%s",
+    LOG_INFO_FMT("检测完成，耗时 %.2f 毫秒: 总计=%llu, 可用=%llu, 已覆盖=%llu (%.2f%%), 多线程=%s",
                  result.detectionTimeMs, result.totalClusters, result.availableClusters,
                  result.overwrittenClusters, result.overwritePercentage,
-                 result.usedMultiThreading ? "Yes" : "No");
+                 result.usedMultiThreading ? "是" : "否");
 
     return result;
 }

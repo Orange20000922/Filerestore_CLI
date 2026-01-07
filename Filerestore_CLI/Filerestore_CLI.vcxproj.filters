@@ -1,186 +1,346 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- ============================================================================ -->
+  <!-- 筛选器定义 -->
+  <!-- ============================================================================ -->
   <ItemGroup>
+    <!-- 源文件 -->
     <Filter Include="源文件">
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
       <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
+    <Filter Include="源文件\Core">
+      <UniqueIdentifier>{3022a833-ab33-4633-baa6-d443e6a1480a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\Commands">
+      <UniqueIdentifier>{a1b2c3d4-1234-5678-abcd-111111111111}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\FileRestore">
+      <UniqueIdentifier>{c7d6876d-6b47-401f-8498-2cb7b97e753e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\FileRestore\MFT">
+      <UniqueIdentifier>{a1b2c3d4-1234-5678-abcd-222222222222}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\FileRestore\Carving">
+      <UniqueIdentifier>{a1b2c3d4-1234-5678-abcd-333333333333}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\FileRestore\Detection">
+      <UniqueIdentifier>{a1b2c3d4-1234-5678-abcd-444444444444}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\FileRestore\ML">
+      <UniqueIdentifier>{a1b2c3d4-1234-5678-abcd-555555555555}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\Utils">
+      <UniqueIdentifier>{fb742311-24be-45a1-955b-2330f21a16cc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="源文件\Analysis">
+      <UniqueIdentifier>{a1b2c3d4-1234-5678-abcd-666666666666}</UniqueIdentifier>
+    </Filter>
+
+    <!-- 头文件 -->
     <Filter Include="头文件">
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
+    <Filter Include="头文件\Core">
+      <UniqueIdentifier>{a1b2c3d4-1234-5678-abcd-777777777777}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\Commands">
+      <UniqueIdentifier>{a1b2c3d4-1234-5678-abcd-888888888888}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\FileRestore">
+      <UniqueIdentifier>{a1b2c3d4-1234-5678-abcd-999999999999}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\FileRestore\MFT">
+      <UniqueIdentifier>{a1b2c3d4-1234-5678-abcd-aaaaaaaaaaaa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\FileRestore\Carving">
+      <UniqueIdentifier>{a1b2c3d4-1234-5678-abcd-bbbbbbbbbbbb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\FileRestore\Detection">
+      <UniqueIdentifier>{a1b2c3d4-1234-5678-abcd-cccccccccccc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\FileRestore\ML">
+      <UniqueIdentifier>{a1b2c3d4-1234-5678-abcd-dddddddddddd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\Utils">
+      <UniqueIdentifier>{a1b2c3d4-1234-5678-abcd-eeeeeeeeeeee}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\Analysis">
+      <UniqueIdentifier>{a1b2c3d4-1234-5678-abcd-ffffffffffff}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="头文件\Platform">
+      <UniqueIdentifier>{a1b2c3d4-1234-5678-abcd-123456789abc}</UniqueIdentifier>
+    </Filter>
+
+    <!-- 资源文件 -->
     <Filter Include="资源文件">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="源文件\CLI">
-      <UniqueIdentifier>{3022a833-ab33-4633-baa6-d443e6a1480a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="源文件\FileAnalyze">
-      <UniqueIdentifier>{c7d6876d-6b47-401f-8498-2cb7b97e753e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="源文件\Util">
-      <UniqueIdentifier>{fb742311-24be-45a1-955b-2330f21a16cc}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
+
+  <!-- ============================================================================ -->
+  <!-- 源文件 (.cpp) -->
+  <!-- ============================================================================ -->
   <ItemGroup>
+    <!-- Core - 核心模块 -->
     <ClCompile Include="src\core\Main.cpp">
-      <Filter>源文件</Filter>
+      <Filter>源文件\Core</Filter>
     </ClCompile>
     <ClCompile Include="src\core\cli.cpp">
-      <Filter>源文件\CLI</Filter>
+      <Filter>源文件\Core</Filter>
     </ClCompile>
     <ClCompile Include="src\core\climodule.cpp">
-      <Filter>源文件\CLI</Filter>
+      <Filter>源文件\Core</Filter>
     </ClCompile>
-    <ClCompile Include="src\utils\CrashHandler.cpp">
-      <Filter>源文件\FileAnalyze</Filter>
+    <ClCompile Include="src\core\ErrorCodes.cpp">
+      <Filter>源文件\Core</Filter>
     </ClCompile>
-    <ClCompile Include="src\fileRestore\FileRestore.cpp">
-      <Filter>源文件\FileAnalyze</Filter>
+    <ClCompile Include="src\core\FileRestoreAPI.cpp">
+      <Filter>源文件\Core</Filter>
     </ClCompile>
+
+    <!-- Commands - 命令实现 -->
     <ClCompile Include="src\commands\cmd.cpp">
-      <Filter>源文件\CLI</Filter>
+      <Filter>源文件\Commands</Filter>
     </ClCompile>
-    <ClCompile Include="src\fileRestore\DeletedFileScanner.cpp">
-      <Filter>源文件\FileAnalyze</Filter>
+    <ClCompile Include="src\commands\SystemCommands.cpp">
+      <Filter>源文件\Commands</Filter>
     </ClCompile>
-    <ClCompile Include="src\utils\LocalizationManager.cpp">
-      <Filter>源文件\Util</Filter>
+    <ClCompile Include="src\commands\RestoreCommands.cpp">
+      <Filter>源文件\Commands</Filter>
     </ClCompile>
-    <ClCompile Include="src\analysis\ImageTable.cpp">
-      <Filter>源文件\FileAnalyze</Filter>
+    <ClCompile Include="src\commands\SearchCommands.cpp">
+      <Filter>源文件\Commands</Filter>
     </ClCompile>
-    <ClCompile Include="src\fileRestore\MFTBatchReader.cpp">
-      <Filter>源文件\FileAnalyze</Filter>
+    <ClCompile Include="src\commands\DiagnosticCommands.cpp">
+      <Filter>源文件\Commands</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\CarveCommands.cpp">
+      <Filter>源文件\Commands</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\PEAnalysisCommands.cpp">
+      <Filter>源文件\Commands</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\MLCommands.cpp">
+      <Filter>源文件\Commands</Filter>
+    </ClCompile>
+
+    <!-- FileRestore\MFT - MFT 操作 -->
+    <ClCompile Include="src\fileRestore\MFTReader.cpp">
+      <Filter>源文件\FileRestore\MFT</Filter>
     </ClCompile>
     <ClCompile Include="src\fileRestore\MFTParser.cpp">
-      <Filter>源文件\FileAnalyze</Filter>
+      <Filter>源文件\FileRestore\MFT</Filter>
     </ClCompile>
-    <ClCompile Include="src\fileRestore\MFTReader.cpp">
-      <Filter>源文件\FileAnalyze</Filter>
-    </ClCompile>
-    <ClCompile Include="src\fileRestore\OverwriteDetectionThreadPool.cpp">
-      <Filter>源文件\FileAnalyze</Filter>
-    </ClCompile>
-    <ClCompile Include="src\fileRestore\OverwriteDetector.cpp">
-      <Filter>源文件\FileAnalyze</Filter>
-    </ClCompile>
-    <ClCompile Include="src\fileRestore\PathResolver.cpp">
-      <Filter>源文件\FileAnalyze</Filter>
-    </ClCompile>
-    <ClCompile Include="src\utils\ProgressBar.cpp">
-      <Filter>源文件\Util</Filter>
-    </ClCompile>
-    <ClCompile Include="src\fileRestore\UsnJournalReader.cpp">
-      <Filter>源文件\FileAnalyze</Filter>
-    </ClCompile>
-    <ClCompile Include="src\utils\Logger.cpp">
-      <Filter>源文件\Util</Filter>
-    </ClCompile>
-    <ClCompile Include="src\fileRestore\FileCarver.cpp">
-      <Filter>源文件\FileAnalyze</Filter>
-    </ClCompile>
-    <ClCompile Include="src\fileRestore\SignatureScanThreadPool.cpp">
-      <Filter>源文件\FileAnalyze</Filter>
-    </ClCompile>
-    <ClCompile Include="src\fileRestore\FileIntegrityValidator.cpp">
-      <Filter>源文件\FileAnalyze</Filter>
+    <ClCompile Include="src\fileRestore\MFTBatchReader.cpp">
+      <Filter>源文件\FileRestore\MFT</Filter>
     </ClCompile>
     <ClCompile Include="src\fileRestore\MFTLCNIndex.cpp">
-      <Filter>源文件\FileAnalyze</Filter>
+      <Filter>源文件\FileRestore\MFT</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\PathResolver.cpp">
+      <Filter>源文件\FileRestore\MFT</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\DeletedFileScanner.cpp">
+      <Filter>源文件\FileRestore\MFT</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\UsnJournalReader.cpp">
+      <Filter>源文件\FileRestore\MFT</Filter>
+    </ClCompile>
+
+    <!-- FileRestore\Carving - 文件雕刻 -->
+    <ClCompile Include="src\fileRestore\FileCarver.cpp">
+      <Filter>源文件\FileRestore\Carving</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\SignatureScanThreadPool.cpp">
+      <Filter>源文件\FileRestore\Carving</Filter>
     </ClCompile>
     <ClCompile Include="src\fileRestore\TimestampExtractor.cpp">
-      <Filter>源文件\FileAnalyze</Filter>
+      <Filter>源文件\FileRestore\Carving</Filter>
     </ClCompile>
-    <ClCompile Include="src\fileRestore\MemoryMappedResults.cpp">
-      <Filter>源文件\FileAnalyze</Filter>
+    <ClCompile Include="src\fileRestore\FileIntegrityValidator.cpp">
+      <Filter>源文件\FileRestore\Carving</Filter>
     </ClCompile>
     <ClCompile Include="src\fileRestore\CarvedResultsCache.cpp">
-      <Filter>源文件\FileAnalyze</Filter>
+      <Filter>源文件\FileRestore\Carving</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\MemoryMappedResults.cpp">
+      <Filter>源文件\FileRestore\Carving</Filter>
+    </ClCompile>
+
+    <!-- FileRestore\Detection - 覆盖检测 -->
+    <ClCompile Include="src\fileRestore\OverwriteDetector.cpp">
+      <Filter>源文件\FileRestore\Detection</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\OverwriteDetectionThreadPool.cpp">
+      <Filter>源文件\FileRestore\Detection</Filter>
+    </ClCompile>
+
+    <!-- FileRestore\ML - 机器学习 -->
+    <ClCompile Include="src\fileRestore\MLClassifier.cpp">
+      <Filter>源文件\FileRestore\ML</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\DatasetGenerator.cpp">
+      <Filter>源文件\FileRestore\ML</Filter>
+    </ClCompile>
+
+    <!-- FileRestore - 主入口 -->
+    <ClCompile Include="src\fileRestore\FileRestore.cpp">
+      <Filter>源文件\FileRestore</Filter>
+    </ClCompile>
+
+    <!-- Utils - 工具类 -->
+    <ClCompile Include="src\utils\Logger.cpp">
+      <Filter>源文件\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utils\ProgressBar.cpp">
+      <Filter>源文件\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utils\LocalizationManager.cpp">
+      <Filter>源文件\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utils\CrashHandler.cpp">
+      <Filter>源文件\Utils</Filter>
+    </ClCompile>
+
+    <!-- Analysis - PE 分析 -->
+    <ClCompile Include="src\analysis\ImageTable.cpp">
+      <Filter>源文件\Analysis</Filter>
     </ClCompile>
   </ItemGroup>
+
+  <!-- ============================================================================ -->
+  <!-- 头文件 (.h) -->
+  <!-- ============================================================================ -->
   <ItemGroup>
+    <!-- Core - 核心模块 -->
     <ClInclude Include="src\core\cli.h">
-      <Filter>头文件</Filter>
+      <Filter>头文件\Core</Filter>
     </ClInclude>
     <ClInclude Include="src\core\climodule.h">
-      <Filter>头文件</Filter>
+      <Filter>头文件\Core</Filter>
     </ClInclude>
+    <ClInclude Include="src\core\ErrorCodes.h">
+      <Filter>头文件\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\Result.h">
+      <Filter>头文件\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\ResourceWrappers.h">
+      <Filter>头文件\Core</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\FileRestoreAPI.h">
+      <Filter>头文件\Core</Filter>
+    </ClInclude>
+
+    <!-- Commands - 命令定义 -->
     <ClInclude Include="src\commands\cmd.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="src\utils\CrashHandler.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="src\fileRestore\DeletedFileScanner.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="src\fileRestore\FileRestore.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="src\analysis\ImageTable.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="src\utils\LocalizationManager.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="src\utils\Logger.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="src\fileRestore\MFTBatchReader.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="src\fileRestore\MFTParser.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="src\fileRestore\MFTReader.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="src\fileRestore\MFTStructures.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="src\fileRestore\OverwriteDetectionThreadPool.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="src\fileRestore\OverwriteDetector.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="src\fileRestore\PathResolver.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="src\utils\ProgressBar.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="src\fileRestore\UsnJournalReader.h">
-      <Filter>头文件</Filter>
+      <Filter>头文件\Commands</Filter>
     </ClInclude>
     <ClInclude Include="src\commands\CommandMacros.h">
-      <Filter>头文件</Filter>
+      <Filter>头文件\Commands</Filter>
     </ClInclude>
-    <ClInclude Include="src\fileRestore\FileCarver.h">
-      <Filter>头文件</Filter>
+    <ClInclude Include="src\commands\CommandUtils.h">
+      <Filter>头文件\Commands</Filter>
     </ClInclude>
-    <ClInclude Include="src\fileRestore\SignatureScanThreadPool.h">
-      <Filter>头文件</Filter>
+
+    <!-- FileRestore\MFT - MFT 操作 -->
+    <ClInclude Include="src\fileRestore\MFTReader.h">
+      <Filter>头文件\FileRestore\MFT</Filter>
     </ClInclude>
-    <ClInclude Include="src\fileRestore\TimestampExtractor.h">
-      <Filter>头文件</Filter>
+    <ClInclude Include="src\fileRestore\MFTParser.h">
+      <Filter>头文件\FileRestore\MFT</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\MFTBatchReader.h">
+      <Filter>头文件\FileRestore\MFT</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\MFTStructures.h">
+      <Filter>头文件\FileRestore\MFT</Filter>
     </ClInclude>
     <ClInclude Include="src\fileRestore\MFTLCNIndex.h">
-      <Filter>头文件</Filter>
+      <Filter>头文件\FileRestore\MFT</Filter>
     </ClInclude>
-    <ClInclude Include="src\fileRestore\FileIntegrityValidator.h">
-      <Filter>头文件</Filter>
+    <ClInclude Include="src\fileRestore\PathResolver.h">
+      <Filter>头文件\FileRestore\MFT</Filter>
     </ClInclude>
-    <ClInclude Include="src\fileRestore\CarvedResultsCache.h">
-      <Filter>头文件</Filter>
+    <ClInclude Include="src\fileRestore\DeletedFileScanner.h">
+      <Filter>头文件\FileRestore\MFT</Filter>
     </ClInclude>
-    <ClInclude Include="src\fileRestore\MemoryMappedResults.h">
-      <Filter>头文件</Filter>
+    <ClInclude Include="src\fileRestore\UsnJournalReader.h">
+      <Filter>头文件\FileRestore\MFT</Filter>
+    </ClInclude>
+
+    <!-- FileRestore\Carving - 文件雕刻 -->
+    <ClInclude Include="src\fileRestore\FileCarver.h">
+      <Filter>头文件\FileRestore\Carving</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\SignatureScanThreadPool.h">
+      <Filter>头文件\FileRestore\Carving</Filter>
     </ClInclude>
     <ClInclude Include="src\fileRestore\CarvedFileTypes.h">
-      <Filter>头文件</Filter>
+      <Filter>头文件\FileRestore\Carving</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\TimestampExtractor.h">
+      <Filter>头文件\FileRestore\Carving</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\FileIntegrityValidator.h">
+      <Filter>头文件\FileRestore\Carving</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\CarvedResultsCache.h">
+      <Filter>头文件\FileRestore\Carving</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\MemoryMappedResults.h">
+      <Filter>头文件\FileRestore\Carving</Filter>
+    </ClInclude>
+
+    <!-- FileRestore\Detection - 覆盖检测 -->
+    <ClInclude Include="src\fileRestore\OverwriteDetector.h">
+      <Filter>头文件\FileRestore\Detection</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\OverwriteDetectionThreadPool.h">
+      <Filter>头文件\FileRestore\Detection</Filter>
+    </ClInclude>
+
+    <!-- FileRestore\ML - 机器学习 -->
+    <ClInclude Include="src\fileRestore\MLClassifier.h">
+      <Filter>头文件\FileRestore\ML</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\DatasetGenerator.h">
+      <Filter>头文件\FileRestore\ML</Filter>
+    </ClInclude>
+
+    <!-- FileRestore - 主入口 -->
+    <ClInclude Include="src\fileRestore\FileRestore.h">
+      <Filter>头文件\FileRestore</Filter>
+    </ClInclude>
+
+    <!-- Utils - 工具类 -->
+    <ClInclude Include="src\utils\Logger.h">
+      <Filter>头文件\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\ProgressBar.h">
+      <Filter>头文件\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\LocalizationManager.h">
+      <Filter>头文件\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\CrashHandler.h">
+      <Filter>头文件\Utils</Filter>
+    </ClInclude>
+
+    <!-- Analysis - PE 分析 -->
+    <ClInclude Include="src\analysis\ImageTable.h">
+      <Filter>头文件\Analysis</Filter>
+    </ClInclude>
+
+    <!-- Platform - 平台抽象 -->
+    <ClInclude Include="src\platform\PlatformConfig.h">
+      <Filter>头文件\Platform</Filter>
+    </ClInclude>
+    <ClInclude Include="src\platform\PlatformTypes.h">
+      <Filter>头文件\Platform</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

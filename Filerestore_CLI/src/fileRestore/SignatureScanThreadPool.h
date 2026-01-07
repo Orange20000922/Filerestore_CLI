@@ -11,6 +11,7 @@
 #include <functional>
 #include <string>
 #include "CarvedFileTypes.h"
+#include "MLClassifier.h"
 
 using namespace std;
 
@@ -46,13 +47,17 @@ struct ScanThreadPoolConfig {
     size_t chunkSize;               // 每个任务的数据块大小
     size_t maxQueueSize;            // 任务队列最大长度
     bool autoDetectThreads;         // 自动检测最优线程数
+    bool useMLClassification;       // 是否启用ML分类辅助
+    float mlConfidenceThreshold;    // ML置信度阈值
 
     // 默认配置（针对 NVMe + 16线程 CPU 优化）
     ScanThreadPoolConfig()
         : workerCount(12)           // 留4线程给系统和I/O
-        , chunkSize(8 * 1024 * 1024)// 8MB per chunk
+        , chunkSize(8 * 1024 * 1024)// 每块8MB
         , maxQueueSize(32)          // 最多32个待处理任务
         , autoDetectThreads(true)
+        , useMLClassification(false)// 默认不启用ML（需要模型）
+        , mlConfidenceThreshold(0.7f)
     {}
 };
 
@@ -79,6 +84,14 @@ private:
     // ==================== 共享只读数据 ====================
     const unordered_map<BYTE, vector<const FileSignature*>>* signatureIndex;
     const set<string>* activeSignatures;
+
+    // ==================== ML分类器 ====================
+    ML::MLClassifier* mlClassifier;     // ML分类器指针（不拥有，外部管理生命周期）
+    atomic<ULONGLONG> mlEnhancedCount;  // ML增强的文件数量
+    atomic<ULONGLONG> mlMatchCount;     // ML预测与签名匹配的数量
+    atomic<ULONGLONG> mlMismatchCount;  // ML预测与签名不匹配的数量
+    atomic<ULONGLONG> mlSkippedCount;   // 因类型不支持而跳过的数量
+    atomic<ULONGLONG> mlUnknownCount;   // ML返回unknown（低置信度）的数量
 
     // ==================== 统计信息 ====================
     atomic<int> completedTasks;
@@ -109,6 +122,9 @@ private:
 
     // 验证文件有效性
     double ValidateFile(const BYTE* data, size_t dataSize, const FileSignature& sig);
+
+    // 使用ML分类增强验证结果
+    void EnhanceWithML(const BYTE* data, size_t dataSize, CarvedFileInfo& info);
 
 public:
     // ==================== 构造和析构 ====================
@@ -174,6 +190,21 @@ public:
 
     // 获取工作线程数
     int GetWorkerCount() const { return config.workerCount; }
+
+    // ==================== ML分类设置 ====================
+
+    // 设置ML分类器
+    void SetMLClassifier(ML::MLClassifier* classifier) { mlClassifier = classifier; }
+
+    // 获取ML统计信息
+    ULONGLONG GetMLEnhancedCount() const { return mlEnhancedCount.load(); }
+    ULONGLONG GetMLMatchCount() const { return mlMatchCount.load(); }
+    ULONGLONG GetMLMismatchCount() const { return mlMismatchCount.load(); }
+    ULONGLONG GetMLSkippedCount() const { return mlSkippedCount.load(); }
+    ULONGLONG GetMLUnknownCount() const { return mlUnknownCount.load(); }
+
+    // 检查ML是否启用
+    bool IsMLEnabled() const { return config.useMLClassification && mlClassifier && mlClassifier->isLoaded(); }
 };
 
 // ============================================================================

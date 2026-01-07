@@ -34,9 +34,8 @@ x86/
 *.VC.opendb
 
 # Build directories
-Filerestore_CLI/x64/
-Filerestore_CLI/ImportTableAnalyzer/
-
+# (已统一输出到解决方案根目录的 x64/)
+x64/
 # Cache files
 *.cache
 path_cache_*.bin
@@ -45,3 +44,41 @@ deleted_files_cache_*.bin
 # Debug logs
 debug*.log
 /nul
+
+# Claude output
+.claude/
+CLAUDE.md
+# Python virtual environments
+pytorch_env/
+venv/
+.venv/
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.eggs/
+
+# PyTorch/ML training artifacts
+*.pt
+*.pth
+checkpoints/
+runs/
+wandb/
+.tensorboard/
+
+# ONNX Runtime libraries (download locally)
+Filerestore_CLI/deps/onnxruntime/include/
+Filerestore_CLI/deps/onnxruntime/lib/
+
+# ML training datasets (too large for git)
+ml/data/
+ml/datasets/
+*.npz
+*.npy
+
+# Release packages
+release_packages/

@@ -25,6 +25,7 @@ struct CarvedFileInfo {
     string description;         // 文件类型描述
     bool hasValidFooter;        // 是否找到有效的文件尾
     double confidence;          // 置信度 (0.0-1.0)
+    double validationScore;     // 验证评分 (0.0-1.0)
 
     // 时间戳信息
     FILETIME creationTime;      // 创建时间
@@ -44,11 +45,16 @@ struct CarvedFileInfo {
     bool deletionChecked;       // 是否已检查删除状态
     bool isActiveFile;          // 是否为活动文件（未删除，可通过文件系统访问）
 
+    // ML 分类信息
+    string mlClassification;    // ML 预测的文件类型
+    float mlConfidence;         // ML 预测置信度 (0-1)
+
     CarvedFileInfo() : startLCN(0), startOffset(0), fileSize(0),
-                       hasValidFooter(false), confidence(0.0),
+                       hasValidFooter(false), confidence(0.0), validationScore(0.0),
                        tsSource(TS_NONE_1), matchedMftRecord(0),
                        integrityScore(0.0), integrityValidated(false),
-                       isDeleted(false), deletionChecked(false), isActiveFile(false) {
+                       isDeleted(false), deletionChecked(false), isActiveFile(false),
+                       mlConfidence(0.0f) {
         creationTime.dwLowDateTime = 0;
         creationTime.dwHighDateTime = 0;
         modificationTime.dwLowDateTime = 0;

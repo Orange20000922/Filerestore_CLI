@@ -76,20 +76,20 @@ DeletedFileScanner::~DeletedFileScanner() {
 vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFiles(ULONGLONG maxRecords) {
     // 自动选择：如果启用批量读取且扫描超过1000条记录，使用批量读取方式
     if (useBatchReading && (maxRecords == 0 || maxRecords > 1000)) {
-        LOG_INFO("Using batch reading for better performance");
-        cout << "Using batch reading (high performance mode)" << endl;
+        LOG_INFO("使用批量读取以提高性能");
+        cout << "使用批量读取（高性能模式）" << endl;
         return ScanDeletedFilesBatch(maxRecords);
     }
 
     // 否则使用原来的逐条读取方式（适合小规模扫描）
-    LOG_INFO("Using traditional scanning method");
+    LOG_INFO("使用传统扫描方法");
 
     vector<DeletedFileInfo> deletedFiles;
 
-    LOG_INFO("=== Starting ScanDeletedFiles ===");
+    LOG_INFO("=== 开始扫描已删除文件 ===");
 
     if (!reader->IsVolumeOpen()) {
-        string msg = "Volume is not open.";
+        string msg = "卷未打开。";
         cout << msg << endl;
         LOG_ERROR(msg);
         return deletedFiles;
@@ -100,11 +100,11 @@ vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFiles(ULONGLONG maxRecord
         maxRecords = totalRecords;
     }
 
-    LOG_INFO_FMT("Total MFT records available: %llu", totalRecords);
-    LOG_INFO_FMT("Will scan up to: %llu records", maxRecords);
+    LOG_INFO_FMT("可用的MFT记录总数: %llu", totalRecords);
+    LOG_INFO_FMT("将扫描最多: %llu 条记录", maxRecords);
 
-    cout << "Scanning MFT for deleted files..." << endl;
-    cout << "Total MFT records to scan: " << maxRecords << endl;
+    cout << "正在扫描MFT以查找已删除文件..." << endl;
+    cout << "要扫描的MFT记录总数: " << maxRecords << endl;
 
     ULONGLONG foundCount = 0;
     ULONGLONG scannedCount = 0;
@@ -129,7 +129,7 @@ vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFiles(ULONGLONG maxRecord
         vector<BYTE> record;
         if (!reader->ReadMFT(i, record)) {
             readFailCount++;
-            LOG_WARNING_FMT("Failed to read MFT record #%llu", i);
+            LOG_WARNING_FMT("读取MFT记录 #%llu 失败", i);
             continue;
         }
 
@@ -151,7 +151,7 @@ vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFiles(ULONGLONG maxRecord
             // 在前10条删除记录上启用调试，以诊断为何没有文件名
             bool enableDebug = (deletedCount <= 10);
             if (enableDebug) {
-                LOG_INFO_FMT("=== Analyzing deleted record #%llu (deleted count: %llu) ===", i, deletedCount);
+                LOG_INFO_FMT("=== 分析已删除记录 #%llu（删除计数: %llu）===", i, deletedCount);
             }
 
             ULONGLONG parentDir;
@@ -160,13 +160,13 @@ vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFiles(ULONGLONG maxRecord
             if (fileName.empty()) {
                 noFileNameCount++;
                 if (enableDebug) {
-                    LOG_WARNING_FMT("Record #%llu has no filename extracted", i);
+                    LOG_WARNING_FMT("记录 #%llu 没有提取到文件名", i);
                 }
                 continue; // 无效记录
             }
 
             if (enableDebug) {
-                LOG_INFO_FMT("Record #%llu: Successfully extracted filename", i);
+                LOG_INFO_FMT("记录 #%llu: 成功提取文件名", i);
             }
 
             // 根据过滤级别处理低价值文件
@@ -197,11 +197,11 @@ vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFiles(ULONGLONG maxRecord
                     }
                 }
                 catch (const exception& e) {
-                    LOG_ERROR_FMT("Exception during path reconstruction for record #%llu: %s", i, e.what());
+                    LOG_ERROR_FMT("记录 #%llu 路径重建时发生异常: %s", i, e.what());
                     info.filePath = L"<unknown>\\" + fileName;
                 }
                 catch (...) {
-                    LOG_ERROR_FMT("Unknown exception during path reconstruction for record #%llu", i);
+                    LOG_ERROR_FMT("记录 #%llu 路径重建时发生未知异常", i);
                     info.filePath = L"<unknown>\\" + fileName;
                 }
             }
@@ -238,7 +238,7 @@ vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFiles(ULONGLONG maxRecord
 
                 // 安全检查：确保不会无限循环
                 if (attr->Length == 0) {
-                    LOG_WARNING_FMT("Attribute length is 0 at record #%llu, breaking attribute loop", i);
+                    LOG_WARNING_FMT("记录 #%llu 的属性长度为0，中断属性循环", i);
                     break;
                 }
 
@@ -264,22 +264,22 @@ vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFiles(ULONGLONG maxRecord
     // 完成进度条
     progressBar.Finish();
 
-    cout << "Scan completed. Found " << foundCount << " deleted files." << endl;
-    cout << "\n=== Detailed Scan Statistics ===" << endl;
-    cout << "  Total scanned: " << scannedCount << " records" << endl;
-    cout << "  Read failures: " << readFailCount << " ("
+    cout << "扫描完成。找到 " << foundCount << " 个已删除文件。" << endl;
+    cout << "\n=== 详细扫描统计 ===" << endl;
+    cout << "  扫描总数: " << scannedCount << " 条记录" << endl;
+    cout << "  读取失败: " << readFailCount << " ("
          << (scannedCount > 0 ? (readFailCount * 100 / scannedCount) : 0) << "%)" << endl;
-    cout << "  In-use records: " << inUseCount << " ("
+    cout << "  使用中记录: " << inUseCount << " ("
          << (scannedCount > 0 ? (inUseCount * 100 / scannedCount) : 0) << "%)" << endl;
-    cout << "  Deleted records: " << deletedCount << " ("
+    cout << "  已删除记录: " << deletedCount << " ("
          << (scannedCount > 0 ? (deletedCount * 100 / scannedCount) : 0) << "%)" << endl;
-    cout << "    - No filename: " << noFileNameCount << endl;
-    cout << "    - Directories: " << filteredCount << endl;
-    cout << "    - Valid files: " << foundCount << endl;
+    cout << "    - 无文件名: " << noFileNameCount << endl;
+    cout << "    - 目录: " << filteredCount << endl;
+    cout << "    - 有效文件: " << foundCount << endl;
     cout << "=================================" << endl;
 
-    LOG_INFO_FMT("=== Scan completed. Scanned: %llu, Found: %llu deleted files ===", scannedCount, foundCount);
-    LOG_INFO_FMT("Statistics: ReadFail=%llu, InUse=%llu, Deleted=%llu, NoFileName=%llu, Filtered=%llu",
+    LOG_INFO_FMT("=== 扫描完成。已扫描: %llu, 找到: %llu 个已删除文件 ===", scannedCount, foundCount);
+    LOG_INFO_FMT("统计: 读取失败=%llu, 使用中=%llu, 已删除=%llu, 无文件名=%llu, 已过滤=%llu",
                  readFailCount, inUseCount, deletedCount, noFileNameCount, filteredCount);
 
     // 显示缓存统计
@@ -287,9 +287,9 @@ vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFiles(ULONGLONG maxRecord
     pathResolver->GetCacheStats(cacheHits, cacheMisses);
     if (cacheHits + cacheMisses > 0) {
         double hitRate = (double)cacheHits / (cacheHits + cacheMisses) * 100.0;
-        LOG_INFO_FMT("Path cache stats: Hits=%llu, Misses=%llu, Hit rate=%.2f%%",
+        LOG_INFO_FMT("路径缓存统计: 命中=%llu, 未命中=%llu, 命中率=%.2f%%",
                      cacheHits, cacheMisses, hitRate);
-        cout << "Path cache hit rate: " << (int)hitRate << "%" << endl;
+        cout << "路径缓存命中率: " << (int)hitRate << "%" << endl;
     }
 
     return deletedFiles;
@@ -299,10 +299,10 @@ vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFiles(ULONGLONG maxRecord
 vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFilesBatch(ULONGLONG maxRecords) {
     vector<DeletedFileInfo> deletedFiles;
 
-    LOG_INFO("=== Starting Batch Reading Scan ===");
+    LOG_INFO("=== 开始批量读取扫描 ===");
 
     if (!reader->IsVolumeOpen()) {
-        string msg = "Volume is not open.";
+        string msg = "卷未打开。";
         cout << msg << endl;
         LOG_ERROR(msg);
         return deletedFiles;
@@ -313,7 +313,7 @@ vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFilesBatch(ULONGLONG maxR
         batchReader = new MFTBatchReader();
 
         if (!batchReader->Initialize(reader)) {
-            LOG_ERROR("Failed to initialize batch reader, falling back to traditional method");
+            LOG_ERROR("初始化批量读取器失败，回退到传统方法");
             delete batchReader;
             batchReader = nullptr;
             useBatchReading = false;
@@ -326,41 +326,41 @@ vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFilesBatch(ULONGLONG maxR
         maxRecords = totalRecords;
     }
 
-    LOG_INFO_FMT("Batch reading scan starting: %llu records", maxRecords);
+    LOG_INFO_FMT("批量读取扫描开始: %llu 条记录", maxRecords);
 
-    cout << "Scanning " << maxRecords << " MFT records (batch reading mode)..." << endl;
+    cout << "正在扫描 " << maxRecords << " 条MFT记录（批量读取模式）..." << endl;
 
     ULONGLONG foundCount = 0;
     ULONGLONG scannedCount = 0;
     ULONGLONG deletedCount = 0;      // 标记为删除的记录总数
     ULONGLONG noFileNameCount = 0;   // 没有文件名的记录
     ULONGLONG filteredCount = 0;     // 被筛选条件过滤的记录
-    ULONGLONG emptyRecordCount = 0;  // 空记录(签名验证失败)
+    ULONGLONG emptyRecordCount = 0;  // 空记录（签名验证失败）
     ULONGLONG inUseCount = 0;        // 正在使用的记录
 
     // 创建进度条
-    ProgressBar progressBar(maxRecords - 16);  // 从记录16开始,所以总数减16
+    ProgressBar progressBar(maxRecords - 16);  // 从记录16开始，所以总数减16
 
-    // 批量处理的大小(减小批量大小以降低内存压力)
+    // 批量处理的大小（减小批量大小以降低内存压力）
     const ULONGLONG BATCH_SIZE = 256;  // 一次处理256条记录
 
-    // 预分配结果向量空间(估计删除文件约占1%,避免频繁重新分配)
+    // 预分配结果向量空间（估计删除文件约占1%，避免频繁重新分配）
     deletedFiles.reserve(maxRecords / 100);
 
     // 从记录号16开始（前16个是系统保留的）
     for (ULONGLONG i = 16; i < maxRecords; i += BATCH_SIZE) {
         ULONGLONG batchCount = min(BATCH_SIZE, maxRecords - i);
 
-        // 定期清理缓存以防止内存累积(每10万条记录清理一次)
+        // 定期清理缓存以防止内存累积（每10万条记录清理一次）
         if (scannedCount > 0 && scannedCount % 100000 == 0) {
             pathResolver->ClearCache();
-            LOG_INFO_FMT("Cache cleared at %llu records to free memory", scannedCount);
+            LOG_INFO_FMT("在 %llu 条记录处清理缓存以释放内存", scannedCount);
         }
 
         // 批量读取
         vector<vector<BYTE>> batchRecords;
         if (!batchReader->ReadMFTBatch(i, batchCount, batchRecords)) {
-            LOG_WARNING_FMT("Failed to read batch starting at record %llu", i);
+            LOG_WARNING_FMT("读取从记录 %llu 开始的批次失败", i);
             continue;
         }
 
@@ -377,12 +377,12 @@ vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFilesBatch(ULONGLONG maxR
             // 检查记录是否有效
             if (batchRecords[j].empty()) {
                 emptyRecordCount++;
-                continue;  // 无效记录(签名验证失败或读取失败)
+                continue;  // 无效记录（签名验证失败或读取失败）
             }
 
             vector<BYTE>& record = batchRecords[j];
 
-            // 安全检查: 确保记录大小足够
+            // 安全检查：确保记录大小足够
             if (record.size() < sizeof(FILE_RECORD_HEADER)) {
                 emptyRecordCount++;
                 continue;
@@ -447,7 +447,7 @@ vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFilesBatch(ULONGLONG maxR
                 BYTE* recordEnd = record.data() + header->UsedSize;
 
                 while (attrPtr < recordEnd) {
-                    // 边界检查: 确保有足够空间读取属性头
+                    // 边界检查：确保有足够空间读取属性头
                     if (attrPtr + sizeof(ATTRIBUTE_HEADER) > recordEnd) {
                         break;
                     }
@@ -464,7 +464,7 @@ vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFilesBatch(ULONGLONG maxR
                     }
 
                     if (attr->Type == AttributeFileName) {
-                        // 边界检查: 确保有足够空间读取FileName属性
+                        // 边界检查：确保有足够空间读取FileName属性
                         if (attrPtr + sizeof(ATTRIBUTE_HEADER) + sizeof(RESIDENT_ATTRIBUTE) <= recordEnd) {
                             PRESIDENT_ATTRIBUTE resAttr = (PRESIDENT_ATTRIBUTE)(attrPtr + sizeof(ATTRIBUTE_HEADER));
                             if (attrPtr + resAttr->ValueOffset + sizeof(FILE_NAME_ATTRIBUTE) <= recordEnd) {
@@ -480,7 +480,7 @@ vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFilesBatch(ULONGLONG maxR
 
                     if (attr->Type == AttributeData && !info.isDirectory) {
                         if (attr->NonResident) {
-                            // 边界检查: 确保有足够空间读取NonResident属性
+                            // 边界检查：确保有足够空间读取NonResident属性
                             if (attrPtr + sizeof(ATTRIBUTE_HEADER) + sizeof(NONRESIDENT_ATTRIBUTE) <= recordEnd) {
                                 PNONRESIDENT_ATTRIBUTE nonResAttr = (PNONRESIDENT_ATTRIBUTE)(attrPtr + sizeof(ATTRIBUTE_HEADER));
                                 if (info.fileSize == 0) {
@@ -496,7 +496,7 @@ vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFilesBatch(ULONGLONG maxR
                 // 检查数据是否可用
                 info.dataAvailable = parser->CheckDataAvailable(record);
 
-                // 放宽筛选条件: 保存所有非目录的删除文件(包括fileSize=0的)
+                // 放宽筛选条件：保存所有非目录的删除文件（包括fileSize=0的）
                 // 或者保存所有有文件名的记录
                 if (!info.isDirectory) {
                     // 非目录文件都保存
@@ -512,7 +512,7 @@ vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFilesBatch(ULONGLONG maxR
             }
         }
 
-        // 显式清理批处理数据,释放内存
+        // 显式清理批处理数据，释放内存
         batchRecords.clear();
         batchRecords.shrink_to_fit();
     }
@@ -520,23 +520,23 @@ vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFilesBatch(ULONGLONG maxR
     // 完成进度条
     progressBar.Finish();
 
-    cout << "Scan completed. Found " << foundCount << " deleted files." << endl;
-    cout << "\n=== Detailed Scan Statistics ===" << endl;
-    cout << "  Total scanned: " << scannedCount << " records" << endl;
-    cout << "  Empty/Invalid: " << emptyRecordCount << " ("
+    cout << "扫描完成。找到 " << foundCount << " 个已删除文件。" << endl;
+    cout << "\n=== 详细扫描统计 ===" << endl;
+    cout << "  扫描总数: " << scannedCount << " 条记录" << endl;
+    cout << "  空/无效: " << emptyRecordCount << " ("
          << (scannedCount > 0 ? (emptyRecordCount * 100 / scannedCount) : 0) << "%)" << endl;
-    cout << "  In-use records: " << inUseCount << " ("
+    cout << "  使用中记录: " << inUseCount << " ("
          << (scannedCount > 0 ? (inUseCount * 100 / scannedCount) : 0) << "%)" << endl;
-    cout << "  Deleted records: " << deletedCount << " ("
+    cout << "  已删除记录: " << deletedCount << " ("
          << (scannedCount > 0 ? (deletedCount * 100 / scannedCount) : 0) << "%)" << endl;
-    cout << "    - No filename: " << noFileNameCount << endl;
-    cout << "    - Directories: " << filteredCount << endl;
-    cout << "    - Valid files: " << foundCount << endl;
+    cout << "    - 无文件名: " << noFileNameCount << endl;
+    cout << "    - 目录: " << filteredCount << endl;
+    cout << "    - 有效文件: " << foundCount << endl;
     cout << "=================================" << endl;
 
-    LOG_INFO_FMT("=== Batch reading scan completed. Scanned: %llu, Found: %llu deleted files ===",
+    LOG_INFO_FMT("=== 批量读取扫描完成。已扫描: %llu, 找到: %llu 个已删除文件 ===",
                  scannedCount, foundCount);
-    LOG_INFO_FMT("Statistics: Empty=%llu, InUse=%llu, Deleted=%llu, NoFileName=%llu, Filtered=%llu",
+    LOG_INFO_FMT("统计: 空=%llu, 使用中=%llu, 已删除=%llu, 无文件名=%llu, 已过滤=%llu",
                  emptyRecordCount, inUseCount, deletedCount, noFileNameCount, filteredCount);
 
     // 显示缓存统计
@@ -544,9 +544,9 @@ vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFilesBatch(ULONGLONG maxR
     pathResolver->GetCacheStats(cacheHits, cacheMisses);
     if (cacheHits + cacheMisses > 0) {
         double hitRate = (double)cacheHits / (cacheHits + cacheMisses) * 100.0;
-        LOG_INFO_FMT("Path cache stats: Hits=%llu, Misses=%llu, Hit rate=%.2f%%",
+        LOG_INFO_FMT("路径缓存统计: 命中=%llu, 未命中=%llu, 命中率=%.2f%%",
                      cacheHits, cacheMisses, hitRate);
-        cout << "Path cache hit rate: " << (int)hitRate << "%" << endl;
+        cout << "路径缓存命中率: " << (int)hitRate << "%" << endl;
     }
 
     return deletedFiles;
@@ -565,19 +565,19 @@ vector<DeletedFileInfo> DeletedFileScanner::FilterByExtension(const vector<Delet
     // 转换为小写以进行不区分大小写的比较
     transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
 
-    wcout << L"[DIAGNOSTIC FilterByExtension] Searching for extension: \"" << ext << L"\"" << endl;
-    wcout << L"[DIAGNOSTIC FilterByExtension] Total files to check: " << files.size() << endl;
+    wcout << L"[诊断 FilterByExtension] 搜索扩展名: \"" << ext << L"\"" << endl;
+    wcout << L"[诊断 FilterByExtension] 待检查文件总数: " << files.size() << endl;
 
     int xmlCount = 0;
     for (const auto& file : files) {
         wstring fileName = file.fileName;
         transform(fileName.begin(), fileName.end(), fileName.begin(), ::towlower);
 
-        // Count XML files for debugging
+        // 统计XML文件用于调试
         if (fileName.length() >= 4 && fileName.substr(fileName.length() - 4) == L".xml") {
             xmlCount++;
-            if (xmlCount <= 5) {  // Show first 5 XML files
-                wcout << L"  [DEBUG] Found XML file: \"" << file.fileName << L"\"" << endl;
+            if (xmlCount <= 5) {  // 显示前5个XML文件
+                wcout << L"  [调试] 找到XML文件: \"" << file.fileName << L"\"" << endl;
             }
         }
 
@@ -588,8 +588,8 @@ vector<DeletedFileInfo> DeletedFileScanner::FilterByExtension(const vector<Delet
         }
     }
 
-    wcout << L"[DIAGNOSTIC FilterByExtension] Total XML files seen: " << xmlCount << endl;
-    wcout << L"[DIAGNOSTIC FilterByExtension] Files matched: " << filtered.size() << endl;
+    wcout << L"[诊断 FilterByExtension] 看到的XML文件总数: " << xmlCount << endl;
+    wcout << L"[诊断 FilterByExtension] 匹配的文件数: " << filtered.size() << endl;
 
     return filtered;
 }
@@ -704,12 +704,12 @@ string DeletedFileScanner::GetCachePath(char driveLetter) {
 
 bool DeletedFileScanner::SaveToCache(const vector<DeletedFileInfo>& files, char driveLetter) {
     string cachePath = GetCachePath(driveLetter);
-    
-    LOG_INFO_FMT("Saving %zu files to cache: %s", files.size(), cachePath.c_str());
-    
+
+    LOG_INFO_FMT("保存 %zu 个文件到缓存: %s", files.size(), cachePath.c_str());
+
     ofstream ofs(cachePath, ios::binary);
     if (!ofs.is_open()) {
-        LOG_ERROR_FMT("Failed to open cache file for writing: %s", cachePath.c_str());
+        LOG_ERROR_FMT("打开缓存文件进行写入失败: %s", cachePath.c_str());
         return false;
     }
 
@@ -746,11 +746,11 @@ bool DeletedFileScanner::SaveToCache(const vector<DeletedFileInfo>& files, char 
         }
 
         ofs.close();
-        LOG_INFO_FMT("Successfully saved %zu files to cache", files.size());
+        LOG_INFO_FMT("成功保存 %zu 个文件到缓存", files.size());
         return true;
     }
     catch (const exception& e) {
-        LOG_ERROR_FMT("Exception while saving cache: %s", e.what());
+        LOG_ERROR_FMT("保存缓存时发生异常: %s", e.what());
         ofs.close();
         return false;
     }
@@ -758,12 +758,12 @@ bool DeletedFileScanner::SaveToCache(const vector<DeletedFileInfo>& files, char 
 
 bool DeletedFileScanner::LoadFromCache(vector<DeletedFileInfo>& files, char driveLetter) {
     string cachePath = GetCachePath(driveLetter);
-    
-    LOG_INFO_FMT("Loading cache from: %s", cachePath.c_str());
-    
+
+    LOG_INFO_FMT("从缓存加载: %s", cachePath.c_str());
+
     ifstream ifs(cachePath, ios::binary);
     if (!ifs.is_open()) {
-        LOG_WARNING_FMT("Cache file not found: %s", cachePath.c_str());
+        LOG_WARNING_FMT("缓存文件未找到: %s", cachePath.c_str());
         return false;
     }
 
@@ -772,7 +772,7 @@ bool DeletedFileScanner::LoadFromCache(vector<DeletedFileInfo>& files, char driv
         DWORD version;
         ifs.read((char*)&version, sizeof(version));
         if (version != 1) {
-            LOG_ERROR_FMT("Unsupported cache version: %d", version);
+            LOG_ERROR_FMT("不支持的缓存版本: %d", version);
             ifs.close();
             return false;
         }
@@ -780,8 +780,8 @@ bool DeletedFileScanner::LoadFromCache(vector<DeletedFileInfo>& files, char driv
         // 读取文件数量
         ULONGLONG fileCount;
         ifs.read((char*)&fileCount, sizeof(fileCount));
-        
-        LOG_INFO_FMT("Loading %llu files from cache", fileCount);
+
+        LOG_INFO_FMT("从缓存加载 %llu 个文件", fileCount);
         files.clear();
         files.reserve((size_t)fileCount);
 
@@ -817,11 +817,11 @@ bool DeletedFileScanner::LoadFromCache(vector<DeletedFileInfo>& files, char driv
         }
 
         ifs.close();
-        LOG_INFO_FMT("Successfully loaded %zu files from cache", files.size());
+        LOG_INFO_FMT("成功从缓存加载 %zu 个文件", files.size());
         return true;
     }
     catch (const exception& e) {
-        LOG_ERROR_FMT("Exception while loading cache: %s", e.what());
+        LOG_ERROR_FMT("加载缓存时发生异常: %s", e.what());
         ifs.close();
         return false;
     }
@@ -829,10 +829,10 @@ bool DeletedFileScanner::LoadFromCache(vector<DeletedFileInfo>& files, char driv
 
 bool DeletedFileScanner::IsCacheValid(char driveLetter, int maxAgeMinutes) {
     string cachePath = GetCachePath(driveLetter);
-    
+
     WIN32_FILE_ATTRIBUTE_DATA fileInfo;
     if (!GetFileAttributesExA(cachePath.c_str(), GetFileExInfoStandard, &fileInfo)) {
-        LOG_DEBUG_FMT("Cache file does not exist: %s", cachePath.c_str());
+        LOG_DEBUG_FMT("缓存文件不存在: %s", cachePath.c_str());
         return false;
     }
 
@@ -853,8 +853,8 @@ bool DeletedFileScanner::IsCacheValid(char driveLetter, int maxAgeMinutes) {
     ULONGLONG diffMinutes = (current.QuadPart - cached.QuadPart) / (600000000ULL);
 
     bool isValid = (diffMinutes <= (ULONGLONG)maxAgeMinutes);
-    LOG_INFO_FMT("Cache age: %llu minutes, max age: %d minutes, valid: %s",
-                 diffMinutes, maxAgeMinutes, isValid ? "yes" : "no");
-    
+    LOG_INFO_FMT("缓存年龄: %llu 分钟, 最大年龄: %d 分钟, 有效: %s",
+                 diffMinutes, maxAgeMinutes, isValid ? "是" : "否");
+
     return isValid;
 }

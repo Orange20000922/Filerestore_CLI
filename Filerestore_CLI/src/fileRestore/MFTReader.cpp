@@ -29,9 +29,9 @@ bool MFTReader::OpenVolume(char driveLetter) {
 
     if (hVolume == INVALID_HANDLE_VALUE) {
         DWORD error = GetLastError();
-        string msg = "Failed to open volume. Error: " + to_string(error);
+        string msg = "打开卷失败。错误代码: " + to_string(error);
         cout << msg << endl;
-        cout << "You need administrator privileges to access raw volume." << endl;
+        cout << "访问原始卷需要管理员权限。" << endl;
         LOG_ERROR(msg);
         return false;
     }
@@ -42,7 +42,7 @@ bool MFTReader::OpenVolume(char driveLetter) {
     NTFS_BOOT_SECTOR bootSector;
     DWORD bytesRead;
     if (!ReadFile(hVolume, &bootSector, sizeof(NTFS_BOOT_SECTOR), &bytesRead, NULL)) {
-        string msg = "Failed to read boot sector.";
+        string msg = "读取引导扇区失败。";
         cout << msg << endl;
         LOG_ERROR_FMT("%s Error: %d", msg.c_str(), GetLastError());
         CloseVolume();
@@ -53,7 +53,7 @@ bool MFTReader::OpenVolume(char driveLetter) {
     // 验证NTFS签名
     LOG_DEBUG("Verifying NTFS signature...");
     if (memcmp(bootSector.OemId, "NTFS    ", 8) != 0) {
-        string msg = "Not a valid NTFS volume.";
+        string msg = "不是有效的 NTFS 卷。";
         cout << msg << endl;
         LOG_ERROR(msg);
         CloseVolume();
@@ -75,7 +75,7 @@ bool MFTReader::OpenVolume(char driveLetter) {
 
     // 验证基本参数
     if (bytesPerSector == 0 || sectorsPerCluster == 0) {
-        string msg = "Invalid boot sector parameters: bytesPerSector or sectorsPerCluster is 0";
+        string msg = "无效的引导扇区参数：bytesPerSector 或 sectorsPerCluster 为 0";
         cout << msg << endl;
         LOG_FATAL(msg);
         CloseVolume();
@@ -93,7 +93,7 @@ bool MFTReader::OpenVolume(char driveLetter) {
 
         // 安全检查：防止位移量过大
         if (shift < 0 || shift > 31) {
-            string msg = "Invalid ClustersPerFileRecord shift value: " + to_string(shift);
+            string msg = "无效的 ClustersPerFileRecord 位移值: " + to_string(shift);
             cout << msg << endl;
             LOG_FATAL(msg);
             CloseVolume();
@@ -106,7 +106,7 @@ bool MFTReader::OpenVolume(char driveLetter) {
 
     // 最终验证
     if (bytesPerFileRecord == 0) {
-        string msg = "CRITICAL: bytesPerFileRecord calculated as 0!";
+        string msg = "严重错误：bytesPerFileRecord 计算结果为 0！";
         cout << msg << endl;
         LOG_FATAL(msg);
         CloseVolume();
@@ -115,11 +115,11 @@ bool MFTReader::OpenVolume(char driveLetter) {
 
     LOG_DEBUG_FMT("Bytes per file record: %d", bytesPerFileRecord);
 
-    cout << "Volume opened successfully." << endl;
-    cout << "Bytes per sector: " << bytesPerSector << endl;
-    cout << "Sectors per cluster: " << (int)sectorsPerCluster << endl;
-    cout << "MFT start LCN: " << mftStartLCN << endl;
-    cout << "Bytes per file record: " << bytesPerFileRecord << endl;
+    cout << "卷打开成功。" << endl;
+    cout << "每扇区字节数: " << bytesPerSector << endl;
+    cout << "每簇扇区数: " << (int)sectorsPerCluster << endl;
+    cout << "MFT 起始 LCN: " << mftStartLCN << endl;
+    cout << "每文件记录字节数: " << bytesPerFileRecord << endl;
 
     LOG_INFO_FMT("Volume %c: opened successfully", driveLetter);
     return true;
@@ -151,7 +151,7 @@ bool MFTReader::ReadClusters(ULONGLONG startLCN, ULONGLONG clusterCount, vector<
     if (bytesToReadFull > MAX_READ_SIZE) {
         LOG_ERROR_FMT("Cluster read size too large: %llu bytes (max: %llu). LCN=%llu, Count=%llu",
                      bytesToReadFull, MAX_READ_SIZE, startLCN, clusterCount);
-        cout << "Error: Cannot read more than 4GB in a single operation." << endl;
+        cout << "错误：单次操作无法读取超过 4GB 的数据。" << endl;
         return false;
     }
 
@@ -163,7 +163,7 @@ bool MFTReader::ReadClusters(ULONGLONG startLCN, ULONGLONG clusterCount, vector<
         buffer.resize(bytesToRead);
     } catch (const std::bad_alloc&) {
         LOG_ERROR_FMT("Failed to allocate memory for cluster read: %u bytes", bytesToRead);
-        cout << "Error: Out of memory while allocating buffer for cluster read." << endl;
+        cout << "错误：为簇读取分配缓冲区时内存不足。" << endl;
         return false;
     }
 
@@ -173,7 +173,7 @@ bool MFTReader::ReadClusters(ULONGLONG startLCN, ULONGLONG clusterCount, vector<
         DWORD error = GetLastError();
         LOG_ERROR_FMT("Failed to seek to cluster position. LCN=%llu, Offset=%llu, Error=%d",
                      startLCN, offset, error);
-        cout << "Failed to seek to cluster position. Error: " << error << endl;
+        cout << "定位到簇位置失败。错误代码: " << error << endl;
         return false;
     }
 
@@ -182,7 +182,7 @@ bool MFTReader::ReadClusters(ULONGLONG startLCN, ULONGLONG clusterCount, vector<
         DWORD error = GetLastError();
         LOG_ERROR_FMT("Failed to read clusters. LCN=%llu, BytesToRead=%u, Error=%d",
                      startLCN, bytesToRead, error);
-        cout << "Failed to read clusters. Error: " << error << endl;
+        cout << "读取簇失败。错误代码: " << error << endl;
         return false;
     }
 
@@ -234,7 +234,7 @@ bool MFTReader::ReadMFT(ULONGLONG fileRecordNumber, vector<BYTE>& record) {
 
     // 验证FILE签名(放宽验证 - 删除的记录可能签名不完整)
     PFILE_RECORD_HEADER header = (PFILE_RECORD_HEADER)record.data();
-    if (header->Signature != 'ELIF') { // 'FILE' in little-endian
+    if (header->Signature != 'ELIF') { // 小端序的 'FILE'
         // 仅记录日志，不返回失败 - 允许读取签名不匹配的记录
         LOG_DEBUG_FMT("Warning: MFT record #%llu has invalid signature 0x%X (expected 0x454C4946)",
                      fileRecordNumber, header->Signature);
@@ -478,33 +478,33 @@ bool MFTReader::ParseMFTDataRuns(BYTE* dataRun) {
 
 void MFTReader::DiagnoseMFTFragmentation() {
     cout << "\n========================================" << endl;
-    cout << "    MFT Fragmentation Analysis" << endl;
+    cout << "    MFT 碎片化分析" << endl;
     cout << "========================================\n" << endl;
 
     if (hVolume == INVALID_HANDLE_VALUE) {
-        cout << "ERROR: Volume not open!" << endl;
+        cout << "错误：卷未打开！" << endl;
         return;
     }
 
     // 读取MFT记录#0
-    cout << "[1/4] Reading MFT record #0..." << endl;
+    cout << "[1/4] 正在读取 MFT 记录 #0..." << endl;
     vector<BYTE> mftRecord;
-    
+
     // 暂时禁用data runs以读取记录#0
     bool savedDataRunsLoaded = mftDataRunsLoaded;
     mftDataRunsLoaded = false;
-    
+
     if (!ReadMFT(0, mftRecord)) {
-        cout << "ERROR: Failed to read MFT record #0" << endl;
+        cout << "错误：无法读取 MFT 记录 #0" << endl;
         mftDataRunsLoaded = savedDataRunsLoaded;
         return;
     }
-    
+
     mftDataRunsLoaded = savedDataRunsLoaded;
-    cout << "SUCCESS: MFT record #0 read successfully\n" << endl;
+    cout << "成功：MFT 记录 #0 读取成功\n" << endl;
 
     // 解析DATA属性
-    cout << "[2/4] Parsing DATA attribute..." << endl;
+    cout << "[2/4] 正在解析 DATA 属性..." << endl;
     PFILE_RECORD_HEADER header = (PFILE_RECORD_HEADER)mftRecord.data();
     BYTE* attrPtr = mftRecord.data() + header->FirstAttributeOffset;
     BYTE* recordEnd = mftRecord.data() + header->UsedSize;
@@ -530,16 +530,16 @@ void MFTReader::DiagnoseMFTFragmentation() {
     }
 
     if (!dataAttr || !dataRunPtr) {
-        cout << "ERROR: No non-resident DATA attribute found" << endl;
+        cout << "错误：未找到非常驻 DATA 属性" << endl;
         return;
     }
 
     ULONGLONG mftSize = dataAttr->RealSize;
-    cout << "MFT Size: " << (mftSize / (1024 * 1024)) << " MB (" << mftSize << " bytes)" << endl;
-    cout << "SUCCESS: DATA attribute found\n" << endl;
+    cout << "MFT 大小: " << (mftSize / (1024 * 1024)) << " MB (" << mftSize << " 字节)" << endl;
+    cout << "成功：找到 DATA 属性\n" << endl;
 
     // 解析data runs
-    cout << "[3/4] Parsing data runs..." << endl;
+    cout << "[3/4] 正在解析数据运行..." << endl;
     
     vector<pair<ULONGLONG, ULONGLONG>> runs;
     BYTE* current = dataRunPtr;
@@ -585,22 +585,22 @@ void MFTReader::DiagnoseMFTFragmentation() {
         }
     }
 
-    cout << "SUCCESS: Found " << runs.size() << " data run(s)\n" << endl;
+    cout << "成功：找到 " << runs.size() << " 个数据运行\n" << endl;
 
     // 分析结果
-    cout << "[4/4] Analysis Results:" << endl;
+    cout << "[4/4] 分析结果:" << endl;
     cout << "----------------------------------------" << endl;
 
     if (runs.empty()) {
-        cout << "STATUS: Unknown (no data runs found)" << endl;
+        cout << "状态：未知（未找到数据运行）" << endl;
     } else if (runs.size() == 1) {
-        cout << "STATUS: MFT is CONTIGUOUS (not fragmented)" << endl;
-        cout << "  Run #1: LCN " << runs[0].first << ", Length " << runs[0].second << " clusters" << endl;
+        cout << "状态：MFT 是连续的（无碎片）" << endl;
+        cout << "  运行 #1: LCN " << runs[0].first << ", 长度 " << runs[0].second << " 簇" << endl;
         ULONGLONG sizeInMB = (runs[0].second * sectorsPerCluster * bytesPerSector) / (1024 * 1024);
-        cout << "  Size: " << sizeInMB << " MB" << endl;
+        cout << "  大小: " << sizeInMB << " MB" << endl;
     } else {
-        cout << "STATUS: MFT is FRAGMENTED (" << runs.size() << " fragments)" << endl;
-        cout << "\nFragment details:" << endl;
+        cout << "状态：MFT 有碎片（" << runs.size() << " 个片段）" << endl;
+        cout << "\n碎片详情:" << endl;
 
         ULONGLONG totalClusters = 0;
         for (size_t i = 0; i < runs.size() && i < 10; i++) {
@@ -609,28 +609,271 @@ void MFTReader::DiagnoseMFTFragmentation() {
             totalClusters += length;
 
             ULONGLONG sizeInMB = (length * sectorsPerCluster * bytesPerSector) / (1024 * 1024);
-            cout << "  Fragment #" << (i + 1) << ": LCN " << lcn 
-                 << ", Length " << length << " clusters (" << sizeInMB << " MB)" << endl;
+            cout << "  片段 #" << (i + 1) << ": LCN " << lcn
+                 << ", 长度 " << length << " 簇 (" << sizeInMB << " MB)" << endl;
         }
 
         if (runs.size() > 10) {
-            cout << "  ... and " << (runs.size() - 10) << " more fragments" << endl;
+            cout << "  ... 还有 " << (runs.size() - 10) << " 个片段" << endl;
         }
 
         ULONGLONG totalSizeInMB = (totalClusters * sectorsPerCluster * bytesPerSector) / (1024 * 1024);
-        cout << "\nTotal: " << totalClusters << " clusters (" << totalSizeInMB << " MB)" << endl;
-        
+        cout << "\n总计: " << totalClusters << " 簇 (" << totalSizeInMB << " MB)" << endl;
+
         // 碎片化程度评估
         double fragmentation = ((double)(runs.size() - 1) / runs.size()) * 100.0;
-        cout << "\nFragmentation severity: ";
+        cout << "\n碎片化程度: ";
         if (runs.size() <= 5) {
-            cout << "LOW (" << runs.size() << " fragments)" << endl;
+            cout << "低（" << runs.size() << " 个片段）" << endl;
         } else if (runs.size() <= 20) {
-            cout << "MODERATE (" << runs.size() << " fragments)" << endl;
+            cout << "中等（" << runs.size() << " 个片段）" << endl;
         } else {
-            cout << "HIGH (" << runs.size() << " fragments)" << endl;
+            cout << "高（" << runs.size() << " 个片段）" << endl;
         }
     }
 
     cout << "========================================\n" << endl;
+}
+
+// ============================================================================
+// 新的错误处理 API 实现
+// ============================================================================
+
+// 打开卷（新版本）- 返回详细错误信息
+// 验证驱动器字母
+Result<void> MFTReader::OpenVolumeNew(char driveLetter) {
+    LOG_DEBUG_FMT("MFTReader::OpenVolumeNew called for drive %c:", driveLetter);
+
+    // 验证驱动器字母
+    if (!isalpha(driveLetter)) {
+        return Result<void>::Failure(
+            ErrorCode::SystemInvalidDriveLetter,
+            "无效的驱动器盘符"
+        );
+    }
+
+    // 构造卷路径
+    char volumePath[MAX_PATH];
+    sprintf_s(volumePath, "\\\\.\\%c:", driveLetter);
+    LOG_DEBUG_FMT("Volume path: %s", volumePath);
+
+    // 打开卷句柄
+    LOG_DEBUG("Attempting to open volume handle...");
+    hVolume = CreateFileA(
+        volumePath,
+        GENERIC_READ,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        NULL,
+        OPEN_EXISTING,
+        0,
+        NULL
+    );
+
+    if (hVolume == INVALID_HANDLE_VALUE) {
+        DWORD lastError = GetLastError();
+
+        // 根据系统错误码返回相应的错误类型
+        if (lastError == ERROR_ACCESS_DENIED) {
+            return Result<void>::Failure(
+                MakeSystemError(
+                    ErrorCode::SystemDiskAccessDenied,
+                    "打开卷失败 - 访问被拒绝。需要管理员权限。",
+                    std::string("驱动器: ") + driveLetter
+                )
+            );
+        } else if (lastError == ERROR_FILE_NOT_FOUND || lastError == ERROR_PATH_NOT_FOUND) {
+            return Result<void>::Failure(
+                MakeSystemError(
+                    ErrorCode::SystemVolumeNotFound,
+                    "未找到卷",
+                    std::string("驱动器: ") + driveLetter
+                )
+            );
+        } else {
+            return Result<void>::Failure(
+                MakeSystemError(
+                    ErrorCode::IOHandleInvalid,
+                    "打开卷失败",
+                    std::string("驱动器: ") + driveLetter
+                )
+            );
+        }
+    }
+    LOG_DEBUG("Volume handle opened successfully");
+
+    // 读取引导扇区
+    LOG_DEBUG("Reading boot sector...");
+    NTFS_BOOT_SECTOR bootSector;
+    DWORD bytesRead;
+
+    if (!ReadFile(hVolume, &bootSector, sizeof(NTFS_BOOT_SECTOR), &bytesRead, NULL)) {
+        CloseVolume();
+        return Result<void>::Failure(
+            MakeSystemError(
+                ErrorCode::IOReadFailed,
+                "读取引导扇区失败",
+                volumePath
+            )
+        );
+    }
+    LOG_DEBUG_FMT("Boot sector read successfully, %d bytes", bytesRead);
+
+    // 验证 NTFS 签名
+    LOG_DEBUG("Verifying NTFS signature...");
+    if (memcmp(bootSector.OemId, "NTFS    ", 8) != 0) {
+        CloseVolume();
+        return Result<void>::Failure(
+            ErrorCode::FSMFTCorrupted,
+            "不是有效的 NTFS 卷"
+        );
+    }
+    LOG_DEBUG("NTFS signature verified");
+
+    // 获取文件系统参数
+    bytesPerSector = bootSector.BytesPerSector;
+    sectorsPerCluster = bootSector.SectorsPerCluster;
+    mftStartLCN = bootSector.MftStartLCN;
+    totalClusters = bootSector.TotalSectors / sectorsPerCluster;
+
+    // 计算文件记录大小
+    CHAR clustersPerFileRecord = bootSector.ClustersPerFileRecord;
+    if (clustersPerFileRecord > 0) {
+        bytesPerFileRecord = clustersPerFileRecord * sectorsPerCluster * bytesPerSector;
+    } else {
+        bytesPerFileRecord = 1 << (-clustersPerFileRecord);
+    }
+
+    LOG_DEBUG_FMT("File system parameters:");
+    LOG_DEBUG_FMT("  Bytes per sector: %d", bytesPerSector);
+    LOG_DEBUG_FMT("  Sectors per cluster: %d", sectorsPerCluster);
+    LOG_DEBUG_FMT("  MFT start LCN: %llu", mftStartLCN);
+    LOG_DEBUG_FMT("  Bytes per file record: %d", bytesPerFileRecord);
+
+    mftDataRunsLoaded = false;
+
+    return Result<void>::Success();
+}
+
+// 读取簇（新版本）- 返回数据或错误
+Result<vector<BYTE>> MFTReader::ReadClustersNew(ULONGLONG startLCN, ULONGLONG clusterCount) {
+    if (hVolume == INVALID_HANDLE_VALUE) {
+        return Result<vector<BYTE>>::Failure(
+            ErrorCode::IOHandleInvalid,
+            "卷未打开"
+        );
+    }
+
+    if (startLCN >= totalClusters) {
+        return Result<vector<BYTE>>::Failure(
+            ErrorCode::FSInvalidClusterNumber,
+            "起始 LCN 超出卷大小"
+        );
+    }
+
+    ULONGLONG clusterSize = (ULONGLONG)bytesPerSector * sectorsPerCluster;
+    ULONGLONG totalBytes = clusterCount * clusterSize;
+
+    vector<BYTE> buffer(totalBytes);
+
+    LARGE_INTEGER offset;
+    offset.QuadPart = startLCN * clusterSize;
+
+    if (SetFilePointerEx(hVolume, offset, NULL, FILE_BEGIN) == 0) {
+        return Result<vector<BYTE>>::Failure(
+            MakeSystemError(
+                ErrorCode::IOSeekFailed,
+                "定位到簇失败",
+                "LCN: " + std::to_string(startLCN)
+            )
+        );
+    }
+
+    DWORD bytesRead;
+    if (!ReadFile(hVolume, buffer.data(), (DWORD)totalBytes, &bytesRead, NULL)) {
+        return Result<vector<BYTE>>::Failure(
+            MakeSystemError(
+                ErrorCode::IOReadFailed,
+                "读取簇失败",
+                "LCN: " + std::to_string(startLCN) + ", 数量: " + std::to_string(clusterCount)
+            )
+        );
+    }
+
+    if (bytesRead != totalBytes) {
+        return Result<vector<BYTE>>::Failure(
+            ErrorCode::IOReadFailed,
+            "读取不完整 - 预期 " + std::to_string(totalBytes) +
+            " 字节，实际 " + std::to_string(bytesRead) + " 字节"
+        );
+    }
+
+    return Result<vector<BYTE>>::Success(std::move(buffer));
+}
+
+// 读取 MFT 记录（新版本）
+Result<vector<BYTE>> MFTReader::ReadMFTNew(ULONGLONG fileRecordNumber) {
+    if (hVolume == INVALID_HANDLE_VALUE) {
+        return Result<vector<BYTE>>::Failure(
+            ErrorCode::IOHandleInvalid,
+            "卷未打开"
+        );
+    }
+
+    // 确保 MFT data runs 已加载
+    if (!mftDataRunsLoaded) {
+        vector<BYTE> mftRecord0;
+        if (!ReadMFT(0, mftRecord0)) {
+            return Result<vector<BYTE>>::Failure(
+                ErrorCode::FSMFTCorrupted,
+                "加载 MFT 数据运行失败"
+            );
+        }
+    }
+
+    // 查找 MFT 记录的实际 LCN
+    ULONGLONG lcn, offsetInCluster;
+    if (!GetMFTRecordLCN(fileRecordNumber, lcn, offsetInCluster)) {
+        return Result<vector<BYTE>>::Failure(
+            FR::ErrorInfo(
+                ErrorCode::FSRecordNotFound,
+                "未找到 MFT 记录",
+                "记录号: " + std::to_string(fileRecordNumber),
+                0
+            )
+        );
+    }
+
+    // 读取包含该记录的簇
+    auto clusterResult = ReadClustersNew(lcn, 1);
+    if (clusterResult.IsFailure()) {
+        return Result<vector<BYTE>>::Failure(clusterResult.Error());
+    }
+
+    // 提取 MFT 记录
+    vector<BYTE>& clusterData = clusterResult.Value();
+    if (offsetInCluster + bytesPerFileRecord > clusterData.size()) {
+        return Result<vector<BYTE>>::Failure(
+            ErrorCode::LogicBufferTooSmall,
+            "MFT 记录超出簇边界"
+        );
+    }
+
+    vector<BYTE> record(bytesPerFileRecord);
+    memcpy(record.data(), clusterData.data() + offsetInCluster, bytesPerFileRecord);
+
+    // 验证 MFT 记录签名
+    if (record.size() >= 4) {
+        if (memcmp(record.data(), "FILE", 4) != 0) {
+            return Result<vector<BYTE>>::Failure(
+                FR::ErrorInfo(
+                    ErrorCode::FSMFTCorrupted,
+                    "无效的 MFT 记录签名",
+                    "记录号: " + std::to_string(fileRecordNumber),
+                    0
+                )
+            );
+        }
+    }
+
+    return Result<vector<BYTE>>::Success(std::move(record));
 }

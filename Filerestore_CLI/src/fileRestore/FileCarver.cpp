@@ -6,6 +6,7 @@
 #include <iostream>
 #include <algorithm>
 #include <iomanip>
+#include <filesystem>
 
 using namespace std;
 
@@ -25,10 +26,11 @@ FileCarver::FileCarver(MFTReader* mftReader)
     : reader(mftReader), shouldStop(false), useAsyncIO(true),
       currentReadBuffer(0), currentScanBuffer(0),
       ioWaitTimeMs(0), scanTimeMs(0), totalIoTimeMs(0), totalScanTimeMs(0),
-      scanThreadPool(nullptr), useThreadPool(true),
-      lcnIndex(nullptr), timestampExtractionEnabled(true), mftIndexBuilt(false),
-      integrityValidationEnabled(true), validatedCount(0), corruptedCount(0) {
-    memset(&stats, 0, sizeof(stats));
+      useThreadPool(true),
+      timestampExtractionEnabled(true), mftIndexBuilt(false),
+      integrityValidationEnabled(true), validatedCount(0), corruptedCount(0),
+      mlClassificationEnabled(false) {
+    stats.reset();
 
     // 初始化双缓冲区
     for (int i = 0; i < 2; i++) {
@@ -44,6 +46,10 @@ FileCarver::FileCarver(MFTReader* mftReader)
 
     InitializeSignatures();
     BuildSignatureIndex();
+
+    // 自动检测并加载ML模型
+    AutoLoadMLModel();
+
     LOG_INFO("FileCarver initialized with async I/O and thread pool support");
 }
 
@@ -53,15 +59,9 @@ FileCarver::~FileCarver() {
     // 清理线程池
     if (scanThreadPool) {
         scanThreadPool->Stop();
-        delete scanThreadPool;
-        scanThreadPool = nullptr;
     }
 
-    // 清理 LCN 索引
-    if (lcnIndex) {
-        delete lcnIndex;
-        lcnIndex = nullptr;
-    }
+    // unique_ptr 自动释放 scanThreadPool, lcnIndex, mlClassifier
 }
 
 // ============================================================================
@@ -234,6 +234,84 @@ void FileCarver::InitializeSignatures() {
         false,
         "WAV Audio",
         0x52
+    };
+
+    // ==================== OLE Compound Document Types ====================
+    // Note: DOC, XLS, PPT share the same OLE header magic bytes
+    // ML classifier helps distinguish between them
+
+    // DOC (Microsoft Word 97-2003)
+    signatures["doc"] = {
+        "doc",
+        {0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1},  // OLE Compound File
+        {},
+        100 * 1024 * 1024,
+        512,
+        false,
+        "Microsoft Word Document",
+        0xD0
+    };
+
+    // XLS (Microsoft Excel 97-2003)
+    signatures["xls"] = {
+        "xls",
+        {0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1},  // OLE Compound File
+        {},
+        100 * 1024 * 1024,
+        512,
+        false,
+        "Microsoft Excel Spreadsheet",
+        0xD0
+    };
+
+    // PPT (Microsoft PowerPoint 97-2003)
+    signatures["ppt"] = {
+        "ppt",
+        {0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1},  // OLE Compound File
+        {},
+        200 * 1024 * 1024,
+        512,
+        false,
+        "Microsoft PowerPoint Presentation",
+        0xD0
+    };
+
+    // ==================== Text-based Document Types ====================
+
+    // RTF (Rich Text Format)
+    signatures["rtf"] = {
+        "rtf",
+        {0x7B, 0x5C, 0x72, 0x74, 0x66},     // {\rtf
+        {0x7D},                              // } (closing brace)
+        50 * 1024 * 1024,
+        20,
+        true,
+        "Rich Text Format",
+        0x7B
+    };
+
+    // HTML (with DOCTYPE)
+    signatures["html"] = {
+        "html",
+        {0x3C, 0x21, 0x44, 0x4F, 0x43, 0x54, 0x59, 0x50, 0x45},  // <!DOCTYPE
+        {0x3C, 0x2F, 0x68, 0x74, 0x6D, 0x6C, 0x3E},              // </html>
+        50 * 1024 * 1024,
+        50,
+        true,
+        "HTML Document",
+        0x3C
+    };
+
+    // XML (with declaration)
+    signatures["xml"] = {
+        "xml",
+        {0x3C, 0x3F, 0x78, 0x6D, 0x6C},     // <?xml
+        {},
+        50 * 1024 * 1024,
+        20,
+        false,
+        "XML Document",
+        0x3C
     };
 
     LOG_INFO_FMT("Loaded %zu file signatures", signatures.size());
@@ -584,7 +662,7 @@ vector<CarvedFileInfo> FileCarver::ScanForFileTypes(const vector<string>& fileTy
     shouldStop = false;
 
     // 重置统计
-    memset(&stats, 0, sizeof(stats));
+    stats.reset();
     stats.totalClusters = reader->GetTotalClusters();
 
     // 设置活动签名
@@ -623,7 +701,7 @@ vector<CarvedFileInfo> FileCarver::ScanForFileTypes(const vector<string>& fileTy
     cout << "\nScanning... (Press Ctrl+C to stop)\n" << endl;
 
     // 计算实际使用的缓冲区大小
-    ULONGLONG bufferClusters = min(BUFFER_SIZE_CLUSTERS, stats.totalClusters);
+    ULONGLONG bufferClusters = min(BUFFER_SIZE_CLUSTERS, stats.totalClusters.load());
 
     // 开始计时
     DWORD startTime = GetTickCount();
@@ -632,8 +710,8 @@ vector<CarvedFileInfo> FileCarver::ScanForFileTypes(const vector<string>& fileTy
     ULONGLONG currentLCN = 0;
     ULONGLONG lastProgressLCN = 0;
 
-    while (currentLCN < stats.totalClusters && !shouldStop && results.size() < maxResults) {
-        ULONGLONG clustersToRead = min(bufferClusters, stats.totalClusters - currentLCN);
+    while (currentLCN < stats.totalClusters.load() && !shouldStop && results.size() < maxResults) {
+        ULONGLONG clustersToRead = min(bufferClusters, stats.totalClusters.load() - currentLCN);
 
         // 读取一大块数据
         if (!reader->ReadClusters(currentLCN, clustersToRead, buffer)) {
@@ -744,28 +822,40 @@ bool FileCarver::RecoverCarvedFile(const CarvedFileInfo& info, const string& out
 
     cout << "Extracted " << fileData.size() << " bytes" << endl;
 
-    // 确保父目录存在
-    string parentPath = outputPath;
-    size_t lastSlash = parentPath.find_last_of("\\/");
-    if (lastSlash != string::npos) {
-        parentPath = parentPath.substr(0, lastSlash);
-        string currentPath;
-        for (size_t i = 0; i < parentPath.length(); i++) {
-            char c = parentPath[i];
-            currentPath += c;
-            if (c == '\\' || c == '/' || i == parentPath.length() - 1) {
-                if (currentPath.length() > 2) {
-                    CreateDirectoryA(currentPath.c_str(), NULL);
-                }
+    // 确保父目录存在 (使用 std::filesystem)
+    namespace fs = std::filesystem;
+    try {
+        fs::path outPath(outputPath);
+        fs::path parentDir = outPath.parent_path();
+
+        if (!parentDir.empty() && !fs::exists(parentDir)) {
+            std::error_code ec;
+            fs::create_directories(parentDir, ec);
+            if (ec) {
+                cout << "Failed to create directory: " << parentDir.string() << endl;
+                cout << "Error: " << ec.message() << endl;
+                return false;
             }
         }
+    } catch (const std::exception& e) {
+        cout << "Path error: " << e.what() << endl;
+        return false;
     }
 
     HANDLE hFile = CreateFileA(outputPath.c_str(), GENERIC_WRITE,
         0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 
     if (hFile == INVALID_HANDLE_VALUE) {
-        cout << "Failed to create output file. Error: " << GetLastError() << endl;
+        DWORD err = GetLastError();
+        cout << "Failed to create output file: " << outputPath << endl;
+        cout << "Error code: " << err;
+        switch (err) {
+            case 5:  cout << " (ACCESS_DENIED - check permissions or run as admin)"; break;
+            case 3:  cout << " (PATH_NOT_FOUND - invalid path)"; break;
+            case 32: cout << " (SHARING_VIOLATION - file in use)"; break;
+            case 123: cout << " (INVALID_NAME - invalid characters in path)"; break;
+        }
+        cout << endl;
         return false;
     }
 
@@ -961,7 +1051,7 @@ vector<CarvedFileInfo> FileCarver::ScanForFileTypesAsync(const vector<string>& f
     shouldStop = false;
 
     // 重置统计和计时器
-    memset(&stats, 0, sizeof(stats));
+    stats.reset();
     ioWaitTimeMs = 0;
     scanTimeMs = 0;
     totalIoTimeMs = 0;
@@ -1013,14 +1103,14 @@ vector<CarvedFileInfo> FileCarver::ScanForFileTypesAsync(const vector<string>& f
         buffers[i].data.clear();
     }
 
-    ULONGLONG bufferClusters = min(BUFFER_SIZE_CLUSTERS, stats.totalClusters);
+    ULONGLONG bufferClusters = min(BUFFER_SIZE_CLUSTERS, stats.totalClusters.load());
 
     // 开始计时
     DWORD startTime = GetTickCount();
 
     // 启动I/O读取线程（生产者）
     thread ioThread(&FileCarver::IOReaderThread, this,
-                    0, stats.totalClusters, bufferClusters, bytesPerCluster, mode);
+                    0, stats.totalClusters.load(), bufferClusters, bytesPerCluster, mode);
 
     // 扫描线程（消费者）- 在当前线程运行
     // 同时显示进度
@@ -1185,7 +1275,7 @@ vector<CarvedFileInfo> FileCarver::ScanForFileTypesThreadPool(const vector<strin
     shouldStop = false;
 
     // 重置统计
-    memset(&stats, 0, sizeof(stats));
+    stats.reset();
     stats.totalClusters = reader->GetTotalClusters();
 
     // 设置活动签名
@@ -1236,16 +1326,33 @@ vector<CarvedFileInfo> FileCarver::ScanForFileTypesThreadPool(const vector<strin
     // 使用更大的缓冲区以优化NVMe性能
     const ULONGLONG BUFFER_SIZE = 128 * 1024 * 1024;  // 128MB
     ULONGLONG bufferClusters = BUFFER_SIZE / bytesPerCluster;
-    bufferClusters = min(bufferClusters, stats.totalClusters);
+    bufferClusters = min(bufferClusters, stats.totalClusters.load());
 
     cout << "Read Buffer: " << (BUFFER_SIZE / (1024 * 1024)) << " MB" << endl;
+
+    // 检查ML状态
+    bool mlEnabled = mlClassificationEnabled && mlClassifier && mlClassifier->isLoaded();
+    if (mlEnabled) {
+        cout << "ML Classification: Enabled (Model loaded)" << endl;
+        threadPoolConfig.useMLClassification = true;
+    } else if (mlClassificationEnabled) {
+        cout << "ML Classification: Disabled (Model not loaded)" << endl;
+        threadPoolConfig.useMLClassification = false;
+    } else {
+        cout << "ML Classification: Disabled" << endl;
+        threadPoolConfig.useMLClassification = false;
+    }
+
     cout << "\nScanning... (Press Ctrl+C to stop)\n" << endl;
 
     // 创建线程池
-    if (scanThreadPool) {
-        delete scanThreadPool;
+    scanThreadPool = make_unique<SignatureScanThreadPool>(&signatureIndex, &activeSignatures, threadPoolConfig);
+
+    // 设置ML分类器
+    if (mlEnabled) {
+        scanThreadPool->SetMLClassifier(mlClassifier.get());
     }
-    scanThreadPool = new SignatureScanThreadPool(&signatureIndex, &activeSignatures, threadPoolConfig);
+
     scanThreadPool->Start();
 
     // 开始计时
@@ -1257,8 +1364,8 @@ vector<CarvedFileInfo> FileCarver::ScanForFileTypesThreadPool(const vector<strin
     ULONGLONG lastProgressLCN = 0;
     int taskIdCounter = 0;
 
-    while (currentLCN < stats.totalClusters && !shouldStop) {
-        ULONGLONG clustersToRead = min(bufferClusters, stats.totalClusters - currentLCN);
+    while (currentLCN < stats.totalClusters.load() && !shouldStop) {
+        ULONGLONG clustersToRead = min(bufferClusters, stats.totalClusters.load() - currentLCN);
 
         // 读取数据
         if (!reader->ReadClusters(currentLCN, clustersToRead, buffer)) {
@@ -1293,12 +1400,19 @@ vector<CarvedFileInfo> FileCarver::ScanForFileTypesThreadPool(const vector<strin
             ULONGLONG filesFound = scanThreadPool->GetTotalFilesFound();
             double poolProgress = scanThreadPool->GetProgress();
 
+            // 构建进度信息
             cout << "\rI/O: " << fixed << setprecision(1) << progress << "% | "
                  << "Pool: " << setprecision(1) << poolProgress << "% | "
                  << "Scanned: " << (stats.scannedClusters / 1000) << "K | "
                  << "Skipped: " << (stats.skippedClusters / 1000) << "K | "
-                 << "Found: " << filesFound << " | "
-                 << "Speed: " << setprecision(1) << speedMBps << " MB/s [THREADPOOL]" << flush;
+                 << "Found: " << filesFound;
+
+            // 如果ML启用，显示ML增强计数
+            if (mlEnabled) {
+                cout << " (ML:" << scanThreadPool->GetMLEnhancedCount() << ")";
+            }
+
+            cout << " | Speed: " << setprecision(1) << speedMBps << " MB/s" << flush;
 
             lastProgressLCN = stats.scannedClusters;
         }
@@ -1345,6 +1459,27 @@ vector<CarvedFileInfo> FileCarver::ScanForFileTypesThreadPool(const vector<strin
     cout << "Total tasks: " << scanThreadPool->GetTotalTasks() << endl;
     cout << "Completed tasks: " << scanThreadPool->GetCompletedTasks() << endl;
 
+    // 显示ML分类统计
+    if (mlEnabled) {
+        cout << "\n--- ML Classification Statistics ---" << endl;
+
+        ULONGLONG mlEnhanced = scanThreadPool->GetMLEnhancedCount();
+        ULONGLONG mlMatch = scanThreadPool->GetMLMatchCount();
+        ULONGLONG mlMismatch = scanThreadPool->GetMLMismatchCount();
+        ULONGLONG mlSkipped = scanThreadPool->GetMLSkippedCount();
+        ULONGLONG mlUnknown = scanThreadPool->GetMLUnknownCount();
+
+        cout << "ML supported files: " << mlEnhanced << endl;
+        cout << "ML skipped (unsupported types): " << mlSkipped << endl;
+        cout << "ML uncertain (low confidence): " << mlUnknown << endl;
+
+        if (mlMatch + mlMismatch > 0) {
+            double matchRate = 100.0 * mlMatch / (mlMatch + mlMismatch);
+            cout << "ML-Signature match rate: " << fixed << setprecision(1) << matchRate << "%" << endl;
+            cout << "  Matches: " << mlMatch << ", Mismatches: " << mlMismatch << endl;
+        }
+    }
+
     // 计算并行效率
     double expectedSingleThreadTime = stats.elapsedMs * threadPoolConfig.workerCount;
     double parallelEfficiency = (expectedSingleThreadTime > 0) ?
@@ -1375,16 +1510,11 @@ vector<CarvedFileInfo> FileCarver::ScanForFileTypesThreadPool(const vector<strin
 
 // 构建 MFT LCN 索引
 bool FileCarver::BuildMFTIndex(bool includeActiveFiles) {
-    if (lcnIndex) {
-        delete lcnIndex;
-    }
-
-    lcnIndex = new MFTLCNIndex(reader);
+    lcnIndex = make_unique<MFTLCNIndex>(reader);
     mftIndexBuilt = lcnIndex->BuildIndex(includeActiveFiles, true);
 
     if (!mftIndexBuilt) {
-        delete lcnIndex;
-        lcnIndex = nullptr;
+        lcnIndex.reset();
     }
 
     return mftIndexBuilt;
@@ -1882,4 +2012,517 @@ size_t FileCarver::CountActiveFiles(const vector<CarvedFileInfo>& results) {
         }
     }
     return count;
+}
+
+// ============================================================================
+// ML 分类功能
+// ============================================================================
+
+bool FileCarver::LoadMLModel(const wstring& modelPath) {
+    if (!ML::MLClassifier::isOnnxRuntimeAvailable()) {
+        LOG_WARNING("ONNX Runtime not available, ML classification disabled");
+        return false;
+    }
+
+    if (!mlClassifier) {
+        mlClassifier = make_unique<ML::MLClassifier>();
+    }
+
+    if (mlClassifier->loadModel(modelPath)) {
+        mlClassificationEnabled = true;
+        LOG_INFO(L"ML model loaded: " + modelPath);
+        return true;
+    }
+
+    LOG_ERROR(L"Failed to load ML model: " + modelPath);
+    return false;
+}
+
+bool FileCarver::IsMLModelLoaded() const {
+    return mlClassifier && mlClassifier->isLoaded();
+}
+
+optional<ML::ClassificationResult> FileCarver::ClassifyWithML(
+    const BYTE* data, size_t dataSize) {
+
+    if (!IsMLModelLoaded()) {
+        return nullopt;
+    }
+
+    return mlClassifier->classify(data, dataSize);
+}
+
+vector<string> FileCarver::GetMLSupportedTypes() const {
+    if (!IsMLModelLoaded()) {
+        return {};
+    }
+    return mlClassifier->getSupportedTypes();
+}
+
+void FileCarver::EnhanceResultsWithML(vector<CarvedFileInfo>& results, bool showProgress) {
+    if (!IsMLModelLoaded()) {
+        LOG_WARNING("ML model not loaded, skipping ML enhancement");
+        return;
+    }
+
+    DWORD startTime = GetTickCount();
+    size_t processedCount = 0;
+    size_t enhancedCount = 0;
+
+    for (auto& info : results) {
+        // 读取文件数据
+        vector<BYTE> fileData;
+        if (!ExtractFile(info.startLCN, info.startOffset, min(info.fileSize, (ULONGLONG)4096), fileData)) {
+            continue;
+        }
+
+        // ML 分类
+        auto mlResult = mlClassifier->classify(fileData.data(), fileData.size());
+        if (mlResult && mlResult->confidence > 0.6) {
+            // 存储 ML 分类结果作为补充信息
+            info.mlClassification = mlResult->predictedType;
+            info.mlConfidence = mlResult->confidence;
+
+            // 如果签名检测和 ML 分类一致，提高可信度
+            if (mlResult->predictedType == info.extension) {
+                info.validationScore = max(info.validationScore, (double)mlResult->confidence);
+            }
+            // 如果不一致但 ML 置信度高，可能是签名误判
+            else if (mlResult->confidence > 0.85) {
+                LOG_DEBUG_FMT("ML suggests %s (%.1f%%) but signature detected %s at LCN %llu",
+                             mlResult->predictedType.c_str(),
+                             mlResult->confidence * 100.0f,
+                             info.extension.c_str(),
+                             info.startLCN);
+            }
+
+            enhancedCount++;
+        }
+
+        processedCount++;
+
+        if (showProgress && processedCount % 100 == 0) {
+            double progress = (double)processedCount / results.size() * 100.0;
+            cout << "\rML Enhancement: " << fixed << setprecision(1) << progress << "%" << flush;
+        }
+    }
+
+    DWORD elapsed = GetTickCount() - startTime;
+
+    if (showProgress) {
+        cout << "\r                                                          " << endl;
+        cout << "\n--- ML Enhancement Complete ---" << endl;
+        cout << "Time: " << (elapsed / 1000) << "." << ((elapsed % 1000) / 100) << " seconds" << endl;
+        cout << "Files processed: " << processedCount << endl;
+        cout << "Files enhanced with ML: " << enhancedCount << endl;
+    }
+
+    LOG_INFO_FMT("ML enhancement: %zu/%zu files enhanced", enhancedCount, processedCount);
+}
+
+vector<CarvedFileInfo> FileCarver::ScanWithMLOnly(CarvingMode mode,
+                                                   ULONGLONG maxResults,
+                                                   float minConfidence) {
+    vector<CarvedFileInfo> results;
+
+    if (!IsMLModelLoaded()) {
+        LOG_ERROR("ML model not loaded, cannot scan with ML only");
+        return results;
+    }
+
+    LOG_INFO("Starting ML-only scan");
+    cout << "ML-only scan starting (confidence threshold: " << (minConfidence * 100.0f) << "%)" << endl;
+
+    // 获取磁盘信息
+    ULONGLONG totalClusters = reader->GetTotalClusters();
+    ULONGLONG bytesPerCluster = reader->GetBytesPerCluster();
+
+    stats.totalClusters = totalClusters;
+    stats.scannedClusters = 0;
+    stats.filesFound = 0;
+
+    shouldStop = false;
+    DWORD startTime = GetTickCount();
+
+    // 分配缓冲区
+    ULONGLONG bufferClusters = 16;  // 16 簇 = 64KB
+    vector<BYTE> buffer(static_cast<size_t>(bufferClusters * bytesPerCluster));
+
+    for (ULONGLONG lcn = 0; lcn < totalClusters && !shouldStop; lcn += bufferClusters) {
+        ULONGLONG clustersToRead = min(bufferClusters, totalClusters - lcn);
+
+        if (!reader->ReadClusters(lcn, clustersToRead, buffer)) {
+            continue;
+        }
+
+        // 使用 ML 分类
+        auto mlResult = mlClassifier->classify(buffer.data(), static_cast<size_t>(clustersToRead * bytesPerCluster));
+
+        if (mlResult && mlResult->confidence >= minConfidence) {
+            CarvedFileInfo info;
+            info.startLCN = lcn;
+            info.startOffset = 0;
+            info.extension = mlResult->predictedType;
+            info.fileSize = clustersToRead * bytesPerCluster;  // 估算大小
+            info.validationScore = mlResult->confidence;
+            info.mlClassification = mlResult->predictedType;
+            info.mlConfidence = mlResult->confidence;
+
+            results.push_back(info);
+            stats.filesFound++;
+
+            if (results.size() >= maxResults) {
+                break;
+            }
+        }
+
+        stats.scannedClusters += clustersToRead;
+
+        // 进度显示
+        if (stats.scannedClusters % PROGRESS_UPDATE_INTERVAL == 0) {
+            double progress = (double)stats.scannedClusters / totalClusters * 100.0;
+            cout << "\rML Scan: " << fixed << setprecision(1) << progress << "% | "
+                 << "Found: " << stats.filesFound << flush;
+        }
+    }
+
+    stats.elapsedMs = GetTickCount() - startTime;
+
+    cout << "\r                                                          " << endl;
+    cout << "\n--- ML-Only Scan Complete ---" << endl;
+    cout << "Time: " << (stats.elapsedMs / 1000) << "." << ((stats.elapsedMs % 1000) / 100) << " seconds" << endl;
+    cout << "Clusters scanned: " << stats.scannedClusters << "/" << totalClusters << endl;
+    cout << "Files found: " << results.size() << endl;
+
+    LOG_INFO_FMT("ML-only scan complete: %zu files found", results.size());
+
+    return results;
+}
+
+// ============================================================================
+// ML 模型自动检测和加载
+// ============================================================================
+
+vector<wstring> FileCarver::GetDefaultMLModelPaths() {
+    vector<wstring> paths;
+
+    // 获取当前可执行文件路径
+    wchar_t exePath[MAX_PATH];
+    if (GetModuleFileNameW(NULL, exePath, MAX_PATH)) {
+        wstring exeDir = exePath;
+        size_t lastSlash = exeDir.find_last_of(L"\\/");
+        if (lastSlash != wstring::npos) {
+            exeDir = exeDir.substr(0, lastSlash);
+        }
+
+        // 默认模型文件名
+        const wchar_t* modelNames[] = {
+            L"file_classifier_deep.onnx",
+            L"filetype_model_deep.onnx",
+            L"ml_model.onnx"
+        };
+
+        // 搜索路径优先级:
+        // 1. exe同目录
+        // 2. exe目录下的models子目录
+        // 3. exe目录下的ml子目录
+        vector<wstring> searchDirs = {
+            exeDir,
+            exeDir + L"\\models",
+            exeDir + L"\\ml",
+            exeDir + L"\\..\\models",
+            exeDir + L"\\..\\ml\\models"
+        };
+
+        for (const auto& dir : searchDirs) {
+            for (const auto& name : modelNames) {
+                paths.push_back(dir + L"\\" + name);
+            }
+        }
+    }
+
+    return paths;
+}
+
+void FileCarver::AutoLoadMLModel() {
+    // 检查ONNX Runtime是否可用
+    if (!ML::MLClassifier::isOnnxRuntimeAvailable()) {
+        LOG_DEBUG("ONNX Runtime not available, skipping ML auto-load");
+        return;
+    }
+
+    // 获取默认模型路径列表
+    vector<wstring> modelPaths = GetDefaultMLModelPaths();
+
+    // 尝试加载第一个存在的模型
+    for (const auto& path : modelPaths) {
+        if (std::filesystem::exists(path)) {
+            LOG_INFO(L"Found ML model: " + path);
+
+            if (LoadMLModel(path)) {
+                LOG_INFO("ML classification auto-enabled");
+                cout << "[ML] Model loaded: ";
+                wcout << path << endl;
+                return;
+            } else {
+                LOG_WARNING(L"Failed to load model: " + path);
+            }
+        }
+    }
+
+    LOG_DEBUG("No ML model found in default paths, ML classification disabled");
+}
+
+// ============================================================================
+// 混合扫描模式（签名 + ML）
+// ============================================================================
+
+float FileCarver::QuickEntropy(const BYTE* data, size_t size) {
+    if (data == nullptr || size == 0) return 0.0f;
+
+    // 快速字节频率统计
+    size_t counts[256] = {0};
+    for (size_t i = 0; i < size; i++) {
+        counts[data[i]]++;
+    }
+
+    // 计算 Shannon 熵
+    double entropy = 0.0;
+    double sizeD = static_cast<double>(size);
+
+    for (int i = 0; i < 256; i++) {
+        if (counts[i] > 0) {
+            double p = static_cast<double>(counts[i]) / sizeD;
+            entropy -= p * log2(p);
+        }
+    }
+
+    return static_cast<float>(entropy);
+}
+
+ULONGLONG FileCarver::EstimateFileSizeML(const BYTE* data, size_t maxSize, const string& type) {
+    if (data == nullptr || maxSize == 0) return 0;
+
+    if (type == "txt" || type == "html" || type == "xml") {
+        // 文本文件：扫描到第一个 NULL 字节序列
+        size_t nullCount = 0;
+        for (size_t i = 0; i < maxSize; i++) {
+            if (data[i] == 0) {
+                nullCount++;
+                if (nullCount >= 8) {  // 连续8个NULL视为结束
+                    return i - nullCount + 1;
+                }
+            } else {
+                nullCount = 0;
+            }
+        }
+
+        // 未找到结束，使用默认大小
+        if (type == "txt") return min(maxSize, (size_t)64 * 1024);      // 64KB
+        if (type == "html") return min(maxSize, (size_t)256 * 1024);    // 256KB
+        if (type == "xml") return min(maxSize, (size_t)128 * 1024);     // 128KB
+    }
+
+    return min(maxSize, (size_t)64 * 1024);  // 默认 64KB
+}
+
+vector<CarvedFileInfo> FileCarver::ScanHybridMode(
+    const vector<string>& fileTypes,
+    const HybridScanConfig& config,
+    CarvingMode mode,
+    ULONGLONG maxResults
+) {
+    vector<CarvedFileInfo> results;
+
+    // 分离签名类型和 ML-only 类型
+    vector<string> signatureTypes;
+    set<string> mlOnlyTypes;
+
+    for (const auto& type : fileTypes) {
+        string lowerType = type;
+        transform(lowerType.begin(), lowerType.end(), lowerType.begin(), ::tolower);
+
+        if (config.mlOnlyTypes.count(lowerType) > 0) {
+            mlOnlyTypes.insert(lowerType);
+        } else if (signatures.count(lowerType) > 0) {
+            signatureTypes.push_back(lowerType);
+        } else if (config.enableMLScan && mlClassifier && mlClassifier->isTypeSupported(lowerType)) {
+            // 签名库不支持但 ML 支持的类型
+            mlOnlyTypes.insert(lowerType);
+        }
+    }
+
+    cout << "\n=== Hybrid Scan Mode ===" << endl;
+    cout << "Signature types: ";
+    for (const auto& t : signatureTypes) cout << t << " ";
+    cout << endl;
+    cout << "ML-only types: ";
+    for (const auto& t : mlOnlyTypes) cout << t << " ";
+    cout << endl;
+
+    // 阶段1：签名扫描
+    vector<CarvedFileInfo> sigResults;
+    if (config.enableSignatureScan && !signatureTypes.empty()) {
+        cout << "\n--- Phase 1: Signature Scan ---" << endl;
+        sigResults = ScanForFileTypesThreadPool(signatureTypes, mode, maxResults);
+        cout << "Signature scan found: " << sigResults.size() << " files" << endl;
+    }
+
+    // 阶段2：ML 扫描（仅针对无签名类型）
+    vector<CarvedFileInfo> mlResults;
+    if (config.enableMLScan && !mlOnlyTypes.empty() && mlClassifier && mlClassifier->isLoaded()) {
+        cout << "\n--- Phase 2: ML Scan (for txt/html/xml) ---" << endl;
+
+        // 获取卷信息
+        ULONGLONG bytesPerCluster = reader->GetBytesPerCluster();
+        ULONGLONG totalClusters = reader->GetTotalClusters();
+
+        // 准备扫描
+        const size_t BUFFER_CLUSTERS = 16384;  // 64MB @ 4KB/cluster
+        const size_t ML_FRAGMENT_SIZE = 4096;
+
+        vector<BYTE> buffer;
+        ULONGLONG currentLCN = 0;
+        DWORD startTime = GetTickCount();
+
+        size_t mlCandidates = 0;
+        size_t mlProcessed = 0;
+
+        while (currentLCN < totalClusters && !shouldStop && mlResults.size() < maxResults) {
+            ULONGLONG clustersToRead = min((ULONGLONG)BUFFER_CLUSTERS, totalClusters - currentLCN);
+
+            if (!reader->ReadClusters(currentLCN, clustersToRead, buffer)) {
+                currentLCN += clustersToRead;
+                continue;
+            }
+
+            // ML 扫描缓冲区
+            vector<ML::BatchClassificationInput> batch;
+
+            for (size_t offset = 0; offset + ML_FRAGMENT_SIZE <= buffer.size(); offset += config.mlScanStep) {
+                // 预过滤：熵检测
+                if (config.prefilterEmpty) {
+                    float entropy = QuickEntropy(buffer.data() + offset, 256);
+                    if (entropy < 0.1f || entropy > 7.9f) continue;  // 跳过空/随机
+                }
+
+                // 收集候选
+                ML::BatchClassificationInput input;
+                input.data = buffer.data() + offset;
+                input.size = ML_FRAGMENT_SIZE;
+                input.lcn = currentLCN + offset / bytesPerCluster;
+                input.offset = offset;
+                batch.push_back(input);
+                mlCandidates++;
+
+                // 批量处理
+                if (batch.size() >= config.mlBatchSize) {
+                    auto batchResults = mlClassifier->classifyBatch(batch, ML_FRAGMENT_SIZE);
+
+                    for (size_t i = 0; i < batchResults.size(); i++) {
+                        if (!batchResults[i] || batchResults[i]->isUnknown) continue;
+                        if (batchResults[i]->confidence < config.mlConfidenceThreshold) continue;
+
+                        // 检查是否为目标类型
+                        if (mlOnlyTypes.count(batchResults[i]->predictedType) == 0) continue;
+
+                        CarvedFileInfo info;
+                        info.extension = batchResults[i]->predictedType;
+                        info.description = "ML-detected " + info.extension;
+                        info.startLCN = batch[i].lcn;
+                        info.startOffset = batch[i].offset % bytesPerCluster;
+                        info.fileSize = EstimateFileSizeML(
+                            batch[i].data, buffer.size() - batch[i].offset, info.extension);
+                        info.confidence = batchResults[i]->confidence * 0.85;
+                        info.mlConfidence = batchResults[i]->confidence;
+                        info.mlClassification = batchResults[i]->predictedType;
+
+                        mlResults.push_back(info);
+                        mlProcessed++;
+                    }
+
+                    batch.clear();
+                }
+            }
+
+            // 处理剩余批次
+            if (!batch.empty()) {
+                auto batchResults = mlClassifier->classifyBatch(batch, ML_FRAGMENT_SIZE);
+
+                for (size_t i = 0; i < batchResults.size(); i++) {
+                    if (!batchResults[i] || batchResults[i]->isUnknown) continue;
+                    if (batchResults[i]->confidence < config.mlConfidenceThreshold) continue;
+                    if (mlOnlyTypes.count(batchResults[i]->predictedType) == 0) continue;
+
+                    CarvedFileInfo info;
+                    info.extension = batchResults[i]->predictedType;
+                    info.description = "ML-detected " + info.extension;
+                    info.startLCN = batch[i].lcn;
+                    info.startOffset = batch[i].offset % bytesPerCluster;
+                    info.fileSize = EstimateFileSizeML(
+                        batch[i].data, buffer.size() - batch[i].offset, info.extension);
+                    info.confidence = batchResults[i]->confidence * 0.85;
+                    info.mlConfidence = batchResults[i]->confidence;
+                    info.mlClassification = batchResults[i]->predictedType;
+
+                    mlResults.push_back(info);
+                    mlProcessed++;
+                }
+            }
+
+            currentLCN += clustersToRead;
+
+            // 进度显示
+            if (currentLCN % (BUFFER_CLUSTERS * 10) == 0) {
+                double progress = (double)currentLCN / totalClusters * 100.0;
+                cout << "\rML Scan: " << fixed << setprecision(1) << progress << "% | "
+                     << "Candidates: " << mlCandidates << " | Found: " << mlResults.size() << flush;
+            }
+        }
+
+        DWORD elapsed = GetTickCount() - startTime;
+        cout << "\r                                                                    " << endl;
+        cout << "ML scan found: " << mlResults.size() << " files (candidates: " << mlCandidates
+             << ", time: " << (elapsed / 1000) << "s)" << endl;
+    }
+
+    // 阶段3：结果融合
+    cout << "\n--- Phase 3: Result Fusion ---" << endl;
+
+    // 先添加签名结果（优先级高）
+    set<ULONGLONG> processedLCNs;
+    for (auto& sig : sigResults) {
+        results.push_back(sig);
+        processedLCNs.insert(sig.startLCN);
+    }
+
+    // 添加不重叠的 ML 结果
+    size_t mlAdded = 0;
+    for (auto& ml : mlResults) {
+        // 检查是否与签名结果重叠（±2 簇范围）
+        bool overlaps = false;
+        for (ULONGLONG lcn = ml.startLCN > 2 ? ml.startLCN - 2 : 0;
+             lcn <= ml.startLCN + 2; lcn++) {
+            if (processedLCNs.count(lcn)) {
+                overlaps = true;
+                break;
+            }
+        }
+
+        if (!overlaps) {
+            results.push_back(ml);
+            processedLCNs.insert(ml.startLCN);
+            mlAdded++;
+        }
+    }
+
+    cout << "Fusion complete: " << sigResults.size() << " (sig) + " << mlAdded
+         << " (ML) = " << results.size() << " total" << endl;
+
+    // 按置信度排序
+    sort(results.begin(), results.end(), [](const CarvedFileInfo& a, const CarvedFileInfo& b) {
+        return a.confidence > b.confidence;
+    });
+
+    return results;
 }

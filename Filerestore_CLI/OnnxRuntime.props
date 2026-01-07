@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ONNX Runtime Configuration for Filerestore_CLI
+
+  To enable ONNX Runtime support:
+  1. Download ONNX Runtime from https://github.com/microsoft/onnxruntime/releases
+     - For GPU: onnxruntime-win-x64-gpu-*.zip
+     - For CPU: onnxruntime-win-x64-*.zip
+  2. Extract to $(ProjectDir)deps\onnxruntime\
+  3. Structure should be:
+     deps\onnxruntime\
+       include\
+         onnxruntime_cxx_api.h
+         ...
+       lib\
+         onnxruntime.lib
+         onnxruntime_providers_cuda.lib (GPU only)
+         ...
+       bin\
+         onnxruntime.dll
+         ...
+-->
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- ONNX Runtime Root Directory -->
+  <PropertyGroup>
+    <OnnxRuntimeDir>$(ProjectDir)deps\onnxruntime</OnnxRuntimeDir>
+    <OnnxRuntimeAvailable>false</OnnxRuntimeAvailable>
+  </PropertyGroup>
+
+  <!-- Check if ONNX Runtime is available -->
+  <PropertyGroup Condition="Exists('$(OnnxRuntimeDir)\include\onnxruntime_cxx_api.h')">
+    <OnnxRuntimeAvailable>true</OnnxRuntimeAvailable>
+  </PropertyGroup>
+
+  <!-- Configuration when ONNX Runtime is available -->
+  <ItemDefinitionGroup Condition="'$(OnnxRuntimeAvailable)'=='true'">
+    <ClCompile>
+      <PreprocessorDefinitions>USE_ONNX_RUNTIME;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(OnnxRuntimeDir)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(OnnxRuntimeDir)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>onnxruntime.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <!-- Copy DLLs to output directory -->
+  <Target Name="CopyOnnxRuntimeDlls" AfterTargets="Build" Condition="'$(OnnxRuntimeAvailable)'=='true'">
+    <ItemGroup>
+      <OnnxDlls Include="$(OnnxRuntimeDir)\lib\*.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(OnnxDlls)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+  <!-- Message when ONNX Runtime is not found -->
+  <Target Name="OnnxRuntimeNotFoundMessage" BeforeTargets="Build" Condition="'$(OnnxRuntimeAvailable)'=='false'">
+    <Message Importance="high" Text="[INFO] ONNX Runtime not found. ML classification will be disabled." />
+    <Message Importance="high" Text="[INFO] To enable: extract ONNX Runtime to $(OnnxRuntimeDir)" />
+  </Target>
+
+</Project>

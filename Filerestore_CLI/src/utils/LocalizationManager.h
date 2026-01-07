@@ -54,6 +54,12 @@ public:
     // 获取翻译文本（带默认值）
     wstring Get(const wstring& key, const wstring& defaultValue) const;
 
+    // 获取翻译文本（UTF-8 窄字符版本）
+    string GetUtf8(const wstring& key) const;
+
+    // 获取翻译文本（UTF-8 窄字符版本，带默认值）
+    string GetUtf8(const wstring& key, const string& defaultValue) const;
+
     // 检查语言是否支持
     bool IsLanguageSupported(const wstring& languageCode) const;
 
@@ -64,6 +70,10 @@ public:
     bool Reload();
 };
 
-// 便捷宏：获取翻译文本
+// 便捷宏：获取翻译文本（宽字符版本）
 #define LOC(key) LocalizationManager::Instance().Get(L##key)
 #define LOC_DEF(key, def) LocalizationManager::Instance().Get(L##key, L##def)
+
+// 便捷宏：获取翻译文本（UTF-8 窄字符版本，用于 cout/string）
+#define LOC_STR(key) LocalizationManager::Instance().GetUtf8(L##key)
+#define LOC_STR_DEF(key, def) LocalizationManager::Instance().GetUtf8(L##key, def)

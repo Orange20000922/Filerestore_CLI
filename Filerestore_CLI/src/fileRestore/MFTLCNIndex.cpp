@@ -81,7 +81,7 @@ bool MFTLCNIndex::ExtractTimestamps(const BYTE* record, size_t recordSize,
     if (recordSize < sizeof(FILE_RECORD_HEADER)) return false;
 
     PFILE_RECORD_HEADER header = (PFILE_RECORD_HEADER)record;
-    if (header->Signature != 'ELIF') return false;  // "FILE" in little-endian
+    if (header->Signature != 'ELIF') return false;  // "FILE" 的小端序表示
 
     WORD attrOffset = header->FirstAttributeOffset;
     if (attrOffset >= recordSize) return false;
@@ -169,7 +169,7 @@ wstring MFTLCNIndex::ExtractFileName(const BYTE* record, size_t recordSize) {
 // ============================================================================
 bool MFTLCNIndex::BuildIndex(bool includeActiveFiles, bool showProgress) {
     if (!reader || !reader->IsVolumeOpen()) {
-        LOG_ERROR("Volume not open for MFT LCN indexing");
+        LOG_ERROR("卷未打开，无法进行 MFT LCN 索引");
         return false;
     }
 
@@ -177,15 +177,15 @@ bool MFTLCNIndex::BuildIndex(bool includeActiveFiles, bool showProgress) {
 
     ULONGLONG totalRecords = reader->GetTotalMFTRecords();
     if (totalRecords == 0) {
-        LOG_ERROR("Cannot get total MFT records");
+        LOG_ERROR("无法获取 MFT 记录总数");
         return false;
     }
 
     if (showProgress) {
-        cout << "\n--- Building MFT LCN Index ---" << endl;
-        cout << "Total MFT records: " << totalRecords << endl;
-        cout << "Mode: " << (includeActiveFiles ? "All files" : "Deleted files only") << endl;
-        cout << "Scanning..." << endl;
+        cout << "\n--- 正在构建 MFT LCN 索引 ---" << endl;
+        cout << "MFT 记录总数: " << totalRecords << endl;
+        cout << "模式: " << (includeActiveFiles ? "所有文件" : "仅已删除文件") << endl;
+        cout << "正在扫描..." << endl;
     }
 
     DWORD startTime = GetTickCount();
@@ -273,9 +273,9 @@ bool MFTLCNIndex::BuildIndex(bool includeActiveFiles, bool showProgress) {
         // 进度更新
         if (showProgress && processedRecords % PROGRESS_INTERVAL < BATCH_SIZE) {
             double progress = (double)processedRecords / totalRecords * 100.0;
-            cout << "\rProgress: " << fixed << setprecision(1) << progress << "% | "
-                 << "Records: " << processedRecords << " | "
-                 << "Indexed: " << indexedFiles << " data runs" << flush;
+            cout << "\r进度: " << fixed << setprecision(1) << progress << "% | "
+                 << "记录数: " << processedRecords << " | "
+                 << "已索引: " << indexedFiles << " 个数据运行" << flush;
         }
     }
 
@@ -285,13 +285,13 @@ bool MFTLCNIndex::BuildIndex(bool includeActiveFiles, bool showProgress) {
 
     if (showProgress) {
         cout << "\r                                                                    " << endl;
-        cout << "\n--- Index Complete ---" << endl;
-        cout << "Time: " << (elapsed / 1000) << "." << ((elapsed % 1000) / 100) << " seconds" << endl;
-        cout << "Records processed: " << processedRecords << endl;
-        cout << "Data runs indexed: " << indexedFiles << endl;
+        cout << "\n--- 索引构建完成 ---" << endl;
+        cout << "耗时: " << (elapsed / 1000) << "." << ((elapsed % 1000) / 100) << " 秒" << endl;
+        cout << "已处理记录数: " << processedRecords << endl;
+        cout << "已索引数据运行数: " << indexedFiles << endl;
     }
 
-    LOG_INFO_FMT("MFT LCN index built: %llu data runs indexed", indexedFiles);
+    LOG_INFO_FMT("MFT LCN 索引构建完成: 已索引 %llu 个数据运行", indexedFiles);
     return true;
 }
 
@@ -312,14 +312,14 @@ vector<LCNMappingInfo> MFTLCNIndex::FindByLCN(ULONGLONG lcn) {
     // 检查前一个条目
     if (it != lcnIndex.begin()) {
         --it;
-        // 检查 LCN 是否在该 run 的范围内
+        // 检查 LCN 是否在该数据运行的范围内
         if (it->second.startLCN <= lcn &&
             lcn < it->second.startLCN + it->second.clusterCount) {
             results.push_back(it->second);
         }
     }
 
-    // 也检查精确匹配
+    // 同时检查精确匹配
     auto exactIt = lcnIndex.find(lcn);
     if (exactIt != lcnIndex.end() && (results.empty() || results[0].mftRecordNumber != exactIt->second.mftRecordNumber)) {
         results.push_back(exactIt->second);
@@ -333,7 +333,7 @@ vector<LCNMappingInfo> MFTLCNIndex::FindByLCN(ULONGLONG lcn) {
 // ============================================================================
 vector<LCNMappingInfo> MFTLCNIndex::FindByLCNRange(ULONGLONG startLCN, ULONGLONG endLCN) {
     vector<LCNMappingInfo> results;
-    set<ULONGLONG> seenRecords;  // 避免重复
+    set<ULONGLONG> seenRecords;  // 用于避免重复记录
 
     if (!indexBuilt || lcnIndex.empty()) {
         return results;

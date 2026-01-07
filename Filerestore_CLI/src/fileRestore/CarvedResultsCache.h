@@ -71,4 +71,10 @@ public:
 
     // 静态方法：获取缓存大小
     static ULONGLONG GetCacheSize(char drive);
+
+    // 从指定驱动器的缓存文件初始化（用于程序重启后恢复）
+    bool InitFromDrive(char drive);
+
+    // 查找并初始化任何存在的缓存文件
+    bool InitFromAnyExistingCache();
 };

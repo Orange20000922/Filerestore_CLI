@@ -1,7 +1,10 @@
 #include "CarvedResultsCache.h"
 #include "Logger.h"
-#include <shlobj.h>
 #include <iostream>
+#include <filesystem>
+
+// 使用 std::filesystem 替代 Windows API
+namespace fs = std::filesystem;
 
 using namespace std;
 
@@ -19,15 +22,15 @@ CarvedResultsCache::~CarvedResultsCache() {
 // 生成缓存文件路径
 // ============================================================================
 string CarvedResultsCache::GenerateCachePath(char drive) {
-    char tempPath[MAX_PATH];
-    GetTempPathA(MAX_PATH, tempPath);
+    // 使用 std::filesystem 获取临时目录（跨平台）
+    fs::path tempDir = fs::temp_directory_path();
 
-    string cachePath = tempPath;
-    cachePath += "filerestore_carved_";
-    cachePath += drive;
-    cachePath += ".cache";
+    string fileName = "filerestore_carved_";
+    fileName += drive;
+    fileName += ".cache";
 
-    return cachePath;
+    fs::path cachePath = tempDir / fileName;
+    return cachePath.string();
 }
 
 // ============================================================================
@@ -187,7 +190,8 @@ bool CarvedResultsCache::SaveResults(const vector<CarvedFileInfo>& results, char
     catch (const exception& e) {
         LOG_ERROR_FMT("Exception while saving cache: %s", e.what());
         out.close();
-        DeleteFileA(cacheFilePath.c_str());
+        std::error_code ec;
+        fs::remove(cacheFilePath, ec);  // 使用 std::filesystem（跨平台）
         return false;
     }
 }
@@ -368,7 +372,8 @@ bool CarvedResultsCache::GetCacheInfo(ULONGLONG& outCount, char& outDrive) {
 // ============================================================================
 void CarvedResultsCache::ClearCache() {
     if (!cacheFilePath.empty()) {
-        DeleteFileA(cacheFilePath.c_str());
+        std::error_code ec;
+        fs::remove(cacheFilePath, ec);  // 使用 std::filesystem（跨平台）
         LOG_INFO_FMT("Cache file deleted: %s", cacheFilePath.c_str());
     }
     isValid = false;
@@ -399,14 +404,70 @@ bool CarvedResultsCache::HasValidCache(char drive) {
 ULONGLONG CarvedResultsCache::GetCacheSize(char drive) {
     string cachePath = GenerateCachePath(drive);
 
-    WIN32_FILE_ATTRIBUTE_DATA fileInfo;
-    if (!GetFileAttributesExA(cachePath.c_str(), GetFileExInfoStandard, &fileInfo)) {
+    std::error_code ec;
+
+    // 检查文件是否存在
+    if (!fs::exists(cachePath, ec) || ec) {
         return 0;
     }
 
-    LARGE_INTEGER size;
-    size.LowPart = fileInfo.nFileSizeLow;
-    size.HighPart = fileInfo.nFileSizeHigh;
+    // 确保不是目录
+    if (fs::is_directory(cachePath, ec) || ec) {
+        return 0;
+    }
 
-    return size.QuadPart;
+    auto fileSize = fs::file_size(cachePath, ec);
+    if (ec) {
+        return 0;
+    }
+
+    return static_cast<ULONGLONG>(fileSize);
+}
+
+// ============================================================================
+// 从指定驱动器的缓存文件初始化
+// ============================================================================
+bool CarvedResultsCache::InitFromDrive(char drive) {
+    string cachePath = GenerateCachePath(drive);
+
+    ifstream in(cachePath, ios::binary);
+    if (!in.is_open()) {
+        return false;
+    }
+
+    CarvedCacheHeader header;
+    in.read((char*)&header, sizeof(header));
+    in.close();
+
+    if (header.magic != CARVED_CACHE_MAGIC) {
+        return false;
+    }
+
+    // 初始化成功
+    cacheFilePath = cachePath;
+    driveLetter = header.driveLetter;
+    totalResults = header.fileCount;
+    isValid = true;
+
+    LOG_INFO_FMT("Initialized from existing cache: %s (%llu files)",
+                 cacheFilePath.c_str(), totalResults);
+    return true;
+}
+
+// ============================================================================
+// 查找并初始化任何存在的缓存文件
+// ============================================================================
+bool CarvedResultsCache::InitFromAnyExistingCache() {
+    // 尝试常见驱动器字母
+    const char driveLetters[] = "CDEFGHIJKLMNOPQRSTUVWXYZ";
+
+    for (int i = 0; driveLetters[i] != '\0'; i++) {
+        if (HasValidCache(driveLetters[i])) {
+            if (InitFromDrive(driveLetters[i])) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }

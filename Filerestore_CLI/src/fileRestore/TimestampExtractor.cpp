@@ -31,7 +31,7 @@ ULONGLONG TimestampExtractor::ReadQWord(const BYTE* data, bool bigEndian) {
 // 时间格式转换函数
 // ============================================================================
 
-// EXIF DateTime格式: "YYYY:MM:DD HH:MM:SS"
+// EXIF 日期时间格式: "YYYY:MM:DD HH:MM:SS"
 bool TimestampExtractor::ParseEXIFDateTime(const char* dateStr, FILETIME& ft) {
     if (!dateStr || strlen(dateStr) < 19) return false;
 
@@ -52,10 +52,10 @@ bool TimestampExtractor::ParseEXIFDateTime(const char* dateStr, FILETIME& ft) {
     return SystemTimeToFileTime(&st, &ft) != FALSE;
 }
 
-// DOS时间转FILETIME（ZIP格式使用）
+// DOS 时间转 FILETIME（ZIP 格式使用）
 bool TimestampExtractor::DOSTimeToFileTime(WORD dosDate, WORD dosTime, FILETIME& ft) {
-    // DOS Date: bits 0-4=day, 5-8=month, 9-15=year-1980
-    // DOS Time: bits 0-4=seconds/2, 5-10=minute, 11-15=hour
+    // DOS 日期: 位 0-4=日, 5-8=月, 9-15=年-1980
+    // DOS 时间: 位 0-4=秒/2, 5-10=分钟, 11-15=小时
 
     SYSTEMTIME st = {0};
     st.wYear = ((dosDate >> 9) & 0x7F) + 1980;
@@ -73,11 +73,11 @@ bool TimestampExtractor::DOSTimeToFileTime(WORD dosDate, WORD dosTime, FILETIME&
     return SystemTimeToFileTime(&st, &ft) != FALSE;
 }
 
-// Unix时间戳转FILETIME
+// Unix 时间戳转 FILETIME
 bool TimestampExtractor::UnixTimeToFileTime(ULONGLONG unixTime, FILETIME& ft) {
-    // Unix时间戳: 从1970-01-01 00:00:00 UTC的秒数
-    // FILETIME: 从1601-01-01 00:00:00 UTC的100纳秒数
-    // 差值: 11644473600秒
+    // Unix 时间戳: 从 1970-01-01 00:00:00 UTC 的秒数
+    // FILETIME: 从 1601-01-01 00:00:00 UTC 的 100 纳秒数
+    // 差值: 11644473600 秒
 
     ULONGLONG fileTime = (unixTime + 11644473600ULL) * 10000000ULL;
     ft.dwLowDateTime = (DWORD)fileTime;
@@ -85,11 +85,11 @@ bool TimestampExtractor::UnixTimeToFileTime(ULONGLONG unixTime, FILETIME& ft) {
     return true;
 }
 
-// MP4时间（从1904-01-01的秒数）转FILETIME
+// MP4 时间（从 1904-01-01 的秒数）转 FILETIME
 bool TimestampExtractor::MP4TimeToFileTime(ULONGLONG mp4Time, FILETIME& ft) {
-    // MP4时间基准: 1904-01-01 00:00:00 UTC
-    // Unix基准: 1970-01-01 00:00:00 UTC
-    // 差值: 2082844800秒
+    // MP4 时间基准: 1904-01-01 00:00:00 UTC
+    // Unix 基准: 1970-01-01 00:00:00 UTC
+    // 差值: 2082844800 秒
 
     if (mp4Time < 2082844800ULL) {
         // 时间值太小，可能无效
@@ -181,11 +181,11 @@ ExtractedTimestamp TimestampExtractor::ExtractFromJPEG(const BYTE* data, size_t 
     return result;
 }
 
-// EXIF IFD 解析
+// EXIF IFD 解析函数
 bool TimestampExtractor::ParseEXIF(const BYTE* data, size_t dataSize, ExtractedTimestamp& result) {
     if (dataSize < 8) return false;
 
-    // TIFF 头
+    // TIFF 头部
     bool bigEndian;
     if (data[0] == 'M' && data[1] == 'M') {
         bigEndian = true;
@@ -222,11 +222,11 @@ bool TimestampExtractor::ParseIFD(const BYTE* tiffStart, size_t tiffSize, DWORD 
         DWORD count = ReadDWord(entry + 4, bigEndian);
         DWORD valueOffset = ReadDWord(entry + 8, bigEndian);
 
-        // Tag 0x8769: ExifIFD 偏移
+        // 标签 0x8769: ExifIFD 偏移
         if (tag == 0x8769) {
             exifIFDOffset = valueOffset;
         }
-        // Tag 0x010F: 相机制造商
+        // 标签 0x010F: 相机制造商
         else if (tag == 0x010F && type == 2 && count < 64) {
             const char* str = (valueOffset + count <= tiffSize) ?
                               (const char*)(tiffStart + valueOffset) : nullptr;
@@ -234,7 +234,7 @@ bool TimestampExtractor::ParseIFD(const BYTE* tiffStart, size_t tiffSize, DWORD 
                 result.additionalInfo = "Make: " + string(str, strnlen(str, count - 1));
             }
         }
-        // Tag 0x0110: 相机型号
+        // 标签 0x0110: 相机型号
         else if (tag == 0x0110 && type == 2 && count < 64) {
             const char* str = (valueOffset + count <= tiffSize) ?
                               (const char*)(tiffStart + valueOffset) : nullptr;
@@ -243,7 +243,7 @@ bool TimestampExtractor::ParseIFD(const BYTE* tiffStart, size_t tiffSize, DWORD 
                 result.additionalInfo += "Model: " + string(str, strnlen(str, count - 1));
             }
         }
-        // Tag 0x0132: 修改日期时间
+        // 标签 0x0132: 修改日期时间
         else if (tag == 0x0132 && type == 2 && count == 20) {
             const char* dateStr = (valueOffset + 20 <= tiffSize) ?
                                   (const char*)(tiffStart + valueOffset) : nullptr;
@@ -253,7 +253,7 @@ bool TimestampExtractor::ParseIFD(const BYTE* tiffStart, size_t tiffSize, DWORD 
         }
     }
 
-    // 解析 Exif IFD（包含更详细的时间信息）
+    // 解析 EXIF IFD（包含更详细的时间信息）
     if (exifIFDOffset > 0 && exifIFDOffset + 2 < tiffSize) {
         WORD exifEntryCount = ReadWord(tiffStart + exifIFDOffset, bigEndian);
         if (exifEntryCount <= 200) {
@@ -265,7 +265,7 @@ bool TimestampExtractor::ParseIFD(const BYTE* tiffStart, size_t tiffSize, DWORD 
                 DWORD count = ReadDWord(exifEntry + 4, bigEndian);
                 DWORD valueOffset = ReadDWord(exifEntry + 8, bigEndian);
 
-                // Tag 0x9003: 原始拍摄日期时间 (DateTimeOriginal)
+                // 标签 0x9003: 原始拍摄日期时间 (DateTimeOriginal)
                 if (tag == 0x9003 && type == 2 && count == 20) {
                     const char* dateStr = (valueOffset + 20 <= tiffSize) ?
                                           (const char*)(tiffStart + valueOffset) : nullptr;
@@ -273,7 +273,7 @@ bool TimestampExtractor::ParseIFD(const BYTE* tiffStart, size_t tiffSize, DWORD 
                         result.hasCreation = true;
                     }
                 }
-                // Tag 0x9004: 数字化日期时间 (DateTimeDigitized)
+                // 标签 0x9004: 数字化日期时间 (DateTimeDigitized)
                 else if (tag == 0x9004 && type == 2 && count == 20 && !result.hasCreation) {
                     const char* dateStr = (valueOffset + 20 <= tiffSize) ?
                                           (const char*)(tiffStart + valueOffset) : nullptr;
@@ -289,7 +289,7 @@ bool TimestampExtractor::ParseIFD(const BYTE* tiffStart, size_t tiffSize, DWORD 
 }
 
 // ============================================================================
-// PNG tIME chunk 提取
+// PNG tIME 块提取
 // ============================================================================
 ExtractedTimestamp TimestampExtractor::ExtractFromPNG(const BYTE* data, size_t dataSize) {
     ExtractedTimestamp result;
@@ -300,7 +300,7 @@ ExtractedTimestamp TimestampExtractor::ExtractFromPNG(const BYTE* data, size_t d
         return result;
     }
 
-    // 遍历 chunks
+    // 遍历数据块
     size_t offset = 8;
     while (offset + 12 < dataSize) {
         DWORD chunkLength = ReadDWord(data + offset, true);
@@ -308,7 +308,7 @@ ExtractedTimestamp TimestampExtractor::ExtractFromPNG(const BYTE* data, size_t d
 
         if (offset + 12 + chunkLength > dataSize) break;
 
-        // tIME chunk
+        // tIME 块
         if (memcmp(chunkType, "tIME", 4) == 0 && chunkLength == 7) {
             const BYTE* timeData = data + offset + 8;
             SYSTEMTIME st = {0};
@@ -327,20 +327,20 @@ ExtractedTimestamp TimestampExtractor::ExtractFromPNG(const BYTE* data, size_t d
                 }
             }
         }
-        // tEXt chunk - 可能包含创建日期
+        // tEXt 块 - 可能包含创建日期
         else if (memcmp(chunkType, "tEXt", 4) == 0) {
             string keyword((const char*)(data + offset + 8));
             if (keyword == "Creation Time" && chunkLength > keyword.length() + 1) {
                 // 尝试解析创建时间字符串
-                // 格式可能是 RFC 1123 或其他格式
+                // 格式可能是 RFC 1123 或其他格式（暂未实现）
             }
         }
-        // IEND - 结束
+        // IEND - 文件结束标记
         else if (memcmp(chunkType, "IEND", 4) == 0) {
             break;
         }
 
-        offset += 12 + chunkLength;  // 4(length) + 4(type) + data + 4(CRC)
+        offset += 12 + chunkLength;  // 4(长度) + 4(类型) + 数据 + 4(CRC校验)
     }
 
     return result;
@@ -358,8 +358,8 @@ ExtractedTimestamp TimestampExtractor::ExtractFromPDF(const BYTE* data, size_t d
     }
 
     // 搜索 /CreationDate 和 /ModDate
-    // PDF 日期格式: D:YYYYMMDDHHmmSS+HH'mm' 或类似
-    string content((const char*)data, min(dataSize, (size_t)65536));  // 只搜索前64KB
+    // PDF 日期格式: D:YYYYMMDDHHmmSS+HH'mm' 或类似格式
+    string content((const char*)data, min(dataSize, (size_t)65536));  // 只搜索前 64KB
 
     auto parsePDFDate = [](const string& dateStr) -> FILETIME {
         FILETIME ft = {0};
@@ -431,9 +431,9 @@ ExtractedTimestamp TimestampExtractor::ExtractFromZIP(const BYTE* data, size_t d
         return result;
     }
 
-    // Local File Header 格式:
-    // Offset 10-11: Last mod file time (DOS format)
-    // Offset 12-13: Last mod file date (DOS format)
+    // 本地文件头格式:
+    // 偏移 10-11: 最后修改时间 (DOS 格式)
+    // 偏移 12-13: 最后修改日期 (DOS 格式)
 
     WORD dosTime = ReadWord(data + 10, false);
     WORD dosDate = ReadWord(data + 12, false);
@@ -460,7 +460,7 @@ ExtractedTimestamp TimestampExtractor::ExtractFromMP4(const BYTE* data, size_t d
 
     if (dataSize < 16) return result;
 
-    // 搜索 moov atom，然后找 mvhd
+    // 搜索 moov 原子，然后找 mvhd
     size_t offset = 0;
 
     while (offset + 8 < dataSize) {
@@ -469,16 +469,16 @@ ExtractedTimestamp TimestampExtractor::ExtractFromMP4(const BYTE* data, size_t d
 
         if (atomSize < 8 || offset + atomSize > dataSize) break;
 
-        // ftyp atom - 验证是 MP4
+        // ftyp 原子 - 验证是 MP4
         if (memcmp(atomType, "ftyp", 4) == 0) {
             if (atomSize >= 12) {
                 string brand((const char*)(data + offset + 8), 4);
                 result.additionalInfo = "Brand: " + brand;
             }
         }
-        // moov atom - 包含 mvhd
+        // moov 原子 - 包含 mvhd
         else if (memcmp(atomType, "moov", 4) == 0) {
-            // 在 moov 内搜索 mvhd
+            // 在 moov 原子内搜索 mvhd
             size_t moovOffset = offset + 8;
             size_t moovEnd = offset + atomSize;
 
@@ -490,8 +490,8 @@ ExtractedTimestamp TimestampExtractor::ExtractFromMP4(const BYTE* data, size_t d
 
                 if (memcmp(subAtomType, "mvhd", 4) == 0) {
                     // mvhd 格式:
-                    // Version 0: 4 bytes each for creation/modification time
-                    // Version 1: 8 bytes each
+                    // 版本 0: 创建/修改时间各 4 字节
+                    // 版本 1: 创建/修改时间各 8 字节
 
                     if (subAtomSize >= 20) {
                         BYTE version = data[moovOffset + 8];
@@ -521,7 +521,7 @@ ExtractedTimestamp TimestampExtractor::ExtractFromMP4(const BYTE* data, size_t d
 
                 moovOffset += subAtomSize;
             }
-            break;  // 找到 moov 后停止
+            break;  // 找到 moov 原子后停止
         }
 
         offset += atomSize;

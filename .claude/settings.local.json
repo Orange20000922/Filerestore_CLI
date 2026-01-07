@@ -3,7 +3,8 @@
     "allow": [
       "Bash(powershell.exe:*)",
       "Bash(xxd:*)",
-      "Bash(move:*)"
+      "Bash(move:*)",
+      "Bash(dir:*)"
     ]
   }
 }

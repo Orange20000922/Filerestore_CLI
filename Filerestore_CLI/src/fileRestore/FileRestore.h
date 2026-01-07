@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include <string>
 #include <vector>
+#include <memory>
 #include "MFTStructures.h"
 #include "MFTReader.h"
 #include "MFTParser.h"
@@ -15,11 +16,11 @@ using namespace std;
 class FileRestore
 {
 private:
-    MFTReader* reader;
-    MFTParser* parser;
-    PathResolver* pathResolver;
-    DeletedFileScanner* scanner;
-    OverwriteDetector* overwriteDetector;
+    unique_ptr<MFTReader> reader;
+    unique_ptr<MFTParser> parser;
+    unique_ptr<PathResolver> pathResolver;
+    unique_ptr<DeletedFileScanner> scanner;
+    unique_ptr<OverwriteDetector> overwriteDetector;
 
     char currentDrive;
     bool volumeOpened;
@@ -42,7 +43,7 @@ public:
     OverwriteDetectionResult DetectFileOverwrite(char driveLetter, ULONGLONG recordNumber);
 
     // 获取覆盖检测器（用于高级用法）
-    OverwriteDetector* GetOverwriteDetector() { return overwriteDetector; }
+    OverwriteDetector* GetOverwriteDetector() { return overwriteDetector.get(); }
 
     // 设置过滤级别
     void SetFilterLevel(FilterLevel level) { if (scanner) scanner->SetFilterLevel(level); }

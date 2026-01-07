@@ -6,7 +6,7 @@
 
 using namespace std;
 
-// USN_REASON 标志定义（如果未定义）
+// USN_REASON 标志定义（如果系统头文件未定义）
 #ifndef USN_REASON_DATA_OVERWRITE
 #define USN_REASON_DATA_OVERWRITE 0x00000001
 #endif
@@ -73,19 +73,19 @@ bool UsnJournalReader::Open(char driveLetter) {
     if (hVolume == INVALID_HANDLE_VALUE) {
         DWORD error = ::GetLastError();
         stringstream ss;
-        ss << "Failed to open volume " << this->driveLetter << ": (Error code: " << error << ")";
+        ss << "打开卷 " << this->driveLetter << " 失败: (错误码: " << error << ")";
         lastError = ss.str();
         LOG_ERROR(lastError);
 
         if (error == ERROR_ACCESS_DENIED) {
-            lastError += " - Administrator privileges required";
+            lastError += " - 需要管理员权限";
         }
         return false;
     }
 
-    LOG_INFO("Volume opened successfully");
+    LOG_INFO("卷打开成功");
 
-    // 查询 USN Journal 数据
+    // 查询 USN 日志数据
     if (!QueryJournalData()) {
         Close();
         return false;
@@ -120,12 +120,12 @@ bool UsnJournalReader::QueryJournalData() {
     if (!result) {
         DWORD error = ::GetLastError();
         stringstream ss;
-        ss << "Failed to query USN Journal (Error code: " << error << ")";
+        ss << "查询 USN 日志失败 (错误码: " << error << ")";
         lastError = ss.str();
         LOG_ERROR(lastError);
 
         if (error == ERROR_JOURNAL_NOT_ACTIVE) {
-            lastError += " - USN Journal is not active on this volume";
+            lastError += " - 此卷上的 USN 日志未激活";
         }
         return false;
     }
@@ -140,7 +140,7 @@ bool UsnJournalReader::QueryJournalData() {
 
 bool UsnJournalReader::GetJournalStats(UsnJournalStats& stats, bool forceRefresh) {
     if (!IsOpen()) {
-        lastError = "Volume not opened";
+        lastError = "卷未打开";
         LOG_ERROR(lastError);
         return false;
     }
@@ -161,7 +161,7 @@ bool UsnJournalReader::GetJournalStats(UsnJournalStats& stats, bool forceRefresh
 }
 
 bool UsnJournalReader::IsDeleteReason(DWORD reason) const {
-    // 检查是否包含删除相关的原因
+    // 检查是否包含删除相关的原因标志
     // USN_REASON_FILE_DELETE: 文件被删除
     // USN_REASON_RENAME_OLD_NAME: 文件被重命名（可能移动到回收站）
     // 注意：删除操作通常与 USN_REASON_CLOSE 一起出现
@@ -178,7 +178,7 @@ FILETIME UsnJournalReader::GetCurrentFileTime() const {
 
 bool UsnJournalReader::IsWithinTimeRange(const LARGE_INTEGER& timestamp, int maxSeconds) const {
     if (maxSeconds <= 0) {
-        return true;  // 不限制时间
+        return true;  // 无时间限制
     }
 
     FILETIME currentFt = GetCurrentFileTime();
@@ -187,7 +187,7 @@ bool UsnJournalReader::IsWithinTimeRange(const LARGE_INTEGER& timestamp, int max
     current.HighPart = currentFt.dwHighDateTime;
     fileTime.QuadPart = timestamp.QuadPart;
 
-    // 计算时间差（100纳秒为单位）
+    // 计算时间差（以100纳秒为单位）
     if (current.QuadPart < fileTime.QuadPart) {
         return true;  // 时间戳在未来？
     }
@@ -202,13 +202,13 @@ vector<UsnDeletedFileInfo> UsnJournalReader::ScanRecentlyDeletedFiles(
     vector<UsnDeletedFileInfo> deletedFiles;
 
     if (!IsOpen()) {
-        lastError = "Volume not opened";
+        lastError = "卷未打开";
         LOG_ERROR(lastError);
         return deletedFiles;
     }
 
     if (!journalDataValid) {
-        lastError = "USN Journal data not available";
+        lastError = "USN 日志数据不可用";
         LOG_ERROR(lastError);
         return deletedFiles;
     }
@@ -216,16 +216,16 @@ vector<UsnDeletedFileInfo> UsnJournalReader::ScanRecentlyDeletedFiles(
     LOG_INFO_FMT("Scanning USN Journal for deleted files (max time: %d seconds, max records: %zu)",
                  maxTimeSeconds, maxRecords);
 
-    // 准备读取 USN Journal
+    // 准备读取 USN 日志
     const DWORD bufferSize = 64 * 1024;  // 64KB 缓冲区
     vector<BYTE> buffer(bufferSize);
 
     READ_USN_JOURNAL_DATA_V0 readData;
     ZeroMemory(&readData, sizeof(readData));
     readData.StartUsn = journalData.FirstUsn;
-    // 不在系统级过滤，而是读取所有记录后在应用程序级过滤
+    // 不在系统级过滤，而是读取所有记录后在应用程序级别过滤
     // 这样可以确保不会遗漏任何删除操作
-    readData.ReasonMask = 0xFFFFFFFF;  // 读取所有原因
+    readData.ReasonMask = 0xFFFFFFFF;  // 读取所有原因类型
     readData.ReturnOnlyOnClose = FALSE;
     readData.Timeout = 0;
     readData.BytesToWaitFor = 0;
@@ -235,7 +235,7 @@ vector<UsnDeletedFileInfo> UsnJournalReader::ScanRecentlyDeletedFiles(
     size_t totalRecordsScanned = 0;
     size_t deleteRecordsFound = 0;
 
-    cout << "Scanning USN Journal..." << endl;
+    cout << "正在扫描 USN 日志..." << endl;
 
     while (true) {
         BOOL result = DeviceIoControl(
@@ -252,7 +252,7 @@ vector<UsnDeletedFileInfo> UsnJournalReader::ScanRecentlyDeletedFiles(
         if (!result) {
             DWORD error = ::GetLastError();
             if (error == ERROR_HANDLE_EOF || error == ERROR_NO_MORE_ITEMS) {
-                // 正常结束
+                // 扫描正常结束
                 break;
             }
             LOG_WARNING_FMT("DeviceIoControl failed: %d", error);
@@ -260,14 +260,14 @@ vector<UsnDeletedFileInfo> UsnJournalReader::ScanRecentlyDeletedFiles(
         }
 
         if (bytesReturned <= sizeof(USN)) {
-            break;  // 没有更多数据
+            break;  // 无更多数据
         }
 
-        // 更新下一个读取位置
+        // 更新下一次读取位置
         USN nextUsn = *(USN*)buffer.data();
         readData.StartUsn = nextUsn;
 
-        // 解析 USN 记录
+        // 解析 USN 日志记录
         BYTE* recordPtr = buffer.data() + sizeof(USN);
         BYTE* bufferEnd = buffer.data() + bytesReturned;
 
@@ -312,29 +312,29 @@ vector<UsnDeletedFileInfo> UsnJournalReader::ScanRecentlyDeletedFiles(
             recordPtr += record->RecordLength;
         }
 
-        // 显示进度
+        // 显示扫描进度
         if (totalRecordsScanned % 10000 == 0) {
-            cout << "\r  Scanned: " << totalRecordsScanned << " records, found: "
-                 << deleteRecordsFound << " deletions" << flush;
+            cout << "\r  已扫描: " << totalRecordsScanned << " 条记录, 发现: "
+                 << deleteRecordsFound << " 条删除记录" << flush;
         }
     }
 
 done:
-    cout << "\r  Scan complete: " << totalRecordsScanned << " records scanned, "
-         << deleteRecordsFound << " deletions found" << endl;
+    cout << "\r  扫描完成: 共扫描 " << totalRecordsScanned << " 条记录, "
+         << "发现 " << deleteRecordsFound << " 条删除记录" << endl;
 
     LOG_INFO_FMT("USN Journal scan complete: %zu records scanned, %zu deletions found",
                  totalRecordsScanned, deleteRecordsFound);
 
     // 按时间戳降序排序（最新删除的文件排在前面）
     if (!deletedFiles.empty()) {
-        LOG_INFO("Sorting results by timestamp (newest first)...");
+        LOG_INFO("正在按时间戳排序（最新的排在前面）...");
         sort(deletedFiles.begin(), deletedFiles.end(),
             [](const UsnDeletedFileInfo& a, const UsnDeletedFileInfo& b) {
                 // 降序排序：时间戳大的（更新的）排在前面
                 return a.TimeStamp.QuadPart > b.TimeStamp.QuadPart;
             });
-        LOG_INFO("Sorting completed");
+        LOG_INFO("排序完成");
     }
 
     return deletedFiles;
@@ -354,7 +354,7 @@ bool UsnJournalReader::ScanWithCallback(
     READ_USN_JOURNAL_DATA_V0 readData;
     ZeroMemory(&readData, sizeof(readData));
     readData.StartUsn = journalData.FirstUsn;
-    // 读取所有记录，在应用程序级过滤
+    // 读取所有记录，在应用程序级别过滤
     readData.ReasonMask = 0xFFFFFFFF;
     readData.ReturnOnlyOnClose = FALSE;
     readData.Timeout = 0;
@@ -406,7 +406,7 @@ bool UsnJournalReader::ScanWithCallback(
                     int nameLength = record->FileNameLength / sizeof(wchar_t);
                     info.FileName = wstring(fileName, nameLength);
 
-                    // 调用回调，如果返回 false 则停止扫描
+                    // 调用回调函数，如果返回 false 则停止扫描
                     if (!callback(info)) {
                         return true;
                     }
@@ -445,7 +445,7 @@ vector<UsnDeletedFileInfo> UsnJournalReader::SearchDeletedByName(
         }
 
         return true;  // 继续扫描
-    }, 0);  // 不限制时间
+    }, 0);  // 无时间限制
 
     return results;
 }

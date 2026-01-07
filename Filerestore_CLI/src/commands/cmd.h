@@ -122,7 +122,7 @@ DECLARE_COMMAND(ScanUsnCommand);
 DECLARE_COMMAND(SearchUsnCommand);
 
 // ============================================================================
-// 文件签名搜索命令 (File Carving)
+// 文件签名搜索命令（文件雕刻）
 // ============================================================================
 
 // 签名搜索扫描
@@ -131,7 +131,7 @@ DECLARE_COMMAND(CarveCommand);
 // 列出支持的文件类型
 DECLARE_COMMAND(CarveTypesCommand);
 
-// 恢复 carved 文件
+// 恢复雕刻文件
 DECLARE_COMMAND(CarveRecoverCommand);
 
 DECLARE_COMMAND(CarveCommandAsync);
@@ -140,3 +140,13 @@ DECLARE_COMMAND(CarveTimestampCommand);
 DECLARE_COMMAND(CarveListCommand);
 DECLARE_COMMAND(CarveValidateCommand);
 DECLARE_COMMAND(CarveIntegrityCommand);
+
+// 分页交互恢复命令
+DECLARE_COMMAND(CarveRecoverPageCommand);
+
+// ============================================================================
+// 机器学习数据集生成命令
+// ============================================================================
+
+// 扫描目录/卷生成机器学习训练数据集
+DECLARE_COMMAND(MLScanCommand);
