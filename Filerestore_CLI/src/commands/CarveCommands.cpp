@@ -227,15 +227,16 @@ void CarveCommand::Execute(string command) {
 	}
 
 	if (GET_ARG_COUNT() < 3) {
-		cout << "Usage: carve <drive> <type|types|all> <output_dir> [async|sync]" << endl;
+		cout << "Usage: carve <drive> <type|types|all> <output_dir> [options...]" << endl;
 		cout << "Examples:" << endl;
 		cout << "  carve C zip D:\\recovered\\" << endl;
 		cout << "  carve C jpg,png,gif D:\\recovered\\" << endl;
 		cout << "  carve D all D:\\recovered\\ async" << endl;
-		cout << "\nModes:" << endl;
-		cout << "  async - Use dual-buffer async I/O (default, faster)" << endl;
-		cout << "  sync  - Use synchronous I/O (simpler)" << endl;
-		cout << "\nUse 'carvetypes' to see supported file types." << endl;
+		cout << "\nOptions:" << endl;
+		cout << "  async      - Use dual-buffer async I/O (default, faster)" << endl;
+		cout << "  sync       - Use synchronous I/O (simpler)" << endl;
+		cout << "\nFor large ZIP recovery, use 'carverecover' with --scaneocd option." << endl;
+		cout << "Use 'carvetypes' to see supported file types." << endl;
 		return;
 	}
 
@@ -244,12 +245,15 @@ void CarveCommand::Execute(string command) {
 		string& fileTypeArg = GET_ARG_STRING(1);
 		string& outputDir = GET_ARG_STRING(2);
 
-		// 检查是否指定了同步/异步模式
+		// 解析选项
 		bool useAsync = true;  // 默认使用异步
-		if (HAS_ARG(3)) {
-			string& modeStr = GET_ARG_STRING(3);
-			if (modeStr == "sync" || modeStr == "s") {
+
+		for (size_t i = 3; i < GET_ARG_COUNT(); i++) {
+			string arg = GET_ARG_STRING(i);
+			if (arg == "sync" || arg == "s") {
 				useAsync = false;
+			} else if (arg == "async" || arg == "a") {
+				useAsync = true;
 			}
 		}
 
@@ -427,11 +431,19 @@ void CarveRecoverCommand::Execute(string command) {
 	}
 
 	if (GET_ARG_COUNT() < 2) {
-		cout << "Usage: carverecover <index> <output_path>" << endl;
-		cout << "Example: carverecover 0 D:\\recovered\\file.zip" << endl;
-		cout << "         carverecover 5 C:\\Users\\Me\\Desktop\\recovered.pdf" << endl;
-		cout << "\nNOTE: Use full absolute path (e.g., D:\\folder\\file.ext)." << endl;
-		cout << "      If ACCESS_DENIED error occurs, run as Administrator." << endl;
+		cout << "Usage: carverecover <index> <output_path> [options...]" << endl;
+		cout << "\nExamples:" << endl;
+		cout << "  carverecover 0 D:\\recovered\\file.zip" << endl;
+		cout << "  carverecover 5 C:\\output\\doc.pdf --scaneocd" << endl;
+		cout << "  carverecover 10 D:\\large.zip --expected 500MB" << endl;
+		cout << "\nOptions:" << endl;
+		cout << "  --scaneocd          - Force EOCD scan for large ZIP files" << endl;
+		cout << "  --expected <size>   - Expected file size (e.g., 100MB, 2GB)" << endl;
+		cout << "  --tolerance <size>  - Size tolerance for EOCD scan (default 10%)" << endl;
+		cout << "  --no-verify         - Skip CRC verification" << endl;
+		cout << "  --allow-fragmented  - Continue recovery even if clusters are unreadable" << endl;
+		cout << "\nNOTE: ZIP files with sizeIsEstimated flag will auto-enable --scaneocd" << endl;
+		cout << "      Use full absolute path (e.g., D:\\folder\\file.ext)." << endl;
 		cout << "\nRun 'carve' or 'carvepool' first to scan for files." << endl;
 		return;
 	}
@@ -440,10 +452,34 @@ void CarveRecoverCommand::Execute(string command) {
 		string& indexStr = GET_ARG_STRING(0);
 		string outputPath = GET_ARG_STRING(1);
 
+		// 解析选项
+		bool forceScanEOCD = false;
+		bool verifyCRC = true;
+		bool allowFragmented = false;
+		ULONGLONG expectedSize = 0;
+		ULONGLONG tolerance = 0;
+
+		for (size_t i = 2; i < GET_ARG_COUNT(); i++) {
+			string arg = GET_ARG_STRING(i);
+
+			if (arg == "--scaneocd" || arg == "--eocd") {
+				forceScanEOCD = true;
+			} else if (arg == "--no-verify" || arg == "--noverify") {
+				verifyCRC = false;
+			} else if (arg == "--allow-fragmented" || arg == "--fragmented") {
+				allowFragmented = true;
+			} else if ((arg == "--expected" || arg == "-e") && i + 1 < GET_ARG_COUNT()) {
+				string sizeStr = GET_ARG_STRING(++i);
+				expectedSize = CommandUtils::ParseSize(sizeStr);
+			} else if ((arg == "--tolerance" || arg == "-t") && i + 1 < GET_ARG_COUNT()) {
+				string tolStr = GET_ARG_STRING(++i);
+				tolerance = CommandUtils::ParseSize(tolStr);
+			}
+		}
+
 		// 检查是否为绝对路径
 		if (outputPath.length() < 3 || outputPath[1] != ':') {
 			cout << "[WARNING] Output path appears to be relative: " << outputPath << endl;
-			// 尝试将相对路径转为绝对路径
 			char currentDir[MAX_PATH];
 			if (GetCurrentDirectoryA(MAX_PATH, currentDir)) {
 				outputPath = string(currentDir) + "\\" + outputPath;
@@ -481,16 +517,134 @@ void CarveRecoverCommand::Execute(string command) {
 
 		FileCarver carver(&reader);
 
-		cout << "Recovering file #" << index << "..." << endl;
-		cout << "  Type: " << info.description << endl;
-		cout << "  Size: " << info.fileSize << " bytes" << endl;
+		cout << "\n=== Recovering File #" << index << " ===" << endl;
+		cout << "  Type:       " << info.description << endl;
+		cout << "  Extension:  " << info.extension << endl;
+		cout << "  Size:       " << info.fileSize << " bytes ("
+		     << (info.fileSize / (1024 * 1024)) << " MB)" << endl;
+		cout << "  LCN:        " << info.startLCN << endl;
+		cout << "  Confidence: " << (int)(info.confidence * 100) << "%" << endl;
 
-		if (carver.RecoverCarvedFile(info, outputPath)) {
-			cout << "\n=== Recovery Successful ===" << endl;
-			cout << "File saved to: " << outputPath << endl;
-		} else {
-			cout << "\n=== Recovery Failed ===" << endl;
+		// 自动检测是否需要 EOCD 扫描
+		bool useEOCDScan = forceScanEOCD;
+		if (!useEOCDScan && info.extension == "zip" && info.sizeIsEstimated) {
+			useEOCDScan = true;
+			cout << "  [AUTO] Detected incomplete size estimation" << endl;
+			cout << "         Enabling EOCD scan mode..." << endl;
 		}
+
+		if (useEOCDScan && forceScanEOCD) {
+			cout << "  [MODE] EOCD scan mode (forced by --scaneocd)" << endl;
+		}
+
+		cout << endl;
+
+		bool success = false;
+
+		// 如果是 ZIP 且需要 EOCD 扫描，使用智能恢复
+		if (useEOCDScan && info.extension == "zip") {
+			cout << "Using ZIP smart recovery with EOCD scan..." << endl;
+
+			// 配置
+			FileCarver::ZipRecoveryConfig config;
+			config.maxSize = 50ULL * 1024 * 1024 * 1024;  // 50GB
+			config.verifyCRC = verifyCRC;
+			config.stopOnFirstEOCD = true;
+			config.allowFragmented = allowFragmented;
+
+			if (expectedSize > 0) {
+				config.expectedSize = expectedSize;
+				config.expectedSizeTolerance = tolerance > 0 ? tolerance : (expectedSize / 10);
+				cout << "Expected size: " << (expectedSize / (1024 * 1024)) << " MB "
+				     << "(+/- " << (config.expectedSizeTolerance / (1024 * 1024)) << " MB)" << endl;
+			} else {
+				// 使用扫描时估算的大小作为提示
+				config.expectedSize = info.fileSize;
+				config.expectedSizeTolerance = info.fileSize / 5;  // 20% 容差
+			}
+
+			// 执行智能恢复
+			auto result = carver.RecoverZipWithEOCDScan(info.startLCN, outputPath, config);
+
+			if (result.success) {
+				success = true;
+				cout << "\n=== Recovery Successful ===" << endl;
+				cout << "File saved to: " << outputPath << endl;
+				cout << "Actual size:   " << result.actualSize << " bytes ("
+				     << (result.actualSize / (1024 * 1024)) << " MB)" << endl;
+
+				if (result.actualSize != info.fileSize) {
+					cout << "Size delta:    "
+					     << (result.actualSize > info.fileSize ? "+" : "")
+					     << ((long long)result.actualSize - (long long)info.fileSize) << " bytes" << endl;
+				}
+
+				if (result.isFragmented) {
+					cout << "[WARNING] File appears to be fragmented" << endl;
+				}
+
+				if (verifyCRC) {
+					cout << "\n--- CRC Verification ---" << endl;
+					cout << "Status:        " << (result.crcValid ? "PASS" : "FAIL") << endl;
+					cout << "Total files:   " << result.totalFiles << endl;
+
+					if (result.corruptedFiles > 0) {
+						cout << "Corrupted:     " << result.corruptedFiles << " files" << endl;
+						cout << "[WARNING] Some files in ZIP have CRC errors" << endl;
+					} else if (result.crcValid) {
+						cout << "All files verified successfully!" << endl;
+					}
+				}
+
+				if (!result.diagnosis.empty()) {
+					cout << "\nDiagnosis: " << result.diagnosis << endl;
+				}
+			} else {
+				cout << "\n=== Recovery Failed ===" << endl;
+				cout << "Reason: " << result.diagnosis << endl;
+
+				if (result.bytesWritten > 0) {
+					cout << "\nPartial data may have been saved as .incomplete file" << endl;
+					cout << "Bytes written: " << result.bytesWritten << endl;
+				}
+			}
+
+		} else {
+			// 普通恢复模式
+			cout << "Using standard recovery mode..." << endl;
+
+			if (carver.RecoverCarvedFile(info, outputPath)) {
+				success = true;
+				cout << "\n=== Recovery Successful ===" << endl;
+				cout << "File saved to: " << outputPath << endl;
+
+				// 如果是 ZIP 且启用了 CRC 验证
+				if (info.extension == "zip" && verifyCRC) {
+					cout << "\nVerifying ZIP integrity..." << endl;
+					auto validation = FileCarver::ValidateZipFile(outputPath);
+
+					if (validation.success) {
+						cout << "CRC Status:    " << (validation.crcValid ? "PASS" : "FAIL") << endl;
+						cout << "Total files:   " << validation.totalFiles << endl;
+
+						if (validation.corruptedFiles > 0) {
+							cout << "Corrupted:     " << validation.corruptedFiles << " files" << endl;
+						}
+					} else {
+						cout << "Validation failed: " << validation.diagnosis << endl;
+					}
+				}
+			} else {
+				cout << "\n=== Recovery Failed ===" << endl;
+			}
+		}
+
+		// 给出建议
+		if (!success && info.extension == "zip" && !useEOCDScan) {
+			cout << "\nTIP: For large ZIP files, try:" << endl;
+			cout << "     carverecover " << index << " " << outputPath << " --scaneocd" << endl;
+		}
+
 	}
 	catch (const exception& e) {
 		cout << "[ERROR] Exception: " << e.what() << endl;
@@ -523,7 +677,8 @@ void CarveCommandThreadPool::Execute(string command) {
 		cout << "  hybrid        - Hybrid mode: signature + ML scan (default)" << endl;
 		cout << "  sig           - Signature-only scan (fastest)" << endl;
 		cout << "  ml            - ML-only scan (for txt/html/xml)" << endl;
-		cout << "\nML-only types (no signature): txt, html, xml" << endl;
+		cout << "\nFor large ZIP recovery, use 'carverecover' with --scaneocd option." << endl;
+		cout << "ML-only types (no signature): txt, html, xml" << endl;
 		cout << "Use 'carvetypes' to see supported signature types." << endl;
 		return;
 	}
@@ -1418,19 +1573,28 @@ void CarveRecoverPageCommand::Execute(string command) {
 		cout << "  autoclean=<N>     - Auto-clean folder when file count >= N (default: 50)" << endl;
 		cout << "  deleted           - Show only deleted files (default)" << endl;
 		cout << "  all               - Show all files (including active)" << endl;
+		cout << "\nZIP Smart Recovery Options:" << endl;
+		cout << "  scaneocd          - Force EOCD scan for all ZIP files" << endl;
+		cout << "  expected=<size>   - Expected file size (e.g., 100MB, 2GB)" << endl;
+		cout << "  tolerance=<size>  - Size tolerance for EOCD scan (default 10%)" << endl;
+		cout << "  noverify          - Skip CRC verification" << endl;
+		cout << "  allowfrag         - Continue recovery even if clusters are unreadable" << endl;
 		cout << "\nExamples:" << endl;
 		cout << "  crp D:\\recovered\\" << endl;
 		cout << "  crp D:\\recovered\\ minconf=30 pagesize=20" << endl;
 		cout << "  crp D:\\recovered\\ autoclean=100 all" << endl;
+		cout << "  crp D:\\recovered\\ scaneocd expected=500MB" << endl;
 		cout << "\nInteractive Commands:" << endl;
 		cout << "  r          - Recover all files on current page" << endl;
 		cout << "  r <idx...> - Recover specific files (e.g., r 0 2 4)" << endl;
 		cout << "  f <idx...> - Force recover low-confidence files" << endl;
+		cout << "  z <idx...> - ZIP smart recovery with EOCD scan" << endl;
 		cout << "  n          - Next page" << endl;
 		cout << "  p          - Previous page" << endl;
 		cout << "  g <page>   - Go to specific page" << endl;
 		cout << "  c          - Clear output folder" << endl;
 		cout << "  q          - Quit recovery mode" << endl;
+		cout << "\nNOTE: ZIP files with [EST] flag will auto-suggest smart recovery." << endl;
 		cout << "\nRun 'carve' or 'carvepool' first to scan for files." << endl;
 		return;
 	}
@@ -1449,6 +1613,13 @@ void CarveRecoverPageCommand::Execute(string command) {
 		size_t pageSize_ = 10;
 		size_t autoCleanThreshold = 50;
 		bool showDeletedOnly = true;
+
+		// ZIP Smart Recovery 选项
+		bool forceScanEOCD = false;
+		bool verifyCRC = true;
+		bool allowFragmented = false;
+		ULONGLONG expectedSize = 0;
+		ULONGLONG tolerance = 0;
 
 		for (size_t i = 1; i < GET_ARG_COUNT(); i++) {
 			string arg = GET_ARG_STRING(i);
@@ -1478,6 +1649,22 @@ void CarveRecoverPageCommand::Execute(string command) {
 			}
 			else if (arg == "deleted" || arg == "del") {
 				showDeletedOnly = true;
+			}
+			// ZIP Smart Recovery 选项解析
+			else if (arg == "scaneocd" || arg == "eocd") {
+				forceScanEOCD = true;
+			}
+			else if (arg == "noverify" || arg == "no-verify") {
+				verifyCRC = false;
+			}
+			else if (arg == "allowfrag" || arg == "allow-frag") {
+				allowFragmented = true;
+			}
+			else if (arg.find("expected=") == 0) {
+				expectedSize = CommandUtils::ParseSize(arg.substr(9));
+			}
+			else if (arg.find("tolerance=") == 0) {
+				tolerance = CommandUtils::ParseSize(arg.substr(10));
 			}
 		}
 
@@ -1535,7 +1722,16 @@ void CarveRecoverPageCommand::Execute(string command) {
 		cout << "Page size: " << pageSize_ << endl;
 		cout << "Auto-clean threshold: " << autoCleanThreshold << " files" << endl;
 		cout << "Filter: " << (showDeletedOnly ? "Deleted only" : "All files") << endl;
-		cout << "\nCommands: r=recover, f=force, n=next, p=prev, g=goto, c=clear, q=quit" << endl;
+		if (forceScanEOCD) {
+			cout << "EOCD Scan: Enabled (forced)" << endl;
+		}
+		if (expectedSize > 0) {
+			cout << "Expected size: " << (expectedSize / (1024 * 1024)) << " MB" << endl;
+			if (tolerance > 0) {
+				cout << "Tolerance: " << (tolerance / (1024 * 1024)) << " MB" << endl;
+			}
+		}
+		cout << "\nCommands: r=recover, f=force, z=zip-smart, n=next, p=prev, g=goto, c=clear, q=quit" << endl;
 
 		while (true) {
 			// 显示当前页
@@ -1576,6 +1772,11 @@ void CarveRecoverPageCommand::Execute(string command) {
 				if (info.deletionChecked) {
 					if (info.isDeleted) cout << " [DEL]";
 					else if (info.isActiveFile) cout << " [ACT]";
+				}
+
+				// 大小估算标志（提示可能需要 EOCD 扫描）
+				if (info.sizeIsEstimated) {
+					cout << " [EST]";
 				}
 
 				cout << endl;
@@ -1739,6 +1940,13 @@ void CarveRecoverPageCommand::Execute(string command) {
 
 							string outputPath = outputDir + filename;
 
+							// 检查是否为 ZIP 且大小是估算的，提示使用 'z' 命令
+							bool needEOCDScan = (info.extension == "zip" && info.sizeIsEstimated) ||
+							                    (info.extension == "zip" && forceScanEOCD);
+							if (needEOCDScan) {
+								cout << "  [" << pageIdx << "] Note: ZIP with estimated size. Consider using 'z " << pageIdx << "' for smart recovery." << endl;
+							}
+
 							if (carver.RecoverCarvedFile(info, outputPath)) {
 								cout << "  [" << pageIdx << "] Recovered: " << filename;
 								if (forceMode && info.confidence < 0.5) {
@@ -1756,8 +1964,141 @@ void CarveRecoverPageCommand::Execute(string command) {
 					}
 					break;
 
+				case 'z':  // ZIP 智能恢复（EOCD 扫描）
+					{
+						// 检查是否需要自动清理
+						size_t currentFileCount = GetFileCountInDirectory(outputDir);
+						if (currentFileCount >= autoCleanThreshold) {
+							cout << "\n[!] Output folder has " << currentFileCount << " files." << endl;
+							cout << "Clear folder before continuing? (y/n/skip): ";
+							string confirm;
+							getline(cin, confirm);
+							if (!confirm.empty() && (confirm[0] == 'y' || confirm[0] == 'Y')) {
+								size_t deleted = ClearDirectory(outputDir);
+								cout << "Deleted " << deleted << " files." << endl;
+							} else if (!confirm.empty() && (confirm[0] == 's' || confirm[0] == 'S')) {
+								// skip - 继续但不清理
+							} else {
+								cout << "Skipping recovery. Use 'c' to clear manually." << endl;
+								break;
+							}
+						}
+
+						vector<size_t> indicesToRecover;
+						if (args.empty()) {
+							// 恢复当前页所有 ZIP 文件
+							for (size_t i = 0; i < endIdx - startIdx; i++) {
+								size_t filteredIdx = startIdx + i;
+								if (filteredIdx < filteredResults.size()) {
+									const auto& [gIdx, inf] = filteredResults[filteredIdx];
+									if (inf.extension == "zip") {
+										indicesToRecover.push_back(i);
+									}
+								}
+							}
+						} else {
+							// 恢复指定索引
+							indicesToRecover = ParseIndices(args, endIdx - startIdx - 1);
+						}
+
+						if (indicesToRecover.empty()) {
+							cout << "No ZIP files found or no valid indices specified." << endl;
+							break;
+						}
+
+						size_t pageRecovered = 0;
+						size_t pageSkipped = 0;
+
+						for (size_t pageIdx : indicesToRecover) {
+							size_t filteredIdx = startIdx + pageIdx;
+							if (filteredIdx >= filteredResults.size()) continue;
+
+							const auto& [globalIdx, info] = filteredResults[filteredIdx];
+
+							// 只处理 ZIP 文件
+							if (info.extension != "zip") {
+								cout << "  [" << pageIdx << "] Skipped (not a ZIP file). Use 'r' for normal recovery." << endl;
+								pageSkipped++;
+								continue;
+							}
+
+							// 生成文件名
+							string filename = "crp_zip_" + to_string(totalRecovered + pageRecovered);
+							if (info.tsSource != TS_NONE_1 &&
+								(info.modificationTime.dwHighDateTime != 0 || info.modificationTime.dwLowDateTime != 0)) {
+								SYSTEMTIME st;
+								FileTimeToSystemTime(&info.modificationTime, &st);
+								char dateStr[20];
+								sprintf_s(dateStr, "_%04d%02d%02d", st.wYear, st.wMonth, st.wDay);
+								filename += dateStr;
+							}
+							filename += ".zip";
+
+							string outputPath = outputDir + filename;
+
+							cout << "  [" << pageIdx << "] ZIP Smart Recovery..." << endl;
+							cout << "      LCN: " << info.startLCN << endl;
+							cout << "      Initial size: " << (info.fileSize / 1024) << " KB";
+							if (info.sizeIsEstimated) {
+								cout << " [ESTIMATED]";
+							}
+							cout << endl;
+
+							// 配置 ZIP 恢复
+							FileCarver::ZipRecoveryConfig config;
+							config.maxSize = 50ULL * 1024 * 1024 * 1024;  // 50GB
+							config.verifyCRC = verifyCRC;
+							config.stopOnFirstEOCD = true;
+							config.allowFragmented = allowFragmented;
+
+							if (expectedSize > 0) {
+								config.expectedSize = expectedSize;
+								config.expectedSizeTolerance = tolerance > 0 ? tolerance : (expectedSize / 10);
+							} else {
+								config.expectedSize = info.fileSize;
+								config.expectedSizeTolerance = info.fileSize / 5;  // 20% 容差
+							}
+
+							// 执行智能恢复
+							auto result = carver.RecoverZipWithEOCDScan(info.startLCN, outputPath, config);
+
+							if (result.success) {
+								cout << "      [OK] " << filename << endl;
+								cout << "      Actual size: " << (result.actualSize / 1024) << " KB";
+								if (result.actualSize != info.fileSize) {
+									long long delta = (long long)result.actualSize - (long long)info.fileSize;
+									cout << " (" << (delta > 0 ? "+" : "") << (delta / 1024) << " KB)";
+								}
+								cout << endl;
+
+								if (result.totalFiles > 0) {
+									cout << "      Files: " << result.totalFiles;
+									if (result.corruptedFiles > 0) {
+										cout << " (" << result.corruptedFiles << " corrupted)";
+									}
+									cout << endl;
+								}
+
+								if (verifyCRC) {
+									cout << "      CRC: " << (result.crcValid ? "VALID" : "INVALID") << endl;
+								}
+
+								pageRecovered++;
+							} else {
+								cout << "      [FAIL] " << result.diagnosis << endl;
+
+								// 如果 EOCD 扫描失败，建议使用普通恢复
+								cout << "      TIP: Try 'r " << pageIdx << "' for normal recovery" << endl;
+							}
+						}
+
+						totalRecovered += pageRecovered;
+						cout << "\nZIP Smart Recovery: " << pageRecovered << " succeeded, " << pageSkipped << " skipped" << endl;
+					}
+					break;
+
 				default:
-					cout << "Unknown command. Use: r, f, n, p, g, c, q" << endl;
+					cout << "Unknown command. Use: r, f, z, n, p, g, c, q" << endl;
 					break;
 			}
 		}

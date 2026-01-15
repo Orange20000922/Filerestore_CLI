@@ -1,0 +1,14 @@
+# HTTP requests
+requests>=2.28.0
+
+# Progress display
+tqdm>=4.64.0
+
+# Aliyun OSS
+oss2>=2.18.0
+
+# Tencent COS
+cos-python-sdk-v5>=1.9.0
+
+# Qiniu
+qiniu>=7.12.0

@@ -2,13 +2,22 @@
 #include <sstream>
 #include <algorithm>
 #include <vector>
-
+#include "Logger.h"
 using namespace std;
 
 // 支持的语言列表
 const wstring LocalizationManager::SUPPORTED_LANGUAGES[] = { L"en", L"zh" };
 const int LocalizationManager::LANGUAGE_COUNT = 2;
+static string WideToUtf8(const wstring& wide) {
+    if (wide.empty()) return "";
 
+    int len = WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), -1, NULL, 0, NULL, NULL);
+    if (len <= 0) return "";
+
+    string utf8(len - 1, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), -1, &utf8[0], len, NULL, NULL);
+    return utf8;
+}
 LocalizationManager::LocalizationManager() : currentLanguage(L"en") {
     // 默认加载英文
     SetLanguage(L"en");
@@ -35,6 +44,8 @@ wstring LocalizationManager::Get(const wstring& key) const {
         return it->second;
     }
     // 如果找不到翻译，返回键本身（开发时方便调试）
+    string logmessage = "[" + WideToUtf8(key) + "]";
+    LOG_WARNING_FMT("Missing translation for key: %ls", logmessage);
     return L"[" + key + L"]";
 }
 
@@ -47,16 +58,7 @@ wstring LocalizationManager::Get(const wstring& key, const wstring& defaultValue
 }
 
 // wstring 转 UTF-8 string 辅助函数
-static string WideToUtf8(const wstring& wide) {
-    if (wide.empty()) return "";
 
-    int len = WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), -1, NULL, 0, NULL, NULL);
-    if (len <= 0) return "";
-
-    string utf8(len - 1, 0);
-    WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), -1, &utf8[0], len, NULL, NULL);
-    return utf8;
-}
 
 string LocalizationManager::GetUtf8(const wstring& key) const {
     auto it = translations.find(key);
@@ -64,6 +66,8 @@ string LocalizationManager::GetUtf8(const wstring& key) const {
         return WideToUtf8(it->second);
     }
     // 如果找不到翻译，返回键本身（方便调试）
+    string logmessage = "[" + WideToUtf8(key) + "]";
+	LOG_WARNING_FMT("Missing translation for key: %ls", logmessage);
     return "[" + WideToUtf8(key) + "]";
 }
 
@@ -99,6 +103,7 @@ wstring LocalizationManager::ReadFileContent(const wstring& filePath) {
     // 打开文件（UTF-8编码）
     ifstream file(filePath, ios::binary);
     if (!file.is_open()) {
+		LOG_ERROR_FMT("Cannot open language file: %ls", filePath.c_str());
         return L"";
     }
 
@@ -112,6 +117,7 @@ wstring LocalizationManager::ReadFileContent(const wstring& filePath) {
     // 转换为宽字符串（UTF-8 to wstring）
     int len = MultiByteToWideChar(CP_UTF8, 0, content.c_str(), -1, NULL, 0);
     if (len <= 0) {
+		LOG_ERROR_FMT("Failed to convert language file content to wide string: %ls", filePath.c_str());
         return L"";
     }
 
@@ -185,6 +191,9 @@ void LocalizationManager::ParseSimpleJson(const wstring& jsonContent) {
         translations[key] = value;
 
         pos = valueEnd + 1;
+    }
+    if (translations.size()==0) {
+        LOG_WARNING_FMT("Failed to analyze any traslation!");
     }
 }
 

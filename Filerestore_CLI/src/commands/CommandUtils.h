@@ -225,6 +225,17 @@ inline bool ParseFileSize(const string& sizeStr, ULONGLONG& outSize) {
     }
 }
 
+/**
+ * 解析文件大小字符串（简化版本，直接返回大小）
+ * @param sizeStr 大小字符串（如 "100MB", "2GB"）
+ * @return 解析后的大小（字节），失败返回 0
+ */
+inline ULONGLONG ParseSize(const string& sizeStr) {
+    ULONGLONG size = 0;
+    ParseFileSize(sizeStr, size);
+    return size;
+}
+
 // ============================================================================
 // 进度显示标准格式
 // ============================================================================

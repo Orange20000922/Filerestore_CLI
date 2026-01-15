@@ -12,7 +12,7 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from config import CHECKPOINTS_DIR, EXPORTED_DIR, MODEL_CONFIG, DEVICE
+from config import CHECKPOINTS_DIR, EXPORTED_DIR, CLASSIFICATION_MODELS_DIR, MODEL_CONFIG, DEVICE
 from model import create_model
 
 
@@ -60,7 +60,7 @@ def export_checkpoint_to_onnx(
 
     # 设置输出路径
     if output_path is None:
-        output_path = EXPORTED_DIR / f"{checkpoint_path.stem}.onnx"
+        output_path = CLASSIFICATION_MODELS_DIR / f"{checkpoint_path.stem}.onnx"
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 

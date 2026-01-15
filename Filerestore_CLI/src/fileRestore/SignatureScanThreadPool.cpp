@@ -253,13 +253,27 @@ void SignatureScanThreadPool::ScanChunk(const ScanTask& task,
                         continue;
                     }
 
-                    // 估算文件大小
-                    ULONGLONG estimatedSize = EstimateFileSize(data + offset, remaining, *sig);
+                    // 估算文件大小（使用 FileCarver 的静态函数，获取 footer 位置和完整性）
+                    ULONGLONG footerPos = 0;
+                    bool isComplete = false;
+
+                    ULONGLONG estimatedSize = FileCarver::EstimateFileSizeStatic(
+                        data + offset, remaining, *sig, &footerPos, &isComplete);
 
                     // 验证文件
                     double confidence = ValidateFile(data + offset,
                                                      min(remaining, (size_t)sig->maxSize),
                                                      *sig);
+
+                    // 如果找到了有效的文件尾，提升置信度
+                    if (footerPos > 0) {
+                        confidence = min(1.0, confidence + 0.1);
+                    }
+
+                    // 如果大小是估计值（没有找到完整结构），降低置信度
+                    if (!isComplete) {
+                        confidence *= 0.9;
+                    }
 
                     // 只添加置信度足够的结果
                     if (confidence >= 0.6) {
@@ -272,8 +286,26 @@ void SignatureScanThreadPool::ScanChunk(const ScanTask& task,
                         info.fileSize = estimatedSize;
                         info.extension = sig->extension;
                         info.description = sig->description;
-                        info.hasValidFooter = false;  // 简化版不查找footer
+                        info.hasValidFooter = (footerPos > 0);
+                        info.sizeIsEstimated = !isComplete;  // 标记大小是否为估计值
                         info.confidence = confidence;
+
+                        // 检测 ZIP 是否为 OOXML Office 文档
+                        if (sig->extension == "zip") {
+                            string ooxmlType = FileCarver::DetectOOXMLTypeStatic(data + offset, remaining);
+                            if (!ooxmlType.empty()) {
+                                info.extension = ooxmlType;
+                                if (ooxmlType == "docx") {
+                                    info.description = "Microsoft Word Document (OOXML)";
+                                } else if (ooxmlType == "xlsx") {
+                                    info.description = "Microsoft Excel Spreadsheet (OOXML)";
+                                } else if (ooxmlType == "pptx") {
+                                    info.description = "Microsoft PowerPoint Presentation (OOXML)";
+                                } else if (ooxmlType == "ooxml") {
+                                    info.description = "Microsoft Office Document (OOXML)";
+                                }
+                            }
+                        }
 
                         // 使用ML增强验证（如果启用）
                         if (IsMLEnabled()) {
@@ -308,38 +340,13 @@ bool SignatureScanThreadPool::MatchSignature(const BYTE* data, size_t dataSize,
 }
 
 // ============================================================================
-// 估算文件大小（简化版）
+// 估算文件大小（调用 FileCarver 的静态函数，避免代码重复）
 // ============================================================================
 ULONGLONG SignatureScanThreadPool::EstimateFileSize(const BYTE* data, size_t dataSize,
                                                      const FileSignature& sig) {
-    // 特殊格式处理（BMP/AVI/WAV从文件头读取大小）
-    if (sig.extension == "bmp" && dataSize >= 6) {
-        DWORD size = *(DWORD*)(data + 2);
-        if (size > sig.minSize && size <= sig.maxSize && size <= dataSize) {
-            return size;
-        }
-    }
-
-    if (sig.extension == "avi" && dataSize >= 12) {
-        if (data[8] == 'A' && data[9] == 'V' && data[10] == 'I' && data[11] == ' ') {
-            DWORD riffSize = *(DWORD*)(data + 4);
-            if (riffSize > 0 && riffSize <= sig.maxSize) {
-                return min((ULONGLONG)riffSize + 8, (ULONGLONG)dataSize);
-            }
-        }
-    }
-
-    if (sig.extension == "wav" && dataSize >= 12) {
-        if (data[8] == 'W' && data[9] == 'A' && data[10] == 'V' && data[11] == 'E') {
-            DWORD riffSize = *(DWORD*)(data + 4);
-            if (riffSize > 0 && riffSize <= sig.maxSize) {
-                return min((ULONGLONG)riffSize + 8, (ULONGLONG)dataSize);
-            }
-        }
-    }
-
-    // 默认：使用保守估计（取可用数据大小和最大大小的较小值）
-    return min((ULONGLONG)dataSize, sig.maxSize);
+    // 直接调用 FileCarver 的线程安全静态函数
+    // 这确保了所有优化（ZIP EOCD、PDF EOF、JPEG EOI 等）都被应用
+    return FileCarver::EstimateFileSizeStatic(data, dataSize, sig, nullptr, nullptr);
 }
 
 // ============================================================================

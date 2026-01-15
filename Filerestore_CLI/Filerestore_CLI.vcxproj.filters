@@ -36,7 +36,6 @@
     <Filter Include="源文件\Analysis">
       <UniqueIdentifier>{a1b2c3d4-1234-5678-abcd-666666666666}</UniqueIdentifier>
     </Filter>
-
     <!-- 头文件 -->
     <Filter Include="头文件">
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
@@ -72,14 +71,12 @@
     <Filter Include="头文件\Platform">
       <UniqueIdentifier>{a1b2c3d4-1234-5678-abcd-123456789abc}</UniqueIdentifier>
     </Filter>
-
     <!-- 资源文件 -->
     <Filter Include="资源文件">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
   </ItemGroup>
-
   <!-- ============================================================================ -->
   <!-- 源文件 (.cpp) -->
   <!-- ============================================================================ -->
@@ -100,7 +97,6 @@
     <ClCompile Include="src\core\FileRestoreAPI.cpp">
       <Filter>源文件\Core</Filter>
     </ClCompile>
-
     <!-- Commands - 命令实现 -->
     <ClCompile Include="src\commands\cmd.cpp">
       <Filter>源文件\Commands</Filter>
@@ -126,7 +122,9 @@
     <ClCompile Include="src\commands\MLCommands.cpp">
       <Filter>源文件\Commands</Filter>
     </ClCompile>
-
+    <ClCompile Include="src\commands\UsnRecoverCommands.cpp">
+      <Filter>源文件\Commands</Filter>
+    </ClCompile>
     <!-- FileRestore\MFT - MFT 操作 -->
     <ClCompile Include="src\fileRestore\MFTReader.cpp">
       <Filter>源文件\FileRestore\MFT</Filter>
@@ -149,7 +147,9 @@
     <ClCompile Include="src\fileRestore\UsnJournalReader.cpp">
       <Filter>源文件\FileRestore\MFT</Filter>
     </ClCompile>
-
+    <ClCompile Include="src\fileRestore\UsnTargetedRecovery.cpp">
+      <Filter>源文件\FileRestore\MFT</Filter>
+    </ClCompile>
     <!-- FileRestore\Carving - 文件雕刻 -->
     <ClCompile Include="src\fileRestore\FileCarver.cpp">
       <Filter>源文件\FileRestore\Carving</Filter>
@@ -169,7 +169,6 @@
     <ClCompile Include="src\fileRestore\MemoryMappedResults.cpp">
       <Filter>源文件\FileRestore\Carving</Filter>
     </ClCompile>
-
     <!-- FileRestore\Detection - 覆盖检测 -->
     <ClCompile Include="src\fileRestore\OverwriteDetector.cpp">
       <Filter>源文件\FileRestore\Detection</Filter>
@@ -177,7 +176,6 @@
     <ClCompile Include="src\fileRestore\OverwriteDetectionThreadPool.cpp">
       <Filter>源文件\FileRestore\Detection</Filter>
     </ClCompile>
-
     <!-- FileRestore\ML - 机器学习 -->
     <ClCompile Include="src\fileRestore\MLClassifier.cpp">
       <Filter>源文件\FileRestore\ML</Filter>
@@ -185,12 +183,13 @@
     <ClCompile Include="src\fileRestore\DatasetGenerator.cpp">
       <Filter>源文件\FileRestore\ML</Filter>
     </ClCompile>
-
+    <ClCompile Include="src\fileRestore\BlockContinuityDetector.cpp">
+      <Filter>源文件\FileRestore\ML</Filter>
+    </ClCompile>
     <!-- FileRestore - 主入口 -->
     <ClCompile Include="src\fileRestore\FileRestore.cpp">
       <Filter>源文件\FileRestore</Filter>
     </ClCompile>
-
     <!-- Utils - 工具类 -->
     <ClCompile Include="src\utils\Logger.cpp">
       <Filter>源文件\Utils</Filter>
@@ -204,13 +203,23 @@
     <ClCompile Include="src\utils\CrashHandler.cpp">
       <Filter>源文件\Utils</Filter>
     </ClCompile>
-
     <!-- Analysis - PE 分析 -->
     <ClCompile Include="src\analysis\ImageTable.cpp">
       <Filter>源文件\Analysis</Filter>
     </ClCompile>
+    <ClCompile Include="src\fileRestore\MLFileRepair.cpp">
+      <Filter>源文件\Commands</Filter>
+    </ClCompile>
+    <ClCompile Include="src\commands\RepairCommands.cpp">
+      <Filter>源文件\Commands</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\ImageHeaderRepairer.cpp">
+      <Filter>源文件\Commands</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\ZipStructureParser.cpp">
+      <Filter>源文件\Commands</Filter>
+    </ClCompile>
   </ItemGroup>
-
   <!-- ============================================================================ -->
   <!-- 头文件 (.h) -->
   <!-- ============================================================================ -->
@@ -234,7 +243,6 @@
     <ClInclude Include="src\core\FileRestoreAPI.h">
       <Filter>头文件\Core</Filter>
     </ClInclude>
-
     <!-- Commands - 命令定义 -->
     <ClInclude Include="src\commands\cmd.h">
       <Filter>头文件\Commands</Filter>
@@ -245,7 +253,6 @@
     <ClInclude Include="src\commands\CommandUtils.h">
       <Filter>头文件\Commands</Filter>
     </ClInclude>
-
     <!-- FileRestore\MFT - MFT 操作 -->
     <ClInclude Include="src\fileRestore\MFTReader.h">
       <Filter>头文件\FileRestore\MFT</Filter>
@@ -271,7 +278,9 @@
     <ClInclude Include="src\fileRestore\UsnJournalReader.h">
       <Filter>头文件\FileRestore\MFT</Filter>
     </ClInclude>
-
+    <ClInclude Include="src\fileRestore\UsnTargetedRecovery.h">
+      <Filter>头文件\FileRestore\MFT</Filter>
+    </ClInclude>
     <!-- FileRestore\Carving - 文件雕刻 -->
     <ClInclude Include="src\fileRestore\FileCarver.h">
       <Filter>头文件\FileRestore\Carving</Filter>
@@ -294,7 +303,6 @@
     <ClInclude Include="src\fileRestore\MemoryMappedResults.h">
       <Filter>头文件\FileRestore\Carving</Filter>
     </ClInclude>
-
     <!-- FileRestore\Detection - 覆盖检测 -->
     <ClInclude Include="src\fileRestore\OverwriteDetector.h">
       <Filter>头文件\FileRestore\Detection</Filter>
@@ -302,7 +310,6 @@
     <ClInclude Include="src\fileRestore\OverwriteDetectionThreadPool.h">
       <Filter>头文件\FileRestore\Detection</Filter>
     </ClInclude>
-
     <!-- FileRestore\ML - 机器学习 -->
     <ClInclude Include="src\fileRestore\MLClassifier.h">
       <Filter>头文件\FileRestore\ML</Filter>
@@ -310,12 +317,13 @@
     <ClInclude Include="src\fileRestore\DatasetGenerator.h">
       <Filter>头文件\FileRestore\ML</Filter>
     </ClInclude>
-
+    <ClInclude Include="src\fileRestore\BlockContinuityDetector.h">
+      <Filter>头文件\FileRestore\ML</Filter>
+    </ClInclude>
     <!-- FileRestore - 主入口 -->
     <ClInclude Include="src\fileRestore\FileRestore.h">
       <Filter>头文件\FileRestore</Filter>
     </ClInclude>
-
     <!-- Utils - 工具类 -->
     <ClInclude Include="src\utils\Logger.h">
       <Filter>头文件\Utils</Filter>
@@ -329,18 +337,25 @@
     <ClInclude Include="src\utils\CrashHandler.h">
       <Filter>头文件\Utils</Filter>
     </ClInclude>
-
     <!-- Analysis - PE 分析 -->
     <ClInclude Include="src\analysis\ImageTable.h">
       <Filter>头文件\Analysis</Filter>
     </ClInclude>
-
     <!-- Platform - 平台抽象 -->
     <ClInclude Include="src\platform\PlatformConfig.h">
       <Filter>头文件\Platform</Filter>
     </ClInclude>
     <ClInclude Include="src\platform\PlatformTypes.h">
       <Filter>头文件\Platform</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\MLFileRepair.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\ImageHeaderRepairer.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\ZipStructureParser.h">
+      <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

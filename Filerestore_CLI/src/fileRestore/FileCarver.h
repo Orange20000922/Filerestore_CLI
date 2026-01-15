@@ -152,9 +152,23 @@ private:
     bool MatchSignature(const BYTE* data, size_t dataSize,
                        const vector<BYTE>& signature);
 
-    // 查找文件尾
+    // 查找文件尾（从前向后搜索）
     ULONGLONG FindFooter(const BYTE* data, size_t dataSize,
                         const vector<BYTE>& footer, ULONGLONG maxSearch);
+
+    // 查找文件尾（从后向前搜索，适用于文件尾在末尾的格式如 ZIP/PDF）
+    ULONGLONG FindFooterReverse(const BYTE* data, size_t dataSize,
+                               const vector<BYTE>& footer, ULONGLONG maxSearch);
+
+    // 查找 ZIP 文件尾（EOCD，处理注释字段）
+    ULONGLONG FindZipEndOfCentralDirectory(const BYTE* data, size_t dataSize);
+
+    // 通过遍历 PNG chunk 结构查找文件末尾
+    ULONGLONG FindPngEndByChunks(const BYTE* data, size_t dataSize);
+
+    // 检测 ZIP 是否为 OOXML Office 文档 (DOCX/XLSX/PPTX)
+    // 返回: "docx", "xlsx", "pptx", "ooxml"(通用), 或 ""(非 Office)
+    string DetectOOXMLType(const BYTE* data, size_t dataSize);
 
     // 估算文件大小（当没有明确文件尾时）
     ULONGLONG EstimateFileSize(const BYTE* data, size_t dataSize,
@@ -284,6 +298,43 @@ public:
     // 获取活动签名集合（供线程池使用）
     const set<string>& GetActiveSignatures() const { return activeSignatures; }
 
+    // ==================== 静态辅助函数（供线程池使用，线程安全）====================
+
+    // 查找 ZIP 文件尾（EOCD）- 静态版本，线程安全
+    // 返回 EOCD 结束位置（即 ZIP 文件大小），未找到返回 0
+    static ULONGLONG FindZipEndOfCentralDirectoryStatic(const BYTE* data, size_t dataSize);
+
+    // 通过遍历 PNG chunk 结构查找文件末尾 - 静态版本，线程安全
+    static ULONGLONG FindPngEndByChunksStatic(const BYTE* data, size_t dataSize);
+
+    // 检测 ZIP 是否为 OOXML Office 文档 - 静态版本，线程安全
+    // 返回: "docx", "xlsx", "pptx", "ooxml"(通用), 或 ""(非 Office)
+    static string DetectOOXMLTypeStatic(const BYTE* data, size_t dataSize);
+
+    // 通过遍历 Local File Headers 估算 ZIP 大小 - 静态版本，线程安全
+    // 当找不到 EOCD 时使用此方法获得更准确的估计
+    // 返回值: 估算大小, outIsComplete 表示是否在数据范围内找到了完整结构
+    static ULONGLONG EstimateZipSizeByHeaders(const BYTE* data, size_t dataSize,
+                                               bool* outIsComplete = nullptr);
+
+    // 查找文件尾（正向搜索）- 静态版本，线程安全
+    // 适用于 JPEG, PNG, GIF 等文件尾在文件中间的格式
+    static ULONGLONG FindFooterStatic(const BYTE* data, size_t dataSize,
+                                      const vector<BYTE>& footer, ULONGLONG maxSearch);
+
+    // 查找文件尾（反向搜索）- 静态版本，线程安全
+    // 适用于 PDF 等文件尾在文件末尾的格式
+    static ULONGLONG FindFooterReverseStatic(const BYTE* data, size_t dataSize,
+                                             const vector<BYTE>& footer, ULONGLONG maxSearch);
+
+    // 估算文件大小 - 静态版本，线程安全
+    // 综合处理各种格式（ZIP EOCD, PDF EOF, BMP/AVI/WAV 头部大小等）
+    // outIsComplete: 输出参数，表示是否找到了完整的文件结构（对于大文件跨chunk处理有用）
+    static ULONGLONG EstimateFileSizeStatic(const BYTE* data, size_t dataSize,
+                                            const FileSignature& sig,
+                                            ULONGLONG* outFooterPos = nullptr,
+                                            bool* outIsComplete = nullptr);
+
     // ==================== 时间戳提取（新增） ====================
 
     // 启用/禁用时间戳提取
@@ -371,8 +422,50 @@ public:
     // 获取 ML 支持的文件类型
     vector<string> GetMLSupportedTypes() const;
 
-    // 获取默认ML模型搜索路径
+    // 获取默认ML分类模型搜索路径
     static vector<wstring> GetDefaultMLModelPaths();
+
+    // 获取默认ML修复模型搜索路径
+    static vector<wstring> GetDefaultRepairModelPaths();
+
+    // ==================== 基于结构的大文件恢复（推荐）====================
+
+    // ZIP 文件恢复配置
+    struct ZipRecoveryConfig {
+        ULONGLONG maxSize = 50ULL * 1024 * 1024 * 1024;  // 最大搜索大小 (默认 50GB)
+        ULONGLONG expectedSize = 0;                      // 用户预期大小 (0 = 不限制)
+        ULONGLONG expectedSizeTolerance = 0;             // 大小容差 (0 = 自动 10%)
+        bool verifyCRC = true;                           // 恢复后验证 CRC
+        bool stopOnFirstEOCD = true;                     // 找到第一个 EOCD 就停止
+        bool allowFragmented = false;                    // 允许碎片化文件（跳过无效块）
+    };
+
+    // ZIP 恢复结果
+    struct ZipRecoveryResult {
+        bool success = false;           // 是否成功找到 EOCD
+        ULONGLONG actualSize = 0;       // 实际文件大小
+        ULONGLONG bytesWritten = 0;     // 写入的字节数
+        bool crcValid = false;          // CRC 是否有效
+        int totalFiles = 0;             // ZIP 内文件数量
+        int corruptedFiles = 0;         // 损坏的文件数量
+        bool isFragmented = false;      // 是否检测到碎片化
+        string diagnosis;               // 诊断信息
+    };
+
+    // 扫描到 EOCD 恢复 ZIP 文件（推荐方法）
+    // 从 startLCN 开始扫描，直到找到有效的 EOCD 或达到 maxSize
+    ZipRecoveryResult RecoverZipWithEOCDScan(
+        ULONGLONG startLCN,
+        const string& outputPath,
+        const ZipRecoveryConfig& config = ZipRecoveryConfig()
+    );
+
+    // 验证已恢复的 ZIP 文件完整性
+    // 检查: EOCD 结构, Central Directory, 各文件 CRC
+    static ZipRecoveryResult ValidateZipFile(const string& filePath);
+
+    // 验证 ZIP 数据完整性（从内存）
+    static ZipRecoveryResult ValidateZipData(const BYTE* data, size_t dataSize);
 
 private:
     // 完整性验证相关成员

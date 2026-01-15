@@ -24,6 +24,7 @@ struct CarvedFileInfo {
     string extension;           // 文件类型
     string description;         // 文件类型描述
     bool hasValidFooter;        // 是否找到有效的文件尾
+    bool sizeIsEstimated;       // 大小是否为估计值（可能实际更大，需要进一步处理）
     double confidence;          // 置信度 (0.0-1.0)
     double validationScore;     // 验证评分 (0.0-1.0)
 
@@ -50,7 +51,8 @@ struct CarvedFileInfo {
     float mlConfidence;         // ML 预测置信度 (0-1)
 
     CarvedFileInfo() : startLCN(0), startOffset(0), fileSize(0),
-                       hasValidFooter(false), confidence(0.0), validationScore(0.0),
+                       hasValidFooter(false), sizeIsEstimated(false),
+                       confidence(0.0), validationScore(0.0),
                        tsSource(TS_NONE_1), matchedMftRecord(0),
                        integrityScore(0.0), integrityValidated(false),
                        isDeleted(false), deletionChecked(false), isActiveFile(false),

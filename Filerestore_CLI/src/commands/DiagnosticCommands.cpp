@@ -1,5 +1,5 @@
 // DiagnosticCommands.cpp - 系统诊断相关命令实现
-// 包含: DiagnoseMFTCommand, DetectOverwriteCommand, ScanUsnCommand
+// 包含: DiagnoseMFTCommand, DetectOverwriteCommand, ScanUsnCommand, ZipInfoCommand
 
 #include "cmd.h"
 #include "CommandUtils.h"
@@ -12,6 +12,7 @@
 #include "OverwriteDetector.h"
 #include "UsnJournalReader.h"
 #include "ProgressBar.h"
+#include "ZipStructureParser.h"
 
 using namespace std;
 
@@ -248,4 +249,265 @@ void ScanUsnCommand::Execute(string command) {
 	catch (const exception& e) {
 		cout << "[ERROR] Exception: " << e.what() << endl;
 	}
+}
+
+// ============================================================================
+// ZipInfoCommand - ZIP 结构解析和诊断
+// ============================================================================
+DEFINE_COMMAND_BASE(ZipInfoCommand, "zipinfo |name |name |name |name |name", TRUE)
+REGISTER_COMMAND(ZipInfoCommand);
+
+void ZipInfoCommand::Execute(string command) {
+	if (!CheckName(command)) {
+		return;
+	}
+
+	if (GET_ARG_COUNT() < 1) {
+		cout << "Usage: zipinfo <zip_file_path> [options]" << endl;
+		cout << "Options:" << endl;
+		cout << "  -v, --verbose    Show detailed information" << endl;
+		cout << "  -l, --list       List all files in archive" << endl;
+		cout << "  -c, --crc        Verify CRC32 checksums" << endl;
+		cout << endl;
+		cout << "Example:" << endl;
+		cout << "  zipinfo D:\\test.zip" << endl;
+		cout << "  zipinfo D:\\test.zip -l" << endl;
+		return;
+	}
+
+	// 解析参数
+	string filePath = GET_ARG_STRING(0);
+	bool verbose = false;
+	bool listFiles = false;
+	bool verifyCRC = false;
+
+	for (size_t i = 1; i < GET_ARG_COUNT(); i++) {
+		string arg = GET_ARG_STRING(i);
+		if (arg == "-v" || arg == "--verbose") {
+			verbose = true;
+		} else if (arg == "-l" || arg == "--list") {
+			listFiles = true;
+		} else if (arg == "-c" || arg == "--crc") {
+			verifyCRC = true;
+		}
+	}
+
+	// 转换路径
+	wstring wFilePath(filePath.begin(), filePath.end());
+
+	// 检查文件是否存在
+	DWORD attrs = GetFileAttributesW(wFilePath.c_str());
+	if (attrs == INVALID_FILE_ATTRIBUTES) {
+		cout << "[ERROR] File not found: " << filePath << endl;
+		return;
+	}
+
+	cout << "========================================" << endl;
+	cout << "ZIP Structure Analysis" << endl;
+	cout << "========================================" << endl;
+	cout << "File: " << filePath << endl;
+	cout << endl;
+
+	// 解析ZIP结构
+	ZipParser::ZipParseResult result = ZipParser::ZipStructureParser::ParseFile(wFilePath);
+
+	// 显示基本信息
+	cout << "--- Basic Info ---" << endl;
+	cout << "File Size:     " << result.actualFileSize << " bytes" << endl;
+
+	if (!result.hasValidEOCD) {
+		cout << "[ERROR] " << result.errorMessage << endl;
+		cout << endl;
+		cout << "Recovery Suggestion:" << endl;
+		cout << "  - File may be truncated or corrupted" << endl;
+		cout << "  - Try searching for Local File Headers (PK\\x03\\x04)" << endl;
+		return;
+	}
+
+	cout << "EOCD Offset:   " << result.eocdOffset << endl;
+	cout << "CD Offset:     " << result.cdOffset << endl;
+	cout << "CD Size:       " << result.cdSize << " bytes" << endl;
+	cout << "Entry Count:   " << result.declaredEntryCount << " (declared)" << endl;
+	cout << "Parsed:        " << result.entries.size() << " entries" << endl;
+	cout << "ZIP64:         " << (result.isZip64 ? "Yes" : "No") << endl;
+	cout << "Complete:      " << (result.isComplete ? "Yes" : "No") << endl;
+
+	if (!result.hasValidCD) {
+		cout << endl;
+		cout << "[WARNING] " << result.errorMessage << endl;
+	}
+
+	// 显示间隙信息
+	if (!result.gaps.empty()) {
+		cout << endl;
+		cout << "--- Detected Gaps ---" << endl;
+		for (size_t i = 0; i < result.gaps.size(); i++) {
+			const auto& gap = result.gaps[i];
+			cout << "Gap " << (i + 1) << ": offset " << gap.start
+			     << " - " << gap.end << " (" << gap.size() << " bytes)" << endl;
+		}
+	}
+
+	// 显示恢复建议
+	ZipParser::ZipRecoveryAdvice advice = ZipParser::ZipStructureParser::GetRecoveryAdvice(result);
+	cout << endl;
+	cout << "--- Recovery Status ---" << endl;
+	cout << "Status: ";
+	switch (advice.status) {
+		case ZipParser::ZipRecoveryAdvice::Status::COMPLETE:
+			cout << "COMPLETE (no repair needed)" << endl;
+			break;
+		case ZipParser::ZipRecoveryAdvice::Status::REPAIRABLE:
+			cout << "REPAIRABLE" << endl;
+			break;
+		case ZipParser::ZipRecoveryAdvice::Status::PARTIAL_RECOVERY:
+			cout << "PARTIAL RECOVERY possible" << endl;
+			break;
+		case ZipParser::ZipRecoveryAdvice::Status::UNRECOVERABLE:
+			cout << "UNRECOVERABLE" << endl;
+			break;
+	}
+	cout << "Description: " << advice.description << endl;
+
+	if (!advice.steps.empty()) {
+		cout << "Suggestions:" << endl;
+		for (const auto& step : advice.steps) {
+			cout << "  - " << step << endl;
+		}
+	}
+
+	// 列出文件
+	if (listFiles || verbose) {
+		cout << endl;
+		cout << "--- File List ---" << endl;
+		cout << setw(8) << "Index" << " | "
+		     << setw(12) << "CompSize" << " | "
+		     << setw(12) << "OrigSize" << " | "
+		     << setw(10) << "CRC32" << " | "
+		     << setw(8) << "Method" << " | "
+		     << "Name" << endl;
+		cout << string(80, '-') << endl;
+
+		for (size_t i = 0; i < result.entries.size(); i++) {
+			const auto& entry = result.entries[i];
+
+			cout << setw(8) << i << " | "
+			     << setw(12) << entry.compressedSize << " | "
+			     << setw(12) << entry.uncompressedSize << " | "
+			     << hex << setw(10) << entry.crc32 << dec << " | "
+			     << setw(8) << ZipParser::ZipStructureParser::GetCompressionMethodName(entry.compression) << " | "
+			     << entry.filename;
+
+			if (verbose) {
+				cout << " [offset=" << entry.localHeaderOffset;
+				if (!entry.hasValidLocalHeader) cout << " INVALID_HDR";
+				if (!entry.hasValidData) cout << " NO_DATA";
+				cout << "]";
+			}
+			cout << endl;
+		}
+
+		cout << string(80, '-') << endl;
+		cout << "Total: " << result.entries.size() << " files" << endl;
+
+		// 计算总大小
+		uint64_t totalCompressed = 0, totalUncompressed = 0;
+		for (const auto& entry : result.entries) {
+			totalCompressed += entry.compressedSize;
+			totalUncompressed += entry.uncompressedSize;
+		}
+		cout << "Compressed:   " << totalCompressed << " bytes" << endl;
+		cout << "Uncompressed: " << totalUncompressed << " bytes" << endl;
+		if (totalUncompressed > 0) {
+			double ratio = (1.0 - (double)totalCompressed / totalUncompressed) * 100;
+			cout << "Ratio:        " << fixed << setprecision(1) << ratio << "%" << endl;
+		}
+	}
+
+	// CRC验证
+	if (verifyCRC) {
+		cout << endl;
+		cout << "--- CRC32 Verification ---" << endl;
+
+		// 打开文件（按需读取每个条目）
+		HANDLE hFile = CreateFileW(wFilePath.c_str(), GENERIC_READ, FILE_SHARE_READ,
+		                           NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+		if (hFile != INVALID_HANDLE_VALUE) {
+			int verified = 0, failed = 0, skipped = 0;
+
+			for (size_t i = 0; i < result.entries.size(); i++) {
+				const auto& entry = result.entries[i];
+
+				// 只验证存储(未压缩)的文件
+				if (entry.compression != 0) {
+					skipped++;
+					continue;
+				}
+
+				// 限制验证的文件大小（避免读取超大文件）
+				if (entry.compressedSize > 100 * 1024 * 1024) {  // 100MB
+					skipped++;
+					if (verbose) {
+						cout << "  [SKIP] " << entry.filename << " (too large)" << endl;
+					}
+					continue;
+				}
+
+				// 读取Local Header获取数据偏移
+				LARGE_INTEGER seekPos;
+				seekPos.QuadPart = entry.localHeaderOffset;
+				SetFilePointerEx(hFile, seekPos, NULL, FILE_BEGIN);
+
+				ZipParser::LocalFileHeader lh;
+				DWORD bytesRead;
+				if (!ReadFile(hFile, &lh, sizeof(lh), &bytesRead, NULL) ||
+				    bytesRead != sizeof(lh) ||
+				    lh.signature != ZipParser::LocalFileHeader::SIGNATURE) {
+					failed++;
+					cout << "  [FAIL] " << entry.filename << " (invalid local header)" << endl;
+					continue;
+				}
+
+				// 跳过文件名和extra字段
+				seekPos.QuadPart = entry.localHeaderOffset + ZipParser::LocalFileHeader::MIN_SIZE +
+				                   lh.filenameLength + lh.extraLength;
+				SetFilePointerEx(hFile, seekPos, NULL, FILE_BEGIN);
+
+				// 读取文件数据
+				vector<BYTE> fileData((size_t)entry.compressedSize);
+				if (!ReadFile(hFile, fileData.data(), (DWORD)entry.compressedSize, &bytesRead, NULL) ||
+				    bytesRead != entry.compressedSize) {
+					failed++;
+					cout << "  [FAIL] " << entry.filename << " (read error)" << endl;
+					continue;
+				}
+
+				// 计算CRC32
+				uint32_t crc = ZipParser::ZipStructureParser::CalculateCRC32(
+				    fileData.data(), fileData.size());
+
+				if (crc == entry.crc32) {
+					verified++;
+					if (verbose) {
+						cout << "  [OK] " << entry.filename << endl;
+					}
+				} else {
+					failed++;
+					cout << "  [FAIL] " << entry.filename << " (CRC mismatch: "
+					     << hex << crc << " != " << entry.crc32 << dec << ")" << endl;
+				}
+			}
+
+			CloseHandle(hFile);
+
+			cout << endl;
+			cout << "Verified: " << verified << ", Failed: " << failed
+			     << ", Skipped (compressed/large): " << skipped << endl;
+		} else {
+			cout << "[ERROR] Cannot open file for CRC verification" << endl;
+		}
+	}
+
+	cout << endl;
+	cout << "========================================" << endl;
 }

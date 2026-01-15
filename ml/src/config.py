@@ -11,8 +11,13 @@ MODELS_DIR = PROJECT_ROOT / "models"
 CHECKPOINTS_DIR = MODELS_DIR / "checkpoints"
 EXPORTED_DIR = MODELS_DIR / "exported"
 
+# 分类模型专用目录
+CLASSIFICATION_MODELS_DIR = MODELS_DIR / "classification"
+# 修复模型专用目录
+REPAIR_MODELS_DIR = MODELS_DIR / "repair"
+
 # 确保目录存在
-for dir_path in [DATA_DIR, CHECKPOINTS_DIR, EXPORTED_DIR]:
+for dir_path in [DATA_DIR, CHECKPOINTS_DIR, EXPORTED_DIR, CLASSIFICATION_MODELS_DIR, REPAIR_MODELS_DIR]:
     dir_path.mkdir(parents=True, exist_ok=True)
 
 # 数据集配置

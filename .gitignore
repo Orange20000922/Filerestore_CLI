@@ -69,7 +69,10 @@ checkpoints/
 runs/
 wandb/
 .tensorboard/
-
+experiment_results/
+*.csv
+*.json
+*.onnx
 # ONNX Runtime libraries (download locally)
 Filerestore_CLI/deps/onnxruntime/include/
 Filerestore_CLI/deps/onnxruntime/lib/

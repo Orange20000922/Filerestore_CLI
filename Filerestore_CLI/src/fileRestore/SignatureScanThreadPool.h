@@ -113,12 +113,8 @@ private:
     // 匹配签名
     bool MatchSignature(const BYTE* data, size_t dataSize, const vector<BYTE>& signature);
 
-    // 估算文件大小
+    // 估算文件大小（包装 FileCarver::EstimateFileSizeStatic）
     ULONGLONG EstimateFileSize(const BYTE* data, size_t dataSize, const FileSignature& sig);
-
-    // 查找文件尾
-    ULONGLONG FindFooter(const BYTE* data, size_t dataSize,
-                         const vector<BYTE>& footer, ULONGLONG maxSearch);
 
     // 验证文件有效性
     double ValidateFile(const BYTE* data, size_t dataSize, const FileSignature& sig);
