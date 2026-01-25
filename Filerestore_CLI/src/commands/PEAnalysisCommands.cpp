@@ -38,9 +38,9 @@ void QueueDLLsCommand::Execute(string command) {
 }
 
 // ============================================================================
-// GetProcessFuncAddressCommand - 获取函数地址
+// GetProcessFuncAddressCommand - 获取函数名及其地址
 // ============================================================================
-DEFINE_COMMAND_BASE(GetProcessFuncAddressCommand, "getfuncaddr |file |name", TRUE)
+DEFINE_COMMAND_BASE(GetProcessFuncAddressCommand, "getfuncnameaddr |file |name", TRUE)
 REGISTER_COMMAND(GetProcessFuncAddressCommand);
 
 void GetProcessFuncAddressCommand::Execute(string command) {

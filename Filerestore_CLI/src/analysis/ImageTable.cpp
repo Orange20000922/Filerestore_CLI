@@ -8,7 +8,7 @@
 #include <sstream>
 #include <ShlObj.h>
 using namespace std;
-//查找函数VA地址
+//查找函数名VA地址
 ULONGLONG ImageTableAnalyzer::GetFuncaddressByName(string name,string file)
 {
 	ImageTableAnalyzer::hFile = CreateFileA(file.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);

@@ -45,7 +45,7 @@ DECLARE_COMMAND(SetLanguageCommand);
 // 列出 DLL 依赖
 DECLARE_COMMAND(QueueDLLsCommand);
 
-// 获取函数地址
+// 获取函数名及函数名的地址
 DECLARE_COMMAND(GetProcessFuncAddressCommand);
 
 // 打印所有导入函数 - 特殊：包含额外成员变量
