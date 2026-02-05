@@ -234,6 +234,11 @@ public:
     bool RecoverCarvedFile(const CarvedFileInfo& info,
                           const string& outputPath);
 
+    // 恢复前精细化：精确计算文件大小、完整性验证、置信度重估
+    // 用于 recover 阶段，对扫描阶段的粗略估计进行精确化
+    // 返回 false 表示文件可能已损坏（仍可尝试恢复）
+    bool RefineCarvedFileInfo(CarvedFileInfo& info, bool verbose = true);
+
     // 获取支持的文件类型列表
     vector<string> GetSupportedTypes();
 
@@ -262,6 +267,11 @@ public:
     // 线程池设置
     void SetThreadPoolMode(bool enabled) { useThreadPool = enabled; }
     bool IsThreadPoolMode() const { return useThreadPool; }
+
+    // SIMD 设置（用于基准测试）
+    void SetSimdEnabled(bool enabled);
+    bool IsSimdEnabled() const;
+    std::string GetSimdInfo() const;
 
     // 设置线程池配置
     void SetThreadPoolConfig(const ScanThreadPoolConfig& config);

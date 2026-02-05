@@ -14,6 +14,8 @@
 #include "MFTBatchReader.h"
 #include "MFTParser.h"
 #include "ProgressBar.h"
+#include "UsnTargetedRecovery.h"
+#include "MFTCache.h"
 
 using namespace std;
 
@@ -29,7 +31,12 @@ void ListDeletedFilesCommand::Execute(string command) {
 	}
 
 	if (GET_ARG_COUNT() < 1 || GET_ARG_COUNT() > 2) {
-		cout << "Invalid Args! Usage: listdeleted <drive_letter> [filter_level]" << endl;
+		cout << "Invalid Args! Usage: listdeleted <drive_letter> [option]" << endl;
+		cout << "Options:" << endl;
+		cout << "  none    - No path filtering" << endl;
+		cout << "  exclude - Exclude system paths" << endl;
+		cout << "  cache   - Only build MFT cache (for carvepool use)" << endl;
+		cout << "  rebuild - Force rebuild MFT cache" << endl;
 		return;
 	}
 
@@ -43,18 +50,66 @@ void ListDeletedFilesCommand::Execute(string command) {
 		}
 
 		FilterLevel filterLevel = FILTER_SKIP_PATH;
+		bool cacheOnly = false;
+		bool forceRebuild = false;
+
 		if (HAS_ARG(1)) {
-			string& filterStr = GET_ARG_STRING(1);
-			if (filterStr == "none") filterLevel = FILTER_NONE;
-			else if (filterStr == "exclude") filterLevel = FILTER_EXCLUDE;
+			string& arg = GET_ARG_STRING(1);
+			if (arg == "none") filterLevel = FILTER_NONE;
+			else if (arg == "exclude") filterLevel = FILTER_EXCLUDE;
+			else if (arg == "cache") cacheOnly = true;
+			else if (arg == "rebuild") forceRebuild = true;
 		}
 
-		cout << "Scanning drive " << driveLetter << ": for deleted files..." << endl;
+		// ========== 构建 MFT 缓存 ==========
+		cout << "Building MFT cache for drive " << driveLetter << ":..." << endl;
 
-		FileRestore* fileRestore = new FileRestore();
-		fileRestore->SetFilterLevel(filterLevel);
-		vector<DeletedFileInfo> deletedFiles = fileRestore->ScanDeletedFiles(driveLetter, 0);
-		delete fileRestore;
+		// 检查是否有有效缓存
+		if (!forceRebuild && MFTCache::HasValidCache(driveLetter, 60)) {
+			cout << "Found valid MFT cache (< 60 minutes old)." << endl;
+			ULONGLONG cacheSize = MFTCache::GetCacheFileSize(driveLetter);
+			if (cacheSize > 0) {
+				cout << "Cache size: " << (cacheSize / (1024 * 1024)) << " MB" << endl;
+			}
+
+			// 加载缓存以获取统计信息
+			MFTCache* cache = MFTCacheManager::GetCache(driveLetter, false);
+			if (cache && cache->IsValid()) {
+				cout << "Cached records: " << cache->GetTotalCount() << endl;
+				cout << "Deleted files: " << cache->GetDeletedCount() << endl;
+				cout << "Active files: " << cache->GetActiveCount() << endl;
+			}
+
+			if (!forceRebuild) {
+				cout << "\nUse 'listdeleted " << driveLetter << " rebuild' to force rebuild." << endl;
+			}
+		} else {
+			// 构建新缓存
+			MFTCache* cache = MFTCacheManager::GetCache(driveLetter, forceRebuild);
+			if (!cache || !cache->IsValid()) {
+				cout << "[ERROR] Failed to build MFT cache." << endl;
+				return;
+			}
+
+			// 保存到磁盘
+			if (cache->SaveToFile()) {
+				cout << "Cache saved to: " << cache->GetCachePath() << endl;
+			}
+		}
+
+		// 如果只是构建缓存，到这里结束
+		if (cacheOnly) {
+			cout << "\nMFT cache ready. Use 'carvepool' for signature scanning." << endl;
+			cout << "Use 'recover <drive> <filename>' for smart recovery." << endl;
+			return;
+		}
+
+		// ========== 传统删除文件扫描 ==========
+		cout << "\nScanning drive " << driveLetter << ": for deleted files..." << endl;
+
+		FileRestore fileRestore;
+		fileRestore.SetFilterLevel(filterLevel);
+		vector<DeletedFileInfo> deletedFiles = fileRestore.ScanDeletedFiles(driveLetter, 0);
 
 		if (deletedFiles.empty()) {
 			cout << "No deleted files found." << endl;
@@ -77,6 +132,11 @@ void ListDeletedFilesCommand::Execute(string command) {
 		if (deletedFiles.size() > 100) {
 			cout << "\nNote: Showing first 100 of " << deletedFiles.size() << " files." << endl;
 		}
+
+		cout << "\n=== Next Steps ===" << endl;
+		cout << "  restorebyrecord " << driveLetter << " <record_number> <output_path>" << endl;
+		cout << "  carvepool " << driveLetter << " <type> <output_dir>  - Signature scan" << endl;
+		cout << "  recover " << driveLetter << " <filename>            - Smart recovery" << endl;
 	}
 	catch (const exception& e) {
 		cout << "[ERROR] Exception: " << e.what() << endl;
@@ -121,16 +181,15 @@ void RestoreByRecordCommand::Execute(string command) {
 		cout << "MFT Record: " << recordNumber << endl;
 		cout << "Output Path: " << outputPath << endl;
 
-		FileRestore* fileRestore = new FileRestore();
-		OverwriteDetectionResult result = fileRestore->DetectFileOverwrite(driveLetter, recordNumber);
+		FileRestore fileRestore;
+		OverwriteDetectionResult result = fileRestore.DetectFileOverwrite(driveLetter, recordNumber);
 
 		if (!result.isFullyAvailable && !result.isPartiallyAvailable) {
 			cout << "\n[FAILED] File data has been completely overwritten." << endl;
-			delete fileRestore;
 			return;
 		}
 
-		bool success = fileRestore->RestoreFileByRecordNumber(driveLetter, recordNumber, outputPath);
+		bool success = fileRestore.RestoreFileByRecordNumber(driveLetter, recordNumber, outputPath);
 
 		if (success) {
 			cout << "\n=== Recovery Successful ===" << endl;
@@ -139,8 +198,6 @@ void RestoreByRecordCommand::Execute(string command) {
 		else {
 			cout << "\n=== Recovery Failed ===" << endl;
 		}
-
-		delete fileRestore;
 	}
 	catch (const exception& e) {
 		cout << "[ERROR] Exception: " << e.what() << endl;
@@ -192,11 +249,11 @@ void ForceRestoreCommand::Execute(string command) {
 		cout << "         - Useful for SSD TRIM, high-entropy files, or false positives" << endl;
 		cout << endl;
 
-		FileRestore* fileRestore = new FileRestore();
+		FileRestore fileRestore;
 
 		// 直接尝试恢复，不检测覆盖
 		cout << "Attempting forced recovery..." << endl;
-		bool success = fileRestore->RestoreFileByRecordNumber(driveLetter, recordNumber, outputPath);
+		bool success = fileRestore.RestoreFileByRecordNumber(driveLetter, recordNumber, outputPath);
 
 		if (success) {
 			cout << "\n=== Recovery Completed ===" << endl;
@@ -213,8 +270,6 @@ void ForceRestoreCommand::Execute(string command) {
 			cout << "  - No DATA attribute found" << endl;
 			cout << "  - Cannot read cluster data" << endl;
 		}
-
-		delete fileRestore;
 	}
 	catch (const exception& e) {
 		cout << "[ERROR] Exception: " << e.what() << endl;
@@ -272,25 +327,22 @@ void BatchRestoreCommand::Execute(string command) {
 		cout << "Output Directory: " << outputDir << endl;
 		cout << "Files to restore: " << recordNumbers.size() << endl;
 
-		FileRestore* fileRestore = new FileRestore();
+		FileRestore fileRestore;
 
-		if (!fileRestore->OpenDrive(driveLetter)) {
+		if (!fileRestore.OpenDrive(driveLetter)) {
 			cout << "Failed to open volume " << driveLetter << ":/" << endl;
-			delete fileRestore;
 			return;
 		}
 
 		MFTReader reader;
 		if (!reader.OpenVolume(driveLetter)) {
 			cout << "Failed to open MFT reader" << endl;
-			delete fileRestore;
 			return;
 		}
 
 		MFTBatchReader batchReader;
 		if (!batchReader.Initialize(&reader)) {
 			cout << "Failed to initialize batch reader." << endl;
-			delete fileRestore;
 			return;
 		}
 
@@ -332,7 +384,7 @@ void BatchRestoreCommand::Execute(string command) {
 				fileName = L"file_" + to_wstring(recordNum);
 			}
 
-			string fileNameStr(fileName.begin(), fileName.end());
+			string fileNameStr = UsnTargetedRecovery::WideToNarrow(fileName);
 			string outputPath = outputDir;
 			if (outputPath.back() != '\\' && outputPath.back() != '/') {
 				outputPath += '\\';
@@ -353,14 +405,14 @@ void BatchRestoreCommand::Execute(string command) {
 				} while (fileAttr != INVALID_FILE_ATTRIBUTES && suffix < 1000);
 			}
 
-			OverwriteDetectionResult result = fileRestore->DetectFileOverwrite(driveLetter, recordNum);
+			OverwriteDetectionResult result = fileRestore.DetectFileOverwrite(driveLetter, recordNum);
 
 			if (!result.isFullyAvailable && !result.isPartiallyAvailable) {
 				skipCount++;
 				continue;
 			}
 
-			bool success = fileRestore->RestoreFileByRecordNumber(driveLetter, recordNum, outputPath);
+			bool success = fileRestore.RestoreFileByRecordNumber(driveLetter, recordNum, outputPath);
 
 			if (success) {
 				successCount++;
@@ -380,7 +432,6 @@ void BatchRestoreCommand::Execute(string command) {
 		cout << "\nOutput directory: " << outputDir << endl;
 
 		batchReader.ClearCache();
-		delete fileRestore;
 	}
 	catch (const exception& e) {
 		cout << "[ERROR] Exception: " << e.what() << endl;

@@ -239,60 +239,6 @@ void FileCarver::InitializeSignatures() {
         0x52
     };
 
-    // ==================== OLE Compound Document ====================
-    // DOC, XLS, PPT share the same OLE header magic bytes
-    // ML classifier distinguishes between specific types (doc/xls/ppt)
-    // Using single "ole" signature to avoid duplicate detections
-
-    signatures["ole"] = {
-        "ole",
-        {0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1},  // OLE Compound File
-        {},
-        200 * 1024 * 1024,
-        512,
-        false,
-        "Microsoft Office Document (OLE)",
-        0xD0
-    };
-
-    // ==================== Text-based Document Types ====================
-
-    // RTF (Rich Text Format)
-    signatures["rtf"] = {
-        "rtf",
-        {0x7B, 0x5C, 0x72, 0x74, 0x66},     // {\rtf
-        {0x7D},                              // } (closing brace)
-        50 * 1024 * 1024,
-        20,
-        true,
-        "Rich Text Format",
-        0x7B
-    };
-
-    // HTML (with DOCTYPE)
-    signatures["html"] = {
-        "html",
-        {0x3C, 0x21, 0x44, 0x4F, 0x43, 0x54, 0x59, 0x50, 0x45},  // <!DOCTYPE
-        {0x3C, 0x2F, 0x68, 0x74, 0x6D, 0x6C, 0x3E},              // </html>
-        50 * 1024 * 1024,
-        50,
-        true,
-        "HTML Document",
-        0x3C
-    };
-
-    // XML (with declaration)
-    signatures["xml"] = {
-        "xml",
-        {0x3C, 0x3F, 0x78, 0x6D, 0x6C},     // <?xml
-        {},
-        50 * 1024 * 1024,
-        20,
-        false,
-        "XML Document",
-        0x3C
-    };
-
     LOG_INFO_FMT("Loaded %zu file signatures", signatures.size());
 }
 
@@ -684,8 +630,9 @@ ULONGLONG FileCarver::EstimateFileSize(const BYTE* data, size_t dataSize,
             }
             return footerPos;
         }
-        // 如果找不到 EOCD，返回保守估计
-        return min((ULONGLONG)dataSize, sig.maxSize);
+        // 如果找不到 EOCD，返回0表示无效
+        // 没有EOCD的ZIP无法确定文件边界，恢复出来的数据没有意义
+        return 0;
     }
 
     // PDF 和其他文件尾在末尾的格式：使用反向搜索
@@ -886,6 +833,11 @@ void FileCarver::ScanBufferMultiSignature(const BYTE* data, size_t dataSize,
                     // 估算文件大小
                     ULONGLONG footerPos = 0;
                     ULONGLONG estimatedSize = EstimateFileSize(data + offset, remaining, *sig, &footerPos);
+
+                    // ZIP文件必须有EOCD，否则跳过
+                    if (sig->extension == "zip" && estimatedSize == 0) {
+                        continue;  // 没有EOCD的ZIP无法可靠恢复
+                    }
 
                     // 验证文件（已匹配签名，不重复检查）
                     double confidence = ValidateFileOptimized(data + offset,
@@ -1201,6 +1153,180 @@ bool FileCarver::RecoverCarvedFile(const CarvedFileInfo& info, const string& out
 
     cout << "Failed to write file data." << endl;
     return false;
+}
+
+// ============================================================================
+// 恢复前精细化：精确大小计算 + 完整性验证 + 置信度重估
+// 将扫描阶段延迟的详细分析集中在此处执行（单文件，非热循环）
+// ============================================================================
+bool FileCarver::RefineCarvedFileInfo(CarvedFileInfo& info, bool verbose) {
+    // 查找对应的签名定义
+    string lookupExt = info.extension;
+    // OOXML 类型映射回 zip
+    if (lookupExt == "docx" || lookupExt == "xlsx" || lookupExt == "pptx" || lookupExt == "ooxml") {
+        lookupExt = "zip";
+    }
+
+    auto sigIt = signatures.find(lookupExt);
+    if (sigIt == signatures.end()) {
+        if (verbose) {
+            cout << "  [精细化] 未知文件类型: " << info.extension << "，跳过" << endl;
+        }
+        return true;  // 未知类型不阻止恢复
+    }
+    const FileSignature& sig = sigIt->second;
+
+    // ZIP 在扫描阶段已经做了 EOCD 精确搜索，不需要重复
+    bool needSizeRefinement = info.sizeIsEstimated;
+
+    if (!needSizeRefinement && !info.integrityValidated) {
+        // 大小已精确但未做完整性验证 → 只做完整性验证
+        if (verbose) {
+            cout << "  [精细化] 文件大小已精确 (" << info.fileSize << " bytes)，执行完整性验证..." << endl;
+        }
+
+        FileIntegrityScore integrity = ValidateFileIntegrity(info);
+        info.integrityScore = integrity.overallScore;
+        info.integrityValidated = true;
+        info.integrityDiagnosis = integrity.diagnosis;
+
+        // 根据完整性评分调整置信度
+        if (integrity.overallScore >= 0.8) {
+            info.confidence = min(1.0, info.confidence * 1.1);
+        } else if (integrity.overallScore < 0.5) {
+            info.confidence *= 0.7;
+        }
+
+        if (verbose) {
+            cout << "  [精细化] 完整性: " << fixed << setprecision(1)
+                 << (integrity.overallScore * 100) << "% - " << integrity.diagnosis << endl;
+        }
+        return !integrity.isLikelyCorrupted;
+    }
+
+    if (!needSizeRefinement) {
+        return true;  // 大小精确且已验证，无需处理
+    }
+
+    // ===== 需要精确计算文件大小 =====
+    if (verbose) {
+        cout << "  [精细化] 大小为估计值 (" << info.fileSize << " bytes)，正在精确计算..." << endl;
+    }
+
+    // 读取数据用于分析（限制读取量，避免内存爆炸）
+    // 对于大多数格式，文件尾在前几MB内就能找到
+    // 但对于大型文件（如视频），可能需要更多数据
+    ULONGLONG readSize = info.fileSize;
+    const ULONGLONG MAX_REFINE_READ = 64ULL * 1024 * 1024;  // 最大读取 64MB 用于分析
+    if (readSize > MAX_REFINE_READ) {
+        readSize = MAX_REFINE_READ;
+    }
+
+    vector<BYTE> fileData;
+    if (!ExtractFile(info.startLCN, info.startOffset, readSize, fileData)) {
+        if (verbose) {
+            cout << "  [精细化] 无法读取文件数据，保持原始估计" << endl;
+        }
+        return true;  // 读取失败不阻止恢复
+    }
+
+    // 调用 EstimateFileSizeStatic 进行精确大小计算
+    ULONGLONG footerPos = 0;
+    bool isComplete = false;
+    ULONGLONG refinedSize = EstimateFileSizeStatic(
+        fileData.data(), fileData.size(), sig, &footerPos, &isComplete);
+
+    ULONGLONG originalSize = info.fileSize;
+    bool sizeChanged = false;
+
+    if (refinedSize > 0 && refinedSize != originalSize) {
+        info.fileSize = refinedSize;
+        info.sizeIsEstimated = !isComplete;
+        sizeChanged = true;
+
+        if (verbose) {
+            double ratio = (double)refinedSize / originalSize * 100.0;
+            cout << "  [精细化] 大小: " << originalSize << " -> " << refinedSize
+                 << " bytes (" << fixed << setprecision(1) << ratio << "%)" << endl;
+        }
+    } else if (refinedSize == 0) {
+        // EstimateFileSizeStatic 返回 0 表示无效（如 ZIP 无 EOCD）
+        if (verbose) {
+            cout << "  [精细化] 警告: 无法确定有效文件边界" << endl;
+        }
+        info.confidence *= 0.5;
+    }
+
+    // 更新文件尾状态
+    if (footerPos > 0) {
+        info.hasValidFooter = true;
+        if (isComplete) {
+            info.sizeIsEstimated = false;
+        }
+    }
+
+    // OOXML 检测（对 zip 类型，检查是否为 Office 文档）
+    if (lookupExt == "zip" && info.extension == "zip") {
+        string ooxmlType = DetectOOXMLTypeStatic(fileData.data(), fileData.size());
+        if (!ooxmlType.empty()) {
+            info.extension = ooxmlType;
+            info.description = ooxmlType + " (Office)";
+            if (verbose) {
+                cout << "  [精细化] 检测到 Office 文档类型: " << ooxmlType << endl;
+            }
+        }
+    }
+
+    // ===== 完整性验证 =====
+    // 使用已读取的数据进行验证，避免重复磁盘 I/O
+    size_t validateSize = (size_t)min((ULONGLONG)fileData.size(), (ULONGLONG)(2 * 1024 * 1024));
+    FileIntegrityScore integrity = FileIntegrityValidator::Validate(
+        fileData.data(), validateSize, info.extension);
+
+    info.integrityScore = integrity.overallScore;
+    info.integrityValidated = true;
+    info.integrityDiagnosis = integrity.diagnosis;
+
+    // ===== 置信度重估 =====
+    double originalConfidence = info.confidence;
+
+    // 因素1：文件尾完整性
+    if (info.hasValidFooter && isComplete) {
+        info.confidence = min(1.0, info.confidence * 1.15);  // 找到完整文件尾，提升置信度
+    } else if (!info.hasValidFooter && (info.extension == "jpg" || info.extension == "png" ||
+               info.extension == "pdf" || info.extension == "gif")) {
+        info.confidence *= 0.75;  // 这些格式应该有文件尾
+    }
+
+    // 因素2：完整性评分
+    if (integrity.overallScore >= 0.8) {
+        info.confidence = min(1.0, info.confidence * 1.1);
+    } else if (integrity.overallScore >= 0.5) {
+        // 中等，不调整
+    } else {
+        info.confidence *= 0.6;  // 完整性低，大幅降低置信度
+    }
+
+    // 因素3：大小合理性
+    if (sizeChanged && refinedSize < originalSize * 0.1) {
+        // 精确大小远小于估计值，可能是有效的小文件
+        // 不额外惩罚
+    }
+
+    if (verbose) {
+        cout << "  [精细化] 完整性: " << fixed << setprecision(1)
+             << (integrity.overallScore * 100) << "% - " << integrity.diagnosis << endl;
+        cout << "  [精细化] 置信度: " << fixed << setprecision(1)
+             << (originalConfidence * 100) << "% -> " << (info.confidence * 100) << "%" << endl;
+
+        if (info.hasValidFooter) {
+            cout << "  [精细化] 文件尾: 有效" << (isComplete ? " (结构完整)" : "") << endl;
+        } else {
+            cout << "  [精细化] 文件尾: 未找到" << endl;
+        }
+    }
+
+    return !integrity.isLikelyCorrupted;
 }
 
 // ============================================================================
@@ -1568,6 +1694,29 @@ void FileCarver::SetThreadPoolConfig(const ScanThreadPoolConfig& config) {
     threadPoolConfig = config;
     LOG_INFO_FMT("Thread pool config updated: %d workers, %zu MB chunks",
                  config.workerCount, config.chunkSize / (1024 * 1024));
+}
+
+// ============================================================================
+// SIMD 控制方法
+// ============================================================================
+void FileCarver::SetSimdEnabled(bool enabled) {
+    if (scanThreadPool) {
+        scanThreadPool->SetSimdEnabled(enabled);
+    }
+}
+
+bool FileCarver::IsSimdEnabled() const {
+    if (scanThreadPool) {
+        return scanThreadPool->IsSimdEnabled();
+    }
+    return true;  // 默认启用
+}
+
+std::string FileCarver::GetSimdInfo() const {
+    if (scanThreadPool) {
+        return scanThreadPool->GetSimdInfo();
+    }
+    return "Thread pool not initialized";
 }
 
 // ============================================================================
@@ -3169,22 +3318,11 @@ ULONGLONG FileCarver::EstimateFileSizeStatic(const BYTE* data, size_t dataSize,
             return footerPos;
         }
 
-        // 如果找不到 EOCD，使用头部遍历方法估算
-        // 这可以更准确地估计跨越多个 chunk 的大文件
-        bool isComplete = false;
-        ULONGLONG headerEstimate = EstimateZipSizeByHeaders(data, dataSize, &isComplete);
-
-        if (outFooterPos) *outFooterPos = 0;  // 没有找到 EOCD
-        if (outIsComplete) *outIsComplete = isComplete;
-
-        if (headerEstimate > 0) {
-            // 如果头部遍历给出了估计，使用它
-            // 但要限制在 maxSize 范围内
-            return min(headerEstimate, sig.maxSize);
-        }
-
-        // 无法估算，返回保守值
-        return min((ULONGLONG)dataSize, sig.maxSize);
+        // 如果找不到 EOCD，返回0表示无效
+        // 没有EOCD的ZIP无法确定文件边界，恢复出来的数据没有意义
+        if (outFooterPos) *outFooterPos = 0;
+        if (outIsComplete) *outIsComplete = false;
+        return 0;
     }
 
     // PDF 和其他文件尾在末尾的格式：使用反向搜索

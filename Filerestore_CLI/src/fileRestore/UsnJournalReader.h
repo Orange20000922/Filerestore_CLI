@@ -30,14 +30,37 @@ struct UsnDeletedFileInfo {
     DWORD FileAttributes;                // 文件属性
     USN Usn;                             // USN 号
 
+    // ==================== MFT 增强信息（可选，需要调用 EnrichWithMFT 填充）====================
+    ULONGLONG FileSize;                  // 文件大小（从 MFT 获取，0 表示未查询或不可用）
+    FILETIME MftCreationTime;            // 创建时间（从 MFT 获取）
+    FILETIME MftModificationTime;        // 修改时间（从 MFT 获取）
+    bool MftInfoValid;                   // MFT 信息是否有效
+    bool MftRecordReused;                // MFT 记录是否已被复用（序列号不匹配）
+
     // 获取真实的 MFT 记录号
     ULONGLONG GetMftRecordNumber() const {
         return ExtractMftRecordNumber(FileReferenceNumber);
     }
 
+    // 获取期望的序列号（来自 USN）
+    WORD GetExpectedSequence() const {
+        return ExtractSequenceNumber(FileReferenceNumber);
+    }
+
     // 获取父目录的 MFT 记录号
     ULONGLONG GetParentMftRecordNumber() const {
         return ExtractMftRecordNumber(ParentFileReferenceNumber);
+    }
+
+    // 默认构造函数
+    UsnDeletedFileInfo() : FileReferenceNumber(0), ParentFileReferenceNumber(0),
+                           Reason(0), FileAttributes(0), Usn(0),
+                           FileSize(0), MftInfoValid(false), MftRecordReused(false) {
+        TimeStamp.QuadPart = 0;
+        MftCreationTime.dwLowDateTime = 0;
+        MftCreationTime.dwHighDateTime = 0;
+        MftModificationTime.dwLowDateTime = 0;
+        MftModificationTime.dwHighDateTime = 0;
     }
 };
 

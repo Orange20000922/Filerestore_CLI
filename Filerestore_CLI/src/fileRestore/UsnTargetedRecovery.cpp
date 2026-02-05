@@ -843,3 +843,103 @@ string UsnTargetedRecovery::GetStatusMessage(UsnRecoveryStatus status) {
             return "未知错误";
     }
 }
+
+// ============================================================================
+// MFT 信息增强功能（复用 ParseMFTRecordForDataRuns）
+// ============================================================================
+
+bool UsnTargetedRecovery::EnrichWithMFT(UsnDeletedFileInfo& usnInfo) {
+    usnInfo.MftInfoValid = false;
+    usnInfo.MftRecordReused = false;
+    usnInfo.FileSize = 0;
+
+    ULONGLONG recordNumber = usnInfo.GetMftRecordNumber();
+    WORD expectedSequence = usnInfo.GetExpectedSequence();
+
+    // 复用现有的 MFT 解析函数
+    vector<pair<ULONGLONG, ULONGLONG>> dataRuns;
+    ULONGLONG fileSize = 0;
+    bool isResident = false;
+    vector<BYTE> residentData;
+    WORD actualSequence = 0;
+
+    if (!ParseMFTRecordForDataRuns(recordNumber, dataRuns, fileSize,
+                                    isResident, residentData, actualSequence)) {
+        return false;
+    }
+
+    // 填充信息
+    usnInfo.FileSize = fileSize;
+    usnInfo.MftRecordReused = (actualSequence != expectedSequence);
+    usnInfo.MftInfoValid = true;
+
+    return true;
+}
+
+size_t UsnTargetedRecovery::EnrichWithMFTBatch(
+    vector<UsnDeletedFileInfo>& usnFiles,
+    UsnRecoveryProgressCallback progressCallback) {
+
+    size_t successCount = 0;
+    size_t total = usnFiles.size();
+
+    for (size_t i = 0; i < total; i++) {
+        if (EnrichWithMFT(usnFiles[i])) {
+            successCount++;
+        }
+
+        if (progressCallback && (i % 100 == 0 || i == total - 1)) {
+            progressCallback(i + 1, total, usnFiles[i].FileName);
+        }
+    }
+
+    return successCount;
+}
+
+vector<UsnDeletedFileInfo> UsnTargetedRecovery::FilterBySize(
+    const vector<UsnDeletedFileInfo>& usnFiles,
+    ULONGLONG minSize,
+    ULONGLONG maxSize,
+    bool requireMftInfo) {
+
+    vector<UsnDeletedFileInfo> filtered;
+
+    for (const auto& info : usnFiles) {
+        if (requireMftInfo && !info.MftInfoValid) {
+            continue;
+        }
+        if (minSize > 0 && info.FileSize < minSize) {
+            continue;
+        }
+        if (maxSize > 0 && info.FileSize > maxSize) {
+            continue;
+        }
+        filtered.push_back(info);
+    }
+
+    return filtered;
+}
+
+vector<UsnDeletedFileInfo> UsnTargetedRecovery::FilterByExtension(
+    const vector<UsnDeletedFileInfo>& usnFiles,
+    const vector<wstring>& extensions) {
+
+    vector<UsnDeletedFileInfo> filtered;
+
+    for (const auto& info : usnFiles) {
+        wstring ext = GetExtension(info.FileName);
+        transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
+
+        for (const auto& targetExt : extensions) {
+            wstring targetLower = targetExt;
+            transform(targetLower.begin(), targetLower.end(), targetLower.begin(), ::towlower);
+
+            if (ext == targetLower) {
+                filtered.push_back(info);
+                break;
+            }
+        }
+    }
+
+    return filtered;
+}

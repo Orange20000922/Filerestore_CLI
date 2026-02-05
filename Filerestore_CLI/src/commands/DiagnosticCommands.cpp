@@ -101,11 +101,11 @@ void DetectOverwriteCommand::Execute(string command) {
 	cout << "Drive: " << driveLetter << ":" << endl;
 	cout << "MFT Record: " << recordNumber << endl;
 
-	FileRestore* fileRestore = new FileRestore();
-	OverwriteDetector* detector = fileRestore->GetOverwriteDetector();
+	FileRestore fileRestore;
+	OverwriteDetector* detector = fileRestore.GetOverwriteDetector();
 	detector->SetDetectionMode(mode);
 
-	OverwriteDetectionResult result = fileRestore->DetectFileOverwrite(driveLetter, recordNumber);
+	OverwriteDetectionResult result = fileRestore.DetectFileOverwrite(driveLetter, recordNumber);
 
 	cout << "\n=== Detection Summary ===" << endl;
 	cout << "Overwrite Percentage: " << result.overwritePercentage << "%" << endl;
@@ -119,8 +119,6 @@ void DetectOverwriteCommand::Execute(string command) {
 	else {
 		cout << "Status: [FAILED] Not Recoverable" << endl;
 	}
-
-	delete fileRestore;
 }
 
 // ============================================================================

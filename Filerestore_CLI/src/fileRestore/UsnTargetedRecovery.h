@@ -177,6 +177,31 @@ public:
                                                 const wstring& outputDir,
                                                 bool forceRecover = false);
 
+    // ==================== MFT 信息增强 ====================
+
+    // 为单个 USN 记录填充 MFT 信息（文件大小、时间戳）
+    // 返回: true 如果成功获取信息，false 如果 MFT 记录不可用或已复用
+    bool EnrichWithMFT(UsnDeletedFileInfo& usnInfo);
+
+    // 批量填充 MFT 信息
+    // 返回: 成功填充的记录数
+    size_t EnrichWithMFTBatch(vector<UsnDeletedFileInfo>& usnFiles,
+                               UsnRecoveryProgressCallback progressCallback = nullptr);
+
+    // 根据文件大小筛选 USN 记录
+    // minSize/maxSize: 大小范围（字节），0 表示不限制
+    // requireMftInfo: 是否要求 MFT 信息有效
+    static vector<UsnDeletedFileInfo> FilterBySize(
+        const vector<UsnDeletedFileInfo>& usnFiles,
+        ULONGLONG minSize = 0,
+        ULONGLONG maxSize = 0,
+        bool requireMftInfo = true);
+
+    // 根据文件扩展名筛选
+    static vector<UsnDeletedFileInfo> FilterByExtension(
+        const vector<UsnDeletedFileInfo>& usnFiles,
+        const vector<wstring>& extensions);
+
     // ==================== 工具方法 ====================
 
     // 获取文件扩展名

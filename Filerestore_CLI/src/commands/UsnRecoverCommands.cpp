@@ -1,5 +1,5 @@
 // UsnRecoverCommands.cpp - USN 定点恢复命令实现
-// 包含: UsnListCommand, UsnRecoverCommand
+// 包含: UsnListCommand, UsnRecoverCommand, RecoverCommand
 
 #include "cmd.h"
 #include "CommandUtils.h"
@@ -7,10 +7,17 @@
 #include <iostream>
 #include <iomanip>
 #include <Windows.h>
+#include <algorithm>
+#include <filesystem>
 #include "MFTReader.h"
 #include "MFTParser.h"
 #include "UsnTargetedRecovery.h"
 #include "LocalizationManager.h"
+#include "FileCarver.h"
+#include "TripleValidator.h"
+#include "MFTCache.h"
+
+namespace fs = std::filesystem;
 
 using namespace std;
 
@@ -411,5 +418,372 @@ void UsnRecoverCommand::Execute(string command) {
     if (!result.canRecover && !forceRecover) {
         cout << LOC_STR("usnrecover.hint_force") << ":" << endl;
         cout << "  usnrecover " << driveStr << " " << targetStr << " " << outputStr << " --force" << endl;
+    }
+}
+
+// ============================================================================
+// RecoverCommand - 智能文件恢复向导（USN + 签名扫描联合）
+// ============================================================================
+// 用法: recover <drive> [filename] [output_dir]
+// 示例: recover C
+//       recover C document.docx
+//       recover C document.docx D:\recovered
+// ============================================================================
+
+DEFINE_COMMAND_BASE(RecoverCommand, "recover |name |name |name", TRUE)
+REGISTER_COMMAND(RecoverCommand);
+
+void RecoverCommand::Execute(string command) {
+    if (!CheckName(command)) {
+        return;
+    }
+
+    if (GET_ARG_COUNT() < 1) {
+        cout << "\n=== 智能文件恢复 ===" << endl;
+        cout << "用法: recover <drive> [filename] [output_dir]" << endl;
+        cout << "\n示例:" << endl;
+        cout << "  recover C                          # 交互式搜索" << endl;
+        cout << "  recover C document.docx            # 搜索指定文件" << endl;
+        cout << "  recover C document.docx D:\\out     # 直接恢复到指定目录" << endl;
+        return;
+    }
+
+    // 解析驱动器
+    string& driveStr = GET_ARG_STRING(0);
+    char driveLetter;
+    if (!CommandUtils::ValidateDriveLetter(driveStr, driveLetter)) {
+        cout << "错误: 无效的驱动器字母" << endl;
+        return;
+    }
+
+    // 解析文件名（可选）
+    wstring targetFileName = L"";
+    if (GET_ARG_COUNT() >= 2) {
+        string& targetStr = GET_ARG_STRING(1);
+        targetFileName = UsnTargetedRecovery::NarrowToWide(targetStr);
+    }
+
+    // 解析输出目录（可选）
+    string outputDir = "";
+    if (GET_ARG_COUNT() >= 3) {
+        outputDir = GET_ARG_STRING(2);
+    }
+
+    // 初始化组件
+    MFTReader reader;
+    if (!reader.OpenVolume(driveLetter)) {
+        cout << "错误: 无法打开卷 " << driveLetter << ":/" << endl;
+        return;
+    }
+
+    MFTParser parser(&reader);
+    UsnTargetedRecovery recovery(&reader, &parser);
+
+    cout << "\n=== 智能文件恢复 ===" << endl;
+    cout << "驱动器: " << driveLetter << ":/" << endl;
+
+    // ========== 第1步：如果没有指定文件名，进入交互式搜索 ==========
+    if (targetFileName.empty()) {
+        cout << "\n请输入要恢复的文件名（支持部分匹配）: ";
+        string input;
+        getline(cin, input);
+        if (input.empty()) {
+            cout << "已取消" << endl;
+            return;
+        }
+        targetFileName = UsnTargetedRecovery::NarrowToWide(input);
+    }
+
+    cout << "\n正在搜索: ";
+    wcout << targetFileName << endl;
+
+    // ========== 第2步：搜索 USN 记录 ==========
+    cout << "\n[1/3] 搜索 USN 删除记录..." << endl;
+
+    vector<UsnFileListItem> usnResults = recovery.SearchAndValidate(
+        driveLetter, 168, targetFileName, 100);  // 搜索最近7天
+
+    // 转换为 UsnDeletedFileInfo 并填充 MFT 信息
+    vector<UsnDeletedFileInfo> matchedUsn;
+    for (auto& item : usnResults) {
+        if (!(item.usnInfo.FileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+            matchedUsn.push_back(item.usnInfo);
+        }
+    }
+
+    if (matchedUsn.empty()) {
+        cout << "  未在 USN 日志中找到匹配的删除记录" << endl;
+    } else {
+        cout << "  找到 " << matchedUsn.size() << " 条 USN 删除记录" << endl;
+
+        // 填充 MFT 信息获取文件大小
+        cout << "\n[2/3] 从 MFT 获取文件大小..." << endl;
+        size_t enriched = recovery.EnrichWithMFTBatch(matchedUsn);
+        cout << "  成功获取 " << enriched << " 个文件的大小信息" << endl;
+    }
+
+    // ========== 第3步：签名扫描 ==========
+    cout << "\n[3/3] 签名扫描磁盘..." << endl;
+
+    // 根据文件扩展名确定要扫描的类型
+    wstring ext = UsnTargetedRecovery::GetExtension(targetFileName);
+    string extNarrow = UsnTargetedRecovery::WideToNarrow(ext);
+    transform(extNarrow.begin(), extNarrow.end(), extNarrow.begin(), ::tolower);
+
+    vector<string> scanTypes;
+    if (!extNarrow.empty()) {
+        // 映射扩展名到签名类型
+        if (extNarrow == "docx" || extNarrow == "xlsx" || extNarrow == "pptx") {
+            scanTypes.push_back("zip");  // Office 文档是 ZIP 格式
+        } else {
+            scanTypes.push_back(extNarrow);
+        }
+    } else {
+        // 没有扩展名，扫描常见类型
+        scanTypes = {"zip", "pdf", "jpg", "png"};
+    }
+
+    FileCarver carver(&reader);
+    vector<CarvedFileInfo> carveResults = carver.ScanForFileTypes(scanTypes, CARVE_SMART, 200);
+
+    cout << "  找到 " << carveResults.size() << " 个候选文件" << endl;
+
+    // ========== 第4步：三角交叉验证 ==========
+    cout << "\n[4/4] 执行三角交叉验证 (USN + MFT + 签名)..." << endl;
+
+    TripleValidator validator(&reader, &parser);
+
+    // 尝试使用 MFT 缓存（如果可用）
+    cout << "  加载 MFT 缓存..." << endl;
+    MFTCache* cache = MFTCacheManager::GetCache(driveLetter, false);
+    if (cache && cache->IsValid()) {
+        cout << "  使用已缓存的 MFT 数据 (" << cache->GetTotalCount() << " 条记录)" << endl;
+        // 使用缓存填充 CarvedFileInfo 的 MFT 信息
+        size_t enriched = cache->EnrichCarvedInfoBatch(carveResults);
+        cout << "  关联到 MFT 记录: " << enriched << " 个文件" << endl;
+    } else {
+        // 没有缓存，回退到传统方式构建 LCN 索引
+        cout << "  未找到缓存，正在构建 MFT LCN 索引..." << endl;
+        cout << "  提示: 使用 'listdeleted " << driveLetter << " cache' 预先构建缓存以加速恢复" << endl;
+        validator.BuildLcnIndex(true, false);
+    }
+
+    // 加载 USN 记录
+    validator.LoadUsnDeletedRecords(matchedUsn);
+
+    // 加载签名扫描结果
+    validator.LoadCarvedResults(carveResults);
+
+    // 执行批量验证
+    vector<TripleValidationResult> validationResults = validator.ValidateCarvedFiles(carveResults, false);
+
+    // 结构体存储匹配结果
+    struct MatchResult {
+        size_t carveIndex;
+        CarvedFileInfo carveInfo;
+        TripleValidationResult validation;
+        double score;
+    };
+    vector<MatchResult> matches;
+
+    for (size_t i = 0; i < carveResults.size(); i++) {
+        MatchResult match;
+        match.carveIndex = i;
+        match.carveInfo = carveResults[i];
+        match.validation = validationResults[i];
+        match.score = validationResults[i].confidence;
+        matches.push_back(match);
+    }
+
+    // 按置信度排序
+    sort(matches.begin(), matches.end(), [](const MatchResult& a, const MatchResult& b) {
+        return a.score > b.score;
+    });
+
+    // 统计验证结果
+    size_t tripleCount = 0, doubleCount = 0, singleCount = 0;
+    for (const auto& v : validationResults) {
+        if (v.level == VAL_TRIPLE) tripleCount++;
+        else if (v.level == VAL_MFT_SIGNATURE || v.level == VAL_USN_SIGNATURE || v.level == VAL_USN_MFT) doubleCount++;
+        else if (v.level == VAL_SIGNATURE_ONLY) singleCount++;
+    }
+
+    cout << "\n========================================" << endl;
+    cout << "验证结果统计" << endl;
+    cout << "========================================" << endl;
+    cout << "  三角验证通过: " << tripleCount << endl;
+    cout << "  双重验证通过: " << doubleCount << endl;
+    cout << "  仅签名验证:   " << singleCount << endl;
+
+    cout << "\n========================================" << endl;
+    cout << "搜索结果" << endl;
+    cout << "========================================\n" << endl;
+
+    // 显示 USN 记录
+    if (!matchedUsn.empty()) {
+        cout << "USN 删除记录:" << endl;
+        cout << string(60, '-') << endl;
+        for (size_t i = 0; i < min(matchedUsn.size(), (size_t)5); i++) {
+            const auto& usn = matchedUsn[i];
+            string fname = UsnTargetedRecovery::WideToNarrow(usn.FileName);
+            cout << "  " << fname;
+            if (usn.MftInfoValid) {
+                string sizeStr = UsnTargetedRecovery::WideToNarrow(
+                    UsnTargetedRecovery::FormatFileSize(usn.FileSize));
+                cout << "  [" << sizeStr << "]";
+                if (usn.MftRecordReused) {
+                    cout << " (MFT已复用)";
+                }
+            } else {
+                cout << "  [大小未知]";
+            }
+            cout << endl;
+        }
+        cout << endl;
+    }
+
+    // 显示候选文件
+    if (matches.empty()) {
+        cout << "未找到可恢复的文件" << endl;
+        return;
+    }
+
+    cout << "候选文件 (按置信度排序):" << endl;
+    cout << string(75, '-') << endl;
+    cout << left << setw(6) << "编号"
+         << setw(12) << "大小"
+         << setw(10) << "置信度"
+         << setw(8) << "类型"
+         << setw(20) << "验证级别"
+         << "状态" << endl;
+    cout << string(75, '-') << endl;
+
+    size_t displayCount = min(matches.size(), (size_t)10);
+    for (size_t i = 0; i < displayCount; i++) {
+        const auto& m = matches[i];
+        string sizeStr = UsnTargetedRecovery::WideToNarrow(
+            UsnTargetedRecovery::FormatFileSize(m.carveInfo.fileSize));
+
+        cout << left << setw(6) << i
+             << setw(12) << sizeStr
+             << setw(10) << fixed << setprecision(0) << (m.score * 100) << "%"
+             << setw(8) << m.carveInfo.extension
+             << setw(20) << TripleValidator::ValidationLevelToString(m.validation.level);
+
+        if (m.validation.level == VAL_TRIPLE) {
+            cout << "*** 最佳";
+        } else if (m.validation.sequenceValid) {
+            cout << "MFT有效";
+        } else if (m.validation.signatureValid) {
+            cout << "签名有效";
+        } else {
+            cout << "-";
+        }
+        cout << endl;
+    }
+
+    if (matches.size() > displayCount) {
+        cout << "  ... 还有 " << (matches.size() - displayCount) << " 个结果" << endl;
+    }
+
+    cout << "\n========================================" << endl;
+
+    // ========== 第5步：用户选择 ==========
+    if (outputDir.empty()) {
+        cout << "输入编号恢复文件，或输入 'q' 退出: ";
+        string input;
+        getline(cin, input);
+
+        if (input.empty() || input == "q" || input == "Q") {
+            cout << "已取消" << endl;
+            return;
+        }
+
+        size_t selectedIndex;
+        try {
+            selectedIndex = stoul(input);
+        } catch (...) {
+            cout << "无效的输入" << endl;
+            return;
+        }
+
+        if (selectedIndex >= matches.size()) {
+            cout << "编号超出范围" << endl;
+            return;
+        }
+
+        // 询问输出目录
+        cout << "输入输出目录 (直接回车使用当前目录): ";
+        getline(cin, outputDir);
+        if (outputDir.empty()) {
+            outputDir = ".";
+        }
+
+        // 恢复文件
+        auto selected = matches[selectedIndex];  // 复制，精细化需要修改
+        string outputFileName = targetFileName.empty() ?
+            ("recovered_" + to_string(selectedIndex) + "." + selected.carveInfo.extension) :
+            UsnTargetedRecovery::WideToNarrow(targetFileName);
+
+        // 恢复前精细化：精确大小计算 + 完整性验证
+        cout << "\n[精细化] 正在对候选文件进行恢复前分析..." << endl;
+        bool isHealthy = carver.RefineCarvedFileInfo(selected.carveInfo);
+
+        if (!isHealthy) {
+            cout << "\n警告: 文件可能已损坏，是否仍然恢复? (y/n): ";
+            string confirm;
+            getline(cin, confirm);
+            if (confirm != "y" && confirm != "Y") {
+                cout << "已取消" << endl;
+                return;
+            }
+        }
+
+        // 精细化后文件名可能需要更新（如 zip -> docx）
+        if (targetFileName.empty()) {
+            outputFileName = "recovered_" + to_string(selectedIndex) + "." + selected.carveInfo.extension;
+        }
+
+        string outputPath = outputDir + "\\" + outputFileName;
+
+        cout << "\n正在恢复到: " << outputPath << " ..." << endl;
+
+        if (carver.RecoverCarvedFile(selected.carveInfo, outputPath)) {
+            cout << "恢复成功!" << endl;
+            cout << "文件大小: " << selected.carveInfo.fileSize << " bytes" << endl;
+        } else {
+            cout << "恢复失败" << endl;
+        }
+    } else {
+        // 直接恢复第一个（最高置信度）
+        auto best = matches[0];  // 复制，精细化需要修改
+        string outputFileName = UsnTargetedRecovery::WideToNarrow(targetFileName);
+        if (outputFileName.empty()) {
+            outputFileName = "recovered." + best.carveInfo.extension;
+        }
+
+        // 恢复前精细化：精确大小计算 + 完整性验证
+        cout << "\n[精细化] 正在对候选文件进行恢复前分析..." << endl;
+        bool isHealthy = carver.RefineCarvedFileInfo(best.carveInfo);
+
+        if (!isHealthy) {
+            cout << "警告: 文件可能已损坏，仍尝试恢复..." << endl;
+        }
+
+        // 精细化后文件名可能需要更新（如 zip -> docx）
+        if (UsnTargetedRecovery::WideToNarrow(targetFileName).empty()) {
+            outputFileName = "recovered." + best.carveInfo.extension;
+        }
+
+        string outputPath = outputDir + "\\" + outputFileName;
+
+        cout << "\n正在恢复最佳匹配到: " << outputPath << " ..." << endl;
+
+        if (carver.RecoverCarvedFile(best.carveInfo, outputPath)) {
+            cout << "恢复成功!" << endl;
+            cout << "文件大小: " << best.carveInfo.fileSize << " bytes" << endl;
+        } else {
+            cout << "恢复失败" << endl;
+        }
     }
 }

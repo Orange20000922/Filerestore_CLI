@@ -96,7 +96,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;$(ProjectDir)src\platform;$(ProjectDir)third_party;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/utf-8 /arch:AVX2 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -115,7 +115,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;$(ProjectDir)src\platform;$(ProjectDir)third_party;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/utf-8 /arch:AVX2 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -132,7 +132,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;$(ProjectDir)src\platform;$(ProjectDir)third_party;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/utf-8 /arch:AVX2 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -151,7 +151,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;$(ProjectDir)src\platform;$(ProjectDir)third_party;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/utf-8 /arch:AVX2 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -176,6 +176,8 @@
     <ClCompile Include="src\commands\UsnRecoverCommands.cpp" />
     <ClCompile Include="src\commands\RepairCommands.cpp" />
     <ClCompile Include="src\utils\CrashHandler.cpp" />
+    <ClCompile Include="src\utils\CpuFeatures.cpp" />
+    <ClCompile Include="src\utils\SimdSignatureScanner.cpp" />
     <ClCompile Include="src\fileRestore\DeletedFileScanner.cpp" />
     <ClCompile Include="src\fileRestore\FileCarver.cpp" />
     <ClCompile Include="src\fileRestore\FileRestore.cpp" />
@@ -204,6 +206,8 @@
     <ClCompile Include="src\fileRestore\MLFileRepair.cpp" />
     <ClCompile Include="src\fileRestore\ImageHeaderRepairer.cpp" />
     <ClCompile Include="src\fileRestore\ZipStructureParser.cpp" />
+    <ClCompile Include="src\fileRestore\TripleValidator.cpp" />
+    <ClCompile Include="src\fileRestore\MFTCache.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\cli.h" />
@@ -216,6 +220,8 @@
     <ClInclude Include="src\commands\CommandMacros.h" />
     <ClInclude Include="src\commands\CommandUtils.h" />
     <ClInclude Include="src\utils\CrashHandler.h" />
+    <ClInclude Include="src\utils\CpuFeatures.h" />
+    <ClInclude Include="src\utils\SimdSignatureScanner.h" />
     <ClInclude Include="src\fileRestore\DeletedFileScanner.h" />
     <ClInclude Include="src\fileRestore\FileCarver.h" />
     <ClInclude Include="src\fileRestore\FileRestore.h" />
@@ -245,6 +251,8 @@
     <ClInclude Include="src\fileRestore\MLFileRepair.h" />
     <ClInclude Include="src\fileRestore\ImageHeaderRepairer.h" />
     <ClInclude Include="src\fileRestore\ZipStructureParser.h" />
+    <ClInclude Include="src\fileRestore\TripleValidator.h" />
+    <ClInclude Include="src\fileRestore\MFTCache.h" />
     <ClInclude Include="src\platform\PlatformConfig.h" />
     <ClInclude Include="src\platform\PlatformTypes.h" />
   </ItemGroup>

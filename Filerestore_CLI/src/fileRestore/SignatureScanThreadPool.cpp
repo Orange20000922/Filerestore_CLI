@@ -30,10 +30,20 @@ SignatureScanThreadPool::SignatureScanThreadPool(
     , mlMismatchCount(0)
     , mlSkippedCount(0)
     , mlUnknownCount(0)
+    , useSimdScan(true)
 {
     // 如果启用自动检测，计算最优线程数
     if (config.autoDetectThreads) {
         config.workerCount = GetOptimalThreadCount();
+    }
+
+    // 初始化SIMD扫描器
+    if (signatureIndex) {
+        std::set<BYTE> targetBytes;
+        for (const auto& pair : *signatureIndex) {
+            targetBytes.insert(pair.first);
+        }
+        simdScanner.SetTargetBytes(targetBytes);
     }
 
     LOG_INFO_FMT("SignatureScanThreadPool created with %d workers, chunk size: %zu MB",
@@ -156,7 +166,11 @@ void SignatureScanThreadPool::WorkerFunction() {
         vector<CarvedFileInfo> localResults;
 
         try {
-            ScanChunk(task, localResults);
+            if (useSimdScan.load()) {
+                ScanChunkSimd(task, localResults);
+            } else {
+                ScanChunk(task, localResults);
+            }
         }
         catch (const exception& e) {
             LOG_ERROR_FMT("Exception in worker thread: %s", e.what());
@@ -245,27 +259,27 @@ void SignatureScanThreadPool::ScanChunk(const ScanTask& task,
                         }
                     }
 
-                    // 特殊检查：OLE Compound Document (doc/xls/ppt 共享相同魔数)
-                    // 只检测为 "doc"，由 ML 分类器区分具体类型
-                    if ((sig->extension == "xls" || sig->extension == "ppt") && remaining >= 8) {
-                        // 跳过 xls/ppt 签名，让 doc 签名处理所有 OLE 文件
-                        // ML 分类器会在后续正确识别文件类型
-                        continue;
-                    }
-
-                    // 估算文件大小（使用 FileCarver 的静态函数，获取 footer 位置和完整性）
+                    // 估算文件大小
+                    // ZIP 使用 EstimateFileSizeStatic（需要 EOCD 搜索来确定精确边界）
+                    // 其他格式使用轻量级 EstimateFileSize（仅读头部字段，O(1)）
                     ULONGLONG footerPos = 0;
                     bool isComplete = false;
+                    ULONGLONG estimatedSize;
 
-                    ULONGLONG estimatedSize = FileCarver::EstimateFileSizeStatic(
-                        data + offset, remaining, *sig, &footerPos, &isComplete);
+                    if (sig->extension == "zip") {
+                        estimatedSize = FileCarver::EstimateFileSizeStatic(
+                            data + offset, remaining, *sig, &footerPos, &isComplete);
+                    } else {
+                        estimatedSize = EstimateFileSize(data + offset, remaining, *sig);
+                        isComplete = false;  // 轻量级估算无法确定完整性
+                    }
 
                     // 验证文件
                     double confidence = ValidateFile(data + offset,
                                                      min(remaining, (size_t)sig->maxSize),
                                                      *sig);
 
-                    // 如果找到了有效的文件尾，提升置信度
+                    // 如果找到了有效的文件尾（仅ZIP路径），提升置信度
                     if (footerPos > 0) {
                         confidence = min(1.0, confidence + 0.1);
                     }
@@ -329,6 +343,150 @@ void SignatureScanThreadPool::ScanChunk(const ScanTask& task,
 }
 
 // ============================================================================
+// SIMD加速扫描（使用SIMD首字节匹配加速）
+// ============================================================================
+void SignatureScanThreadPool::ScanChunkSimd(const ScanTask& task,
+                                              vector<CarvedFileInfo>& localResults) {
+    if (!task.data || task.dataSize == 0) return;
+
+    const BYTE* data = task.data;
+    size_t dataSize = task.dataSize;
+
+    // 使用SIMD扫描器找出所有首字节匹配位置
+    std::vector<SimdSignatureScanner::MatchResult> matches;
+    matches.reserve(dataSize / 512);  // 预分配
+    simdScanner.Scan(data, dataSize, matches);
+
+    size_t skipUntil = 0;  // 用于跳过已识别文件区域
+
+    for (const auto& match : matches) {
+        if (stopFlag.load()) break;
+        if (match.offset < skipUntil) continue;
+
+        size_t offset = match.offset;
+
+        // 查找该首字节对应的签名
+        auto it = signatureIndex->find(match.matchedByte);
+        if (it == signatureIndex->end()) continue;
+
+        for (const FileSignature* sig : it->second) {
+            if (activeSignatures->find(sig->extension) == activeSignatures->end()) {
+                continue;
+            }
+
+            size_t remaining = dataSize - offset;
+            if (remaining < sig->header.size()) continue;
+
+            if (!MatchSignature(data + offset, remaining, sig->header)) continue;
+
+            // AVI/WAV 区分
+            if (sig->extension == "avi" || sig->extension == "wav") {
+                if (remaining >= 12) {
+                    bool isAvi = (data[offset + 8] == 'A' && data[offset + 9] == 'V' &&
+                                  data[offset + 10] == 'I');
+                    bool isWav = (data[offset + 8] == 'W' && data[offset + 9] == 'A' &&
+                                  data[offset + 10] == 'V' && data[offset + 11] == 'E');
+                    if ((sig->extension == "avi" && !isAvi) ||
+                        (sig->extension == "wav" && !isWav)) {
+                        continue;
+                    }
+                } else {
+                    continue;
+                }
+            }
+
+            // MP4 ftyp 验证
+            if (sig->extension == "mp4" && remaining >= 8) {
+                if (!(data[offset + 4] == 'f' && data[offset + 5] == 't' &&
+                      data[offset + 6] == 'y' && data[offset + 7] == 'p')) {
+                    continue;
+                }
+            }
+
+            // 估算文件大小（ZIP用重量级，其他用轻量级）
+            ULONGLONG footerPos = 0;
+            bool isComplete = false;
+            ULONGLONG estimatedSize;
+
+            if (sig->extension == "zip") {
+                estimatedSize = FileCarver::EstimateFileSizeStatic(
+                    data + offset, remaining, *sig, &footerPos, &isComplete);
+            } else {
+                estimatedSize = EstimateFileSize(data + offset, remaining, *sig);
+                isComplete = false;
+            }
+
+            double confidence = ValidateFile(data + offset,
+                                              min(remaining, (size_t)sig->maxSize),
+                                              *sig);
+
+            if (footerPos > 0) {
+                confidence = min(1.0, confidence + 0.1);
+            }
+            if (!isComplete) {
+                confidence *= 0.9;
+            }
+
+            if (confidence >= 0.6) {
+                ULONGLONG absoluteLCN = task.baseLCN + (offset / task.bytesPerCluster);
+                ULONGLONG clusterOffset = offset % task.bytesPerCluster;
+
+                CarvedFileInfo info;
+                info.startLCN = absoluteLCN;
+                info.startOffset = clusterOffset;
+                info.fileSize = estimatedSize;
+                info.extension = sig->extension;
+                info.description = sig->description;
+                info.hasValidFooter = (footerPos > 0);
+                info.sizeIsEstimated = !isComplete;
+                info.confidence = confidence;
+
+                // OOXML 检测
+                if (sig->extension == "zip") {
+                    string ooxmlType = FileCarver::DetectOOXMLTypeStatic(data + offset, remaining);
+                    if (!ooxmlType.empty()) {
+                        info.extension = ooxmlType;
+                        if (ooxmlType == "docx") {
+                            info.description = "Microsoft Word Document (OOXML)";
+                        } else if (ooxmlType == "xlsx") {
+                            info.description = "Microsoft Excel Spreadsheet (OOXML)";
+                        } else if (ooxmlType == "pptx") {
+                            info.description = "Microsoft PowerPoint Presentation (OOXML)";
+                        } else if (ooxmlType == "ooxml") {
+                            info.description = "Microsoft Office Document (OOXML)";
+                        }
+                    }
+                }
+
+                // ML增强
+                if (IsMLEnabled()) {
+                    size_t mlDataSize = (size_t)(std::min)(remaining, (size_t)4096);
+                    EnhanceWithML(data + offset, mlDataSize, info);
+                }
+
+                localResults.push_back(info);
+
+                skipUntil = offset + (size_t)min(estimatedSize, (ULONGLONG)remaining);
+                break;  // 跳出签名循环，处理下一个SIMD匹配
+            }
+        }
+    }
+}
+
+// ============================================================================
+// 获取SIMD信息
+// ============================================================================
+std::string SignatureScanThreadPool::GetSimdInfo() const {
+    auto level = simdScanner.GetSimdLevel();
+    switch (level) {
+        case CpuFeatures::SimdLevel::AVX512: return "AVX-512";
+        case CpuFeatures::SimdLevel::AVX2: return "AVX2";
+        case CpuFeatures::SimdLevel::SSE2: return "SSE2";
+        default: return "Scalar";
+    }
+}
+
+// ============================================================================
 // 签名匹配
 // ============================================================================
 bool SignatureScanThreadPool::MatchSignature(const BYTE* data, size_t dataSize,
@@ -340,13 +498,49 @@ bool SignatureScanThreadPool::MatchSignature(const BYTE* data, size_t dataSize,
 }
 
 // ============================================================================
-// 估算文件大小（调用 FileCarver 的静态函数，避免代码重复）
+// 估算文件大小（轻量级，仅解析头部字段，用于扫描热循环）
+// 详细的 footer 搜索和结构遍历推迟到 recover 阶段
 // ============================================================================
 ULONGLONG SignatureScanThreadPool::EstimateFileSize(const BYTE* data, size_t dataSize,
                                                      const FileSignature& sig) {
-    // 直接调用 FileCarver 的线程安全静态函数
-    // 这确保了所有优化（ZIP EOCD、PDF EOF、JPEG EOI 等）都被应用
-    return FileCarver::EstimateFileSizeStatic(data, dataSize, sig, nullptr, nullptr);
+    // BMP: 头部包含精确大小
+    if (sig.extension == "bmp" && dataSize >= 6) {
+        DWORD size = *(DWORD*)(data + 2);
+        if (size > sig.minSize && size <= sig.maxSize && size <= dataSize) {
+            return size;
+        }
+    }
+
+    // AVI: RIFF 头部包含精确大小
+    if (sig.extension == "avi" && dataSize >= 12) {
+        if (data[8] == 'A' && data[9] == 'V' && data[10] == 'I' && data[11] == ' ') {
+            DWORD riffSize = *(DWORD*)(data + 4);
+            if (riffSize > 0 && riffSize <= sig.maxSize) {
+                return min((ULONGLONG)riffSize + 8, (ULONGLONG)dataSize);
+            }
+        }
+    }
+
+    // WAV: RIFF 头部包含精确大小
+    if (sig.extension == "wav" && dataSize >= 12) {
+        if (data[8] == 'W' && data[9] == 'A' && data[10] == 'V' && data[11] == 'E') {
+            DWORD riffSize = *(DWORD*)(data + 4);
+            if (riffSize > 0 && riffSize <= sig.maxSize) {
+                return min((ULONGLONG)riffSize + 8, (ULONGLONG)dataSize);
+            }
+        }
+    }
+
+    // MP4: 读取 ftyp atom 大小（但实际文件通常更大）
+    if (sig.extension == "mp4" && dataSize >= 8) {
+        DWORD atomSize = _byteswap_ulong(*(DWORD*)data);
+        if (atomSize >= 8) {
+            return min((ULONGLONG)dataSize, sig.maxSize);
+        }
+    }
+
+    // 默认：保守估计
+    return min((ULONGLONG)dataSize, sig.maxSize);
 }
 
 // ============================================================================

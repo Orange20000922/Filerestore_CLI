@@ -25,7 +25,7 @@ PrintAllFunction::PrintAllFunction() {
 }
 
 PrintAllFunction::~PrintAllFunction() {
-	delete analyzer;
+	// unique_ptr 自动释放
 }
 
 void PrintAllFunction::AcceptArgs(vector<LPVOID> argslist) {
@@ -142,6 +142,7 @@ void HelpCommand::Execute(string command) {
 		cout << "=== USN 定点恢复命令 ===" << endl;
 		cout << "  usnlist           - 列出USN删除记录（带验证）" << endl;
 		cout << "  usnrecover        - USN定点恢复单个文件" << endl;
+		cout << "  recover           - 智能恢复向导（推荐）" << endl;
 		cout << endl;
 
 		cout << "=== 文件修复命令 ===" << endl;
@@ -220,13 +221,23 @@ void HelpCommand::Execute(string command) {
 	}
 	else if (cmdName == "listdeleted") {
 		cout << "\n=== listdeleted - 列出已删除文件 ===\n" << endl;
-		cout << "用法: listdeleted <drive> <max_files>\n" << endl;
+		cout << "用法: listdeleted <drive> [max_files|option]\n" << endl;
 		cout << "参数:" << endl;
 		cout << "  <drive>      - 驱动器字母" << endl;
 		cout << "  <max_files>  - 最大显示数量 (0=不限制)\n" << endl;
+		cout << "选项:" << endl;
+		cout << "  cache        - 仅构建MFT缓存，跳过文件列表显示" << endl;
+		cout << "  rebuild      - 强制重建MFT缓存（即使缓存有效）\n" << endl;
 		cout << "示例:" << endl;
-		cout << "  listdeleted C 100   - 显示C盘前100个已删除文件" << endl;
-		cout << "  listdeleted D 0     - 显示D盘所有已删除文件\n" << endl;
+		cout << "  listdeleted C 100      - 显示C盘前100个已删除文件" << endl;
+		cout << "  listdeleted D 0        - 显示D盘所有已删除文件" << endl;
+		cout << "  listdeleted C cache    - 仅构建C盘MFT缓存" << endl;
+		cout << "  listdeleted C rebuild  - 强制重建C盘MFT缓存\n" << endl;
+		cout << "MFT缓存说明:" << endl;
+		cout << "  - 缓存包含LCN到MFT记录的映射，用于加速其他命令" << endl;
+		cout << "  - 缓存文件保存在工作目录: mft_cache_<drive>.dat" << endl;
+		cout << "  - 缓存有效期: 60分钟（之后自动重建）" << endl;
+		cout << "  - carvepool/recover等命令会自动使用已有缓存\n" << endl;
 	}
 	else if (cmdName == "searchdeleted") {
 		cout << "\n=== searchdeleted - 搜索已删除文件 ===\n" << endl;
@@ -376,15 +387,13 @@ void HelpCommand::Execute(string command) {
 		cout << "  ml           - 纯ML模式 (用于txt/html/xml等无签名类型)\n" << endl;
 		cout << "其他选项:" << endl;
 		cout << "  notimestamp  - 跳过时间戳提取 (更快)" << endl;
-		cout << "  continuity   - 启用ML连续性检测（大文件优化）\n" << endl;
+		cout << "  nosimd       - 禁用SIMD优化 (用于基准测试)\n" << endl;
 		cout << "示例:" << endl;
 		cout << "  carvepool C zip D:\\recovered\\" << endl;
 		cout << "  carvepool C jpg,png,gif D:\\recovered\\" << endl;
 		cout << "  carvepool D all D:\\recovered\\ 8" << endl;
 		cout << "  carvepool D all D:\\recovered\\ 0 hybrid      # 混合模式" << endl;
-		cout << "  carvepool D txt,html,xml D:\\recovered\\ 0 ml # 纯ML模式" << endl;
-		cout << "  carvepool D zip D:\\recovered\\ 0 continuity  # 连续性检测" << endl;
-		cout << "  carvepool D mp4,zip D:\\recovered\\ 8 hybrid continuity\n" << endl;
+		cout << "  carvepool D txt,html,xml D:\\recovered\\ 0 ml # 纯ML模式\n" << endl;
 		cout << "ML支持的类型 (无文件签名，仅ML识别):" << endl;
 		cout << "  txt, html, xml\n" << endl;
 		cout << "扫描模式说明:" << endl;
@@ -621,6 +630,21 @@ void HelpCommand::Execute(string command) {
 		cout << "  1. 先运行 usnlist 列出删除的文件" << endl;
 		cout << "  2. 选择要恢复的文件索引" << endl;
 		cout << "  3. 运行 usnrecover 进行恢复" << endl;
+	}
+	else if (cmdName == "recover") {
+		cout << "\n=== recover - 智能恢复向导 ===\n" << endl;
+		cout << "用法: recover <drive> [filename] [output_dir]\n" << endl;
+		cout << "这是推荐的恢复命令，结合 USN 日志和签名扫描进行智能匹配。\n" << endl;
+		cout << "功能:" << endl;
+		cout << "  1. 搜索 USN 删除记录，获取文件名和删除时间" << endl;
+		cout << "  2. 从 MFT 获取文件大小（即使已删除）" << endl;
+		cout << "  3. 对磁盘进行签名扫描，找到候选文件" << endl;
+		cout << "  4. 用 USN 的大小信息筛选，提高匹配准确度" << endl;
+		cout << "  5. 显示候选列表，让用户选择恢复\n" << endl;
+		cout << "示例:" << endl;
+		cout << "  recover C                         # 交互式搜索" << endl;
+		cout << "  recover C document.docx           # 搜索指定文件" << endl;
+		cout << "  recover C document.docx D:\\out    # 直接恢复到指定目录\n" << endl;
 	}
 	else if (cmdName == "crp") {
 		cout << "\n=== crp - 分页交互式恢复 ===\n" << endl;

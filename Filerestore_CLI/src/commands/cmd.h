@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <Windows.h>
 #include <string>
+#include <memory>
 #include "climodule.h"
 #include <queue>
 #include <vector>
@@ -54,7 +55,7 @@ class PrintAllFunction : public Command
 public:
 	static string name;
 	static vector<LPVOID> Arglist;
-	ImageTableAnalyzer* analyzer = new ImageTableAnalyzer();
+	unique_ptr<ImageTableAnalyzer> analyzer = make_unique<ImageTableAnalyzer>();
 public:
 	PrintAllFunction();
 	~PrintAllFunction();
@@ -156,6 +157,9 @@ DECLARE_COMMAND(UsnListCommand);
 
 // USN 定点恢复
 DECLARE_COMMAND(UsnRecoverCommand);
+
+// 智能恢复向导（USN + 签名扫描联合）
+DECLARE_COMMAND(RecoverCommand);
 
 // ============================================================================
 // 文件修复命令

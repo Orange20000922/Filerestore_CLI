@@ -12,6 +12,7 @@
 #include <string>
 #include "CarvedFileTypes.h"
 #include "MLClassifier.h"
+#include "../utils/SimdSignatureScanner.h"
 
 using namespace std;
 
@@ -102,6 +103,10 @@ private:
     // ==================== 配置 ====================
     ScanThreadPoolConfig config;
 
+    // ==================== SIMD扫描 ====================
+    SimdSignatureScanner simdScanner;
+    atomic<bool> useSimdScan;
+
     // ==================== 私有方法 ====================
 
     // 工作线程主函数
@@ -110,10 +115,13 @@ private:
     // 扫描单个数据块（核心扫描逻辑）
     void ScanChunk(const ScanTask& task, vector<CarvedFileInfo>& localResults);
 
+    // SIMD加速扫描
+    void ScanChunkSimd(const ScanTask& task, vector<CarvedFileInfo>& localResults);
+
     // 匹配签名
     bool MatchSignature(const BYTE* data, size_t dataSize, const vector<BYTE>& signature);
 
-    // 估算文件大小（包装 FileCarver::EstimateFileSizeStatic）
+    // 估算文件大小（轻量级O(1)，仅解析头部字段，用于扫描热循环）
     ULONGLONG EstimateFileSize(const BYTE* data, size_t dataSize, const FileSignature& sig);
 
     // 验证文件有效性
@@ -186,6 +194,13 @@ public:
 
     // 获取工作线程数
     int GetWorkerCount() const { return config.workerCount; }
+
+    // ==================== SIMD设置 ====================
+
+    // 启用/禁用SIMD扫描
+    void SetSimdEnabled(bool enabled) { useSimdScan = enabled; }
+    bool IsSimdEnabled() const { return useSimdScan.load(); }
+    std::string GetSimdInfo() const;
 
     // ==================== ML分类设置 ====================
 

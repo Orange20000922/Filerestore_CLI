@@ -6,6 +6,7 @@
 #include <cctype>
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 #include "MFTReader.h"
 
 using namespace std;
@@ -258,6 +259,147 @@ inline void PrintProgress(const string& operation, double percentage,
  */
 inline void ClearProgressLine() {
     cout << "\r" << string(80, ' ') << "\r" << flush;
+}
+
+// ============================================================================
+// 卷初始化（驱动器验证 + 打开卷）
+// ============================================================================
+
+/**
+ * 验证驱动器并打开卷（一体化初始化）
+ * @param driveStr 驱动器字符串
+ * @param reader MFTReader 对象引用
+ * @param outDrive 输出的驱动器字母（可选）
+ * @return 成功返回 true，失败会输出错误信息
+ */
+inline bool OpenVolumeWithValidation(const string& driveStr, MFTReader& reader, char* outDrive = nullptr) {
+    char driveLetter;
+    if (!ValidateDriveLetter(driveStr, driveLetter)) {
+        cout << "Invalid drive letter: " << driveStr << endl;
+        return false;
+    }
+
+    if (!reader.OpenVolume(driveLetter)) {
+        cout << "Failed to open volume " << driveLetter << ":/" << endl;
+        return false;
+    }
+
+    if (outDrive) {
+        *outDrive = driveLetter;
+    }
+    return true;
+}
+
+// ============================================================================
+// 结果显示工具
+// ============================================================================
+
+/**
+ * 显示结果列表（带数量限制和"还有 X 条"提示）
+ * @param results 结果向量
+ * @param displayFunc 显示单条结果的函数 (index, item) -> void
+ * @param limit 显示数量限制（默认100）
+ */
+template<typename T, typename DisplayFunc>
+inline void DisplayResultsWithLimit(const vector<T>& results, DisplayFunc displayFunc, size_t limit = 100) {
+    size_t displayCount = min(results.size(), limit);
+
+    for (size_t i = 0; i < displayCount; i++) {
+        displayFunc(i, results[i]);
+    }
+
+    if (results.size() > limit) {
+        cout << "\n... and " << (results.size() - limit) << " more items" << endl;
+        cout << "Use specific commands to view full results" << endl;
+    }
+}
+
+/**
+ * 格式化文件大小为可读字符串
+ * @param size 大小（字节）
+ * @return 格式化后的字符串（如 "1.5 MB"）
+ */
+inline string FormatFileSize(ULONGLONG size) {
+    const char* units[] = {"B", "KB", "MB", "GB", "TB"};
+    int unitIndex = 0;
+    double displaySize = static_cast<double>(size);
+
+    while (displaySize >= 1024.0 && unitIndex < 4) {
+        displaySize /= 1024.0;
+        unitIndex++;
+    }
+
+    ostringstream oss;
+    if (unitIndex == 0) {
+        oss << size << " B";
+    } else {
+        oss << fixed << setprecision(2) << displaySize << " " << units[unitIndex];
+    }
+    return oss.str();
+}
+
+// ============================================================================
+// 字符串转换工具
+// ============================================================================
+
+/**
+ * 宽字符串转窄字符串（UTF-16 -> UTF-8/ANSI）
+ * @param wide 宽字符串
+ * @return 窄字符串
+ */
+inline string WideToNarrow(const wstring& wide) {
+    if (wide.empty()) return "";
+
+    int size = WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), -1, nullptr, 0, nullptr, nullptr);
+    if (size <= 0) return "";
+
+    string result(size - 1, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), -1, &result[0], size, nullptr, nullptr);
+    return result;
+}
+
+/**
+ * 窄字符串转宽字符串（UTF-8/ANSI -> UTF-16）
+ * @param narrow 窄字符串
+ * @return 宽字符串
+ */
+inline wstring NarrowToWide(const string& narrow) {
+    if (narrow.empty()) return L"";
+
+    int size = MultiByteToWideChar(CP_UTF8, 0, narrow.c_str(), -1, nullptr, 0);
+    if (size <= 0) return L"";
+
+    wstring result(size - 1, 0);
+    MultiByteToWideChar(CP_UTF8, 0, narrow.c_str(), -1, &result[0], size);
+    return result;
+}
+
+// ============================================================================
+// 时间格式化工具
+// ============================================================================
+
+/**
+ * FILETIME 转可读字符串
+ * @param ft FILETIME 结构
+ * @return 格式化的时间字符串
+ */
+inline string FileTimeToString(const FILETIME& ft) {
+    if (ft.dwHighDateTime == 0 && ft.dwLowDateTime == 0) {
+        return "N/A";
+    }
+
+    SYSTEMTIME st;
+    FileTimeToSystemTime(&ft, &st);
+
+    ostringstream oss;
+    oss << setfill('0')
+        << st.wYear << "-"
+        << setw(2) << st.wMonth << "-"
+        << setw(2) << st.wDay << " "
+        << setw(2) << st.wHour << ":"
+        << setw(2) << st.wMinute << ":"
+        << setw(2) << st.wSecond;
+    return oss.str();
 }
 
 } // namespace CommandUtils

@@ -18,13 +18,13 @@ void QueueDLLsCommand::Execute(string command) {
 	if (!CheckName(command)) {
 		return;
 	}
-	ImageTableAnalyzer* analyzer = new ImageTableAnalyzer();
+	ImageTableAnalyzer analyzer;
 	if (GET_ARG_COUNT() != 1) {
 		cout << "Invalid Args!" << endl;
 	}
 	else {
 		string& pefile = GET_ARG_STRING(0);
-		vector<string> dlllist = analyzer->AnalyzeTableForDLL(pefile);
+		vector<string> dlllist = analyzer.AnalyzeTableForDLL(pefile);
 		if (dlllist.size() != 0) {
 			for (int i = 0; i < dlllist.size(); i++) {
 				cout << "    " + dlllist[i] << endl;
@@ -34,7 +34,6 @@ void QueueDLLsCommand::Execute(string command) {
 			cout << "can't find the IAT" << endl;
 		}
 	}
-	delete analyzer;
 }
 
 // ============================================================================
@@ -47,14 +46,14 @@ void GetProcessFuncAddressCommand::Execute(string command) {
 	if (!CheckName(command)) {
 		return;
 	}
-	ImageTableAnalyzer* analyzer = new ImageTableAnalyzer();
+	ImageTableAnalyzer analyzer;
 	if (GET_ARG_COUNT() != 2) {
 		cout << "Invalid Args!" << endl;
 	}
 	else {
 		string& funcname = GET_ARG_STRING(1);
 		string& pefile = GET_ARG_STRING(0);
-		ULONGLONG funcaddress = analyzer->GetFuncaddressByName(funcname, pefile);
+		ULONGLONG funcaddress = analyzer.GetFuncaddressByName(funcname, pefile);
 		if (funcaddress != 0) {
 			cout << "Function Address: 0x" << hex << funcaddress << endl;
 		}
@@ -62,5 +61,4 @@ void GetProcessFuncAddressCommand::Execute(string command) {
 			cout << "can't find the function address" << endl;
 		}
 	}
-	delete analyzer;
 }

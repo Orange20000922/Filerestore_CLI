@@ -19,6 +19,31 @@
 
 using namespace std;
 
+// 辅助函数：获取或扫描已删除文件（使用缓存）
+static vector<DeletedFileInfo> GetOrScanDeletedFiles(char driveLetter, FilterLevel filterLevel = FILTER_SKIP_PATH) {
+	vector<DeletedFileInfo> allFiles;
+
+	// 尝试从缓存加载
+	if (DeletedFileScanner::IsCacheValid(driveLetter, 60)) {
+		cout << "Loading from cache..." << endl;
+		DeletedFileScanner::LoadFromCache(allFiles, driveLetter);
+	}
+
+	// 缓存无效或为空，重新扫描
+	if (allFiles.empty()) {
+		cout << "Scanning MFT..." << endl;
+		FileRestore fileRestore;
+		fileRestore.SetFilterLevel(filterLevel);
+		allFiles = fileRestore.ScanDeletedFiles(driveLetter, 0);
+
+		if (!allFiles.empty()) {
+			DeletedFileScanner::SaveToCache(allFiles, driveLetter);
+		}
+	}
+
+	return allFiles;
+}
+
 // ============================================================================
 // SearchDeletedFilesCommand - 搜索已删除文件
 // ============================================================================
@@ -56,24 +81,7 @@ void SearchDeletedFilesCommand::Execute(string command) {
 		cout << "Searching drive " << driveLetter << ": for deleted files..." << endl;
 		cout << "Pattern: " << pattern << endl;
 
-		vector<DeletedFileInfo> allFiles;
-
-		if (DeletedFileScanner::IsCacheValid(driveLetter, 60)) {
-			cout << "Loading from cache..." << endl;
-			DeletedFileScanner::LoadFromCache(allFiles, driveLetter);
-		}
-
-		if (allFiles.empty()) {
-			cout << "Scanning MFT..." << endl;
-			FileRestore* fileRestore = new FileRestore();
-			fileRestore->SetFilterLevel(filterLevel);
-			allFiles = fileRestore->ScanDeletedFiles(driveLetter, 0);
-			delete fileRestore;
-
-			if (!allFiles.empty()) {
-				DeletedFileScanner::SaveToCache(allFiles, driveLetter);
-			}
-		}
+		vector<DeletedFileInfo> allFiles = GetOrScanDeletedFiles(driveLetter, filterLevel);
 
 		if (allFiles.empty()) {
 			cout << "No deleted files found." << endl;
@@ -347,20 +355,7 @@ void FilterSizeCommand::Execute(string command) {
 		cout << "Drive: " << driveLetter << ":" << endl;
 		cout << "Size range: " << minSize << " - " << maxSize << " bytes" << endl;
 
-		vector<DeletedFileInfo> allFiles;
-		if (DeletedFileScanner::IsCacheValid(driveLetter, 60)) {
-			cout << "Loading from cache..." << endl;
-			DeletedFileScanner::LoadFromCache(allFiles, driveLetter);
-		}
-
-		if (allFiles.empty()) {
-			cout << "Scanning deleted files..." << endl;
-			FileRestore fr;
-			allFiles = fr.ScanDeletedFiles(driveLetter, 0);
-			if (!allFiles.empty()) {
-				DeletedFileScanner::SaveToCache(allFiles, driveLetter);
-			}
-		}
+		vector<DeletedFileInfo> allFiles = GetOrScanDeletedFiles(driveLetter);
 
 		if (allFiles.empty()) {
 			cout << "No deleted files found." << endl;
@@ -488,20 +483,7 @@ void FindUserFilesCommand::Execute(string command) {
 		cout << "=== Find User Files ===" << endl;
 		cout << "Drive: " << driveLetter << ":" << endl;
 
-		vector<DeletedFileInfo> allFiles;
-		if (DeletedFileScanner::IsCacheValid(driveLetter, 60)) {
-			cout << "Loading from cache..." << endl;
-			DeletedFileScanner::LoadFromCache(allFiles, driveLetter);
-		}
-
-		if (allFiles.empty()) {
-			cout << "Scanning deleted files..." << endl;
-			FileRestore fr;
-			allFiles = fr.ScanDeletedFiles(driveLetter, 0);
-			if (!allFiles.empty()) {
-				DeletedFileScanner::SaveToCache(allFiles, driveLetter);
-			}
-		}
+		vector<DeletedFileInfo> allFiles = GetOrScanDeletedFiles(driveLetter);
 
 		if (allFiles.empty()) {
 			cout << "No deleted files found." << endl;

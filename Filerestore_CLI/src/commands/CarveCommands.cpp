@@ -16,6 +16,7 @@
 #include "FileIntegrityValidator.h"
 #include "CarvedResultsCache.h"
 #include "MemoryMappedResults.h"
+#include "CpuFeatures.h"
 
 using namespace std;
 
@@ -24,8 +25,8 @@ static vector<CarvedFileInfo> lastCarveResults;
 static char lastCarveDrive = 0;
 
 // 缓存和内存映射管理（大数据集模式）
-static CarvedResultsCache* resultsCache = nullptr;
-static MemoryMappedResults* mappedResults = nullptr;
+static unique_ptr<CarvedResultsCache> resultsCache;
+static unique_ptr<MemoryMappedResults> mappedResults;
 static bool useMemoryMapping = false;
 static size_t currentPageIndex = 0;
 static size_t pageSize = 50;  // 每页显示50条记录
@@ -33,7 +34,7 @@ static size_t pageSize = 50;  // 每页显示50条记录
 // 辅助函数：尝试从磁盘缓存初始化（程序重启后恢复）
 static bool TryInitFromDiskCache() {
     if (!resultsCache) {
-        resultsCache = new CarvedResultsCache();
+        resultsCache = make_unique<CarvedResultsCache>();
     }
 
     if (resultsCache->InitFromAnyExistingCache()) {
@@ -127,22 +128,6 @@ static bool GetSingleResult(size_t index, CarvedFileInfo& outResult, char& outDr
     return false;
 }
 
-// 辅助函数：将 FILETIME 转换为字符串
-static string FileTimeToString(const FILETIME& ft) {
-	if (ft.dwHighDateTime == 0 && ft.dwLowDateTime == 0) {
-		return "N/A";
-	}
-
-	SYSTEMTIME st;
-	FileTimeToSystemTime(&ft, &st);
-
-	char buffer[32];
-	sprintf_s(buffer, "%04d-%02d-%02d %02d:%02d:%02d",
-		st.wYear, st.wMonth, st.wDay,
-		st.wHour, st.wMinute, st.wSecond);
-	return string(buffer);
-}
-
 // 辅助函数：获取时间戳来源描述
 static string GetTimestampSourceStr(TimestampSource source) {
 	switch (source) {
@@ -150,6 +135,47 @@ static string GetTimestampSourceStr(TimestampSource source) {
 	case TS_MFT_MATCH: return "MFT";
 	case TS_BOTH: return "Both";
 	default: return "None";
+	}
+}
+
+// 辅助函数：保存扫描结果到缓存或内存
+static void SaveScanResults(const vector<CarvedFileInfo>& results, char driveLetter) {
+	lastCarveDrive = driveLetter;
+
+	if (results.size() >= 1000) {
+		cout << "\n=== Saving " << results.size() << " results to cache ===" << endl;
+
+		if (!resultsCache) {
+			resultsCache = make_unique<CarvedResultsCache>();
+		}
+
+		if (resultsCache->SaveResults(results, driveLetter)) {
+			cout << "Results saved to cache file: " << resultsCache->GetCachePath() << endl;
+			cout << "Cache size: " << (resultsCache->GetCacheSize(driveLetter) / (1024 * 1024)) << " MB" << endl;
+
+			lastCarveResults.clear();
+
+			if (MemoryMappedResults::ShouldUseMemoryMapping(results.size())) {
+				cout << "\nUsing memory-mapped files for large result set..." << endl;
+
+				if (!mappedResults) {
+					mappedResults = make_unique<MemoryMappedResults>();
+				}
+
+				if (mappedResults->OpenFromCache(resultsCache->GetCachePath())) {
+					useMemoryMapping = true;
+					cout << "Memory mapping enabled (" << results.size() << " records)" << endl;
+				}
+			}
+
+			currentPageIndex = 0;
+		} else {
+			cout << "Failed to save cache, keeping results in memory" << endl;
+			lastCarveResults = results;
+		}
+	} else {
+		lastCarveResults = results;
+		useMemoryMapping = false;
 	}
 }
 
@@ -294,52 +320,13 @@ void CarveCommand::Execute(string command) {
 		}
 
 		// 保存结果供后续恢复使用
-		lastCarveDrive = driveLetter;
-
 		if (results.empty()) {
 			cout << "\nNo files found." << endl;
 			return;
 		}
 
-		// 检查是否应该使用缓存/内存映射
-		if (results.size() >= 1000) {  // 超过1000条记录使用持久化
-			cout << "\n=== Saving " << results.size() << " results to cache ===" << endl;
-
-			if (!resultsCache) {
-				resultsCache = new CarvedResultsCache();
-			}
-
-			if (resultsCache->SaveResults(results, driveLetter)) {
-				cout << "Results saved to cache file: " << resultsCache->GetCachePath() << endl;
-				cout << "Cache size: " << (resultsCache->GetCacheSize(driveLetter) / (1024 * 1024)) << " MB" << endl;
-
-				// 清空内存中的结果
-				lastCarveResults.clear();
-
-				// 检查是否应该使用内存映射
-				if (MemoryMappedResults::ShouldUseMemoryMapping(results.size())) {
-					cout << "\nUsing memory-mapped files for large result set..." << endl;
-
-					if (!mappedResults) {
-						mappedResults = new MemoryMappedResults();
-					}
-
-					if (mappedResults->OpenFromCache(resultsCache->GetCachePath())) {
-						useMemoryMapping = true;
-						cout << "Memory mapping enabled (" << results.size() << " records)" << endl;
-					}
-				}
-
-				currentPageIndex = 0;  // 重置分页
-			} else {
-				cout << "Failed to save cache, keeping results in memory" << endl;
-				lastCarveResults = results;
-			}
-		} else {
-			// 小数据集，直接保存到内存
-			lastCarveResults = results;
-			useMemoryMapping = false;
-		}
+		// 保存扫描结果
+		SaveScanResults(results, driveLetter);
 
 		cout << "\n=== Found " << results.size() << " file(s) ===" << endl;
 		cout << "Use 'carverecover <index> <output_path>' to recover a specific file." << endl;
@@ -674,6 +661,7 @@ void CarveCommandThreadPool::Execute(string command) {
 		cout << "\nOptions:" << endl;
 		cout << "  [threads]     - Worker threads (0 = auto-detect)" << endl;
 		cout << "  notimestamp   - Skip timestamp extraction (faster)" << endl;
+		cout << "  nosimd        - Disable SIMD optimization (for benchmarking)" << endl;
 		cout << "  hybrid        - Hybrid mode: signature + ML scan (default)" << endl;
 		cout << "  sig           - Signature-only scan (fastest)" << endl;
 		cout << "  ml            - ML-only scan (for txt/html/xml)" << endl;
@@ -692,6 +680,7 @@ void CarveCommandThreadPool::Execute(string command) {
 		int threadCount = 0;
 		bool extractTimestamps = true;
 		string scanMode = "hybrid";  // 默认混合模式
+		bool useSimd = true;  // 默认启用 SIMD
 
 		// 遍历所有可选参数
 		for (size_t i = 3; i < GET_ARG_COUNT(); i++) {
@@ -699,6 +688,8 @@ void CarveCommandThreadPool::Execute(string command) {
 
 			if (arg == "notimestamp" || arg == "nots") {
 				extractTimestamps = false;
+			} else if (arg == "nosimd") {
+				useSimd = false;  // 禁用 SIMD（用于基准测试）
 			} else if (arg == "hybrid" || arg == "sig" || arg == "signature" || arg == "ml") {
 				scanMode = arg;
 				if (arg == "signature") scanMode = "sig";
@@ -739,6 +730,9 @@ void CarveCommandThreadPool::Execute(string command) {
 			carver.SetThreadPoolConfig(config);
 		}
 
+		// 设置 SIMD 模式
+		carver.SetSimdEnabled(useSimd);
+
 		vector<CarvedFileInfo> results;
 
 		// 解析文件类型 - 使用 CommandUtils
@@ -759,6 +753,13 @@ void CarveCommandThreadPool::Execute(string command) {
 		}
 
 		cout << "\n=== Scan Mode: " << scanMode << " ===" << endl;
+
+		// 显示 CPU 和 SIMD 信息
+		auto& cpu = CpuFeatures::Instance();
+		cout << "CPU: " << cpu.Brand() << endl;
+		cout << "SIMD: " << CpuFeatures::SimdLevelToString(cpu.GetBestSimdLevel());
+		cout << (useSimd ? " [Enabled]" : " [Disabled]") << endl;
+
 		cout << "Target types: ";
 		for (const auto& t : types) cout << t << " ";
 		cout << endl;
@@ -772,7 +773,8 @@ void CarveCommandThreadPool::Execute(string command) {
 			// 纯 ML 模式
 			results = carver.ScanWithMLOnly(CARVE_SMART, 1000, 0.7f);
 		} else {
-			// 纯签名模式 (sig)
+			// 纯签名模式 (sig) - 禁用线程池内ML推理
+			carver.SetMLClassification(false);
 			results = carver.ScanForFileTypesThreadPool(types, CARVE_SMART, 1000);
 		}
 
@@ -781,184 +783,44 @@ void CarveCommandThreadPool::Execute(string command) {
 			return;
 		}
 
-		// ========== 时间戳提取与排序 ==========
-		if (extractTimestamps) {
-			cout << "\n=== Extracting Timestamps ===" << endl;
-
-			// 构建 MFT 索引
-			cout << "Building MFT LCN index..." << endl;
-			bool mftIndexOk = carver.BuildMFTIndex(false);
-			if (!mftIndexOk) {
-				cout << "Warning: MFT index failed, using embedded metadata only." << endl;
-			}
-
-			// 提取时间戳
-			carver.ExtractTimestampsForResults(results, true);
-
-			// 按置信度和日期排序
-			cout << "\nSorting by confidence and date..." << endl;
-			sort(results.begin(), results.end(), CompareCarvedFiles);
-
-			cout << "Sorting complete." << endl;
-		}
-
-		// 保存结果
-		lastCarveDrive = driveLetter;
-
-		// 检查是否应该使用缓存/内存映射（与CarveCommand相同逻辑）
-		if (results.size() >= 1000) {
-			cout << "\n=== Saving " << results.size() << " results to cache ===" << endl;
-
-			if (!resultsCache) {
-				resultsCache = new CarvedResultsCache();
-			}
-
-			if (resultsCache->SaveResults(results, driveLetter)) {
-				cout << "Results saved to cache file: " << resultsCache->GetCachePath() << endl;
-				cout << "Cache size: " << (resultsCache->GetCacheSize(driveLetter) / (1024 * 1024)) << " MB" << endl;
-
-				lastCarveResults.clear();
-
-				if (MemoryMappedResults::ShouldUseMemoryMapping(results.size())) {
-					cout << "\nUsing memory-mapped files for large result set..." << endl;
-
-					if (!mappedResults) {
-						mappedResults = new MemoryMappedResults();
-					}
-
-					if (mappedResults->OpenFromCache(resultsCache->GetCachePath())) {
-						useMemoryMapping = true;
-						cout << "Memory mapping enabled (" << results.size() << " records)" << endl;
-					}
-				}
-
-				currentPageIndex = 0;
-			} else {
-				cout << "Failed to save cache, keeping results in memory" << endl;
-				lastCarveResults = results;
-			}
-		} else {
-			lastCarveResults = results;
-			useMemoryMapping = false;
-		}
+		// 保存结果到缓存（纯签名扫描结果，不含 MFT 关联）
+		SaveScanResults(results, driveLetter);
 
 		// ========== 显示结果 ==========
 		cout << "\n=== Found " << results.size() << " file(s) ===" << endl;
-		if (extractTimestamps) {
-			cout << "Sorted by: Confidence (high) -> Date (earlier first)" << endl;
-		}
-		cout << "\nTop Files:" << endl;
-		cout << string(85, '-') << endl;
+		cout << "\nTop Files (by signature confidence):" << endl;
+		cout << string(60, '-') << endl;
 
-		size_t withTimestamp = 0;
 		for (size_t i = 0; i < results.size() && i < 30; i++) {
 			const auto& info = results[i];
 
 			cout << "[" << setw(3) << i << "] ";
 			cout << setw(6) << info.extension << " | ";
-			cout << setw(5) << (info.fileSize / 1024) << " KB | ";
+			cout << setw(8) << (info.fileSize / 1024) << " KB | ";
 			cout << setw(3) << (int)(info.confidence * 100) << "% | ";
-
-			// 显示时间戳
-			if (info.tsSource != TS_NONE_1 &&
-				(info.modificationTime.dwHighDateTime != 0 || info.modificationTime.dwLowDateTime != 0)) {
-				withTimestamp++;
-				SYSTEMTIME st;
-				FileTimeToSystemTime(&info.modificationTime, &st);
-				printf("%04d-%02d-%02d %02d:%02d", st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute);
-
-				// 来源标记
-				if (info.tsSource == TS_EMBEDDED) cout << " [E]";
-				else if (info.tsSource == TS_MFT_MATCH) cout << " [M]";
-				else if (info.tsSource == TS_BOTH) cout << " [B]";
-			} else {
-				cout << "       N/A        ";
-			}
-
+			cout << "LCN: " << info.startLCN;
 			cout << endl;
 		}
 
-		cout << string(85, '-') << endl;
+		cout << string(60, '-') << endl;
 		if (results.size() > 30) {
 			cout << "... and " << (results.size() - 30) << " more files" << endl;
 		}
-		cout << "Legend: [E]=Embedded, [M]=MFT, [B]=Both" << endl;
-		cout << "Files with timestamp: " << withTimestamp << "/" << min(results.size(), (size_t)30) << endl;
 
-		// ========== 检查删除状态 ==========
-		cout << "\n=== Checking Deletion Status ===" << endl;
-		carver.CheckDeletionStatusForResults(results, true);
+		// 显示扫描统计
+		const CarvingStats& stats = carver.GetStats();
+		DWORD elapsed = stats.elapsedMs;
+		double speedMBps = (elapsed > 0) ? (stats.bytesRead / 1024.0 / 1024.0 / (elapsed / 1000.0)) : 0;
 
-		size_t deletedFileCount = carver.CountDeletedFiles(results);
-		size_t activeFileCount = carver.CountActiveFiles(results);
-
-		cout << "\nDeleted files (recoverable): " << deletedFileCount << endl;
-		cout << "Active files (already exist): " << activeFileCount << " (will be skipped)" << endl;
-
-		// ========== 智能自动恢复（只恢复已删除的文件） ==========
-		cout << "\n=== Auto-Recovering Deleted Files (Confidence >= 80%, sorted by date) ===" << endl;
-
-		size_t recoveredCount = 0;
-		size_t skippedActiveCount = 0;
-		for (size_t i = 0; i < results.size(); i++) {
-			const auto& info = results[i];
-
-			// 跳过活动文件（未删除）
-			if (info.deletionChecked && info.isActiveFile) {
-				skippedActiveCount++;
-				continue;
-			}
-
-			if (info.confidence >= 0.8) {
-				string outputPath = outputDir;
-				if (outputPath.back() != '\\' && outputPath.back() != '/') {
-					outputPath += '\\';
-				}
-
-				// 文件名包含序号和时间戳
-				string filename = "carved_" + to_string(i);
-				if (info.tsSource != TS_NONE_1 &&
-					(info.modificationTime.dwHighDateTime != 0 || info.modificationTime.dwLowDateTime != 0)) {
-					SYSTEMTIME st;
-					FileTimeToSystemTime(&info.modificationTime, &st);
-					char dateStr[20];
-					sprintf_s(dateStr, "_%04d%02d%02d", st.wYear, st.wMonth, st.wDay);
-					filename += dateStr;
-				}
-				filename += "." + info.extension;
-				outputPath += filename;
-
-				if (carver.RecoverCarvedFile(info, outputPath)) {
-					recoveredCount++;
-				}
-
-				if (recoveredCount >= 20) {
-					cout << "\nReached auto-recovery limit (20 files)." << endl;
-					break;
-				}
-			}
-		}
-
-		// ========== 统计摘要 ==========
-		size_t embeddedCount = 0, mftCount = 0;
-		for (const auto& info : results) {
-			if (info.tsSource == TS_EMBEDDED || info.tsSource == TS_BOTH) embeddedCount++;
-			if (info.tsSource == TS_MFT_MATCH || info.tsSource == TS_BOTH) mftCount++;
-		}
-
-		cout << "\n=== Summary ===" << endl;
+		cout << "\n=== Scan Summary ===" << endl;
 		cout << "Total files found: " << results.size() << endl;
-		cout << "Deleted files: " << deletedFileCount << endl;
-		cout << "Active files skipped: " << skippedActiveCount << endl;
-		cout << "With timestamps: " << (embeddedCount + mftCount - (embeddedCount > 0 && mftCount > 0 ? min(embeddedCount, mftCount) : 0));
-		cout << " (Embedded: " << embeddedCount << ", MFT: " << mftCount << ")" << endl;
-		cout << "Auto-recovered: " << recoveredCount << " files" << endl;
-		cout << "Output directory: " << outputDir << endl;
+		cout << "Bytes scanned: " << (stats.bytesRead / (1024 * 1024)) << " MB" << endl;
+		cout << "Scan speed: " << fixed << setprecision(1) << speedMBps << " MB/s" << endl;
 
-		cout << "\nCommands:" << endl;
-		cout << "  carvelist              - Show all files with details" << endl;
-		cout << "  carvelist deleted      - Show only deleted files" << endl;
-		cout << "  carverecover <i> <path> - Recover specific file" << endl;
+		cout << "\n=== Next Steps ===" << endl;
+		cout << "  recover <drive> <filename>  - Smart recovery with MFT correlation" << endl;
+		cout << "  carvelist                   - Browse scan results" << endl;
+		cout << "  carverecover <i> <path>     - Direct recovery (no MFT check)" << endl;
 	}
 	catch (const exception& e) {
 		cout << "[ERROR] Exception: " << e.what() << endl;
@@ -1024,10 +886,10 @@ void CarveTimestampCommand::Execute(string command) {
 				cout << "    Size: " << info.fileSize << " bytes" << endl;
 
 				if (info.creationTime.dwHighDateTime != 0 || info.creationTime.dwLowDateTime != 0) {
-					cout << "    Created:  " << FileTimeToString(info.creationTime) << endl;
+					cout << "    Created:  " << CommandUtils::FileTimeToString(info.creationTime) << endl;
 				}
 				if (info.modificationTime.dwHighDateTime != 0 || info.modificationTime.dwLowDateTime != 0) {
-					cout << "    Modified: " << FileTimeToString(info.modificationTime) << endl;
+					cout << "    Modified: " << CommandUtils::FileTimeToString(info.modificationTime) << endl;
 				}
 
 				if (!info.embeddedInfo.empty()) {
@@ -1222,13 +1084,13 @@ void CarveListCommand::Execute(string command) {
 			cout << "    Timestamp Source: " << GetTimestampSourceStr(info.tsSource) << endl;
 
 			if (info.creationTime.dwHighDateTime != 0 || info.creationTime.dwLowDateTime != 0) {
-				cout << "    Created:  " << FileTimeToString(info.creationTime) << endl;
+				cout << "    Created:  " << CommandUtils::FileTimeToString(info.creationTime) << endl;
 			}
 			if (info.modificationTime.dwHighDateTime != 0 || info.modificationTime.dwLowDateTime != 0) {
-				cout << "    Modified: " << FileTimeToString(info.modificationTime) << endl;
+				cout << "    Modified: " << CommandUtils::FileTimeToString(info.modificationTime) << endl;
 			}
 			if (info.accessTime.dwHighDateTime != 0 || info.accessTime.dwLowDateTime != 0) {
-				cout << "    Accessed: " << FileTimeToString(info.accessTime) << endl;
+				cout << "    Accessed: " << CommandUtils::FileTimeToString(info.accessTime) << endl;
 			}
 
 			if (!info.embeddedInfo.empty()) {
