@@ -1,385 +1,842 @@
-# Filerestore_CLI - NTFS 文件恢复工具
+# Filerestore_CLI_Tests
 
-[![Version](https://img.shields.io/badge/version-v0.3.1-blue.svg)](https://github.com/Orange20000922/Filerestore_CLI/releases)
-[![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
-[![Language](https://img.shields.io/badge/language-C%2B%2B20-orange.svg)](https://isocpp.org/)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-
-> NTFS 文件恢复工具，支持 MFT 扫描、签名搜索恢复、ML 文件分类和多线程优化
+[中文](#中文) | [English](#english)
 
 ---
 
-## 下载
+<a name="中文"></a>
 
-| 版本 | 说明 | 下载 |
-|------|------|------|
-| **CPU 版** | 标准版，适合大多数用户 (5.6 MB) | [Filerestore_CLI_v0.3.1_x64.zip](https://github.com/Orange20000922/Filerestore_CLI/releases) |
-| **CUDA 版** | GPU 加速版，需要 NVIDIA 显卡 (186 MB) | [Filerestore_CLI_v0.3.1_x64_cuda.zip](https://github.com/Orange20000922/Filerestore_CLI/releases) |
+## 中文
 
----
+### 概述
 
-## 最新更新 (2026-01-07)
+Filerestore_CLI 的 Google Test 单元测试项目。
 
-### v0.3.1 - 分页交互式恢复
+**最新进展** (2026-02-07):
+- ✅ 完成 Google Test 1.14.0 集成（通过 NuGet）
+- ✅ 创建 CLI 参数解析测试套件（26 个测试）
+- ✅ 创建 SIMD 签名匹配测试套件（19 个测试）
+- ✅ 配置自动化构建脚本 (`build_and_test.ps1`)
+- ✅ 总计 45 个单元测试覆盖核心功能
 
-#### 新增：`crp` 分页交互式恢复命令
-- **逐页浏览**：用户可逐页检查扫描结果，决定是否恢复
-- **选择性恢复**：支持恢复整页或指定索引的文件
-- **自动清理**：输出文件夹文件数达到阈值时提示清理
-- **强制恢复**：`f` 命令允许恢复低置信度（<30%）文件
+### 测试套件
 
-```bash
-# 基本用法
-crp D:\recovered\
+#### 1. CLI 参数解析测试 (`cli_test.cpp`)
 
-# 自定义参数
-crp D:\recovered\ minconf=30 pagesize=20 autoclean=100
+测试命令行界面的参数解析和命令匹配功能：
 
-# 交互命令：r=恢复, f=强制, n=下页, p=上页, c=清空, q=退出
-```
+- **基础命令测试** (5个)：help, exit, 无效命令, 空命令, 额外空格
+- **参数验证** (7个)：缺少必填参数, 无效驱动器格式, 参数验证
+- **命令匹配** (2个)：前缀匹配, 大小写不敏感
+- **复杂命令** (3个)：多参数, 带空格路径, 特殊字符
+- **CommandHelper** (6个)：命令元数据, 参数信息, 命令组装
+- **边界条件** (3个)：超长命令, 大量参数, Unicode 字符
 
----
+**总计**: 26 个测试
 
-### v0.3.0 - ML 文件分类与代码质量改进
+#### 2. 签名匹配测试 (`signature_scanner_test.cpp`)
 
-#### 新增：ML 文件类型分类
-- **ONNX 神经网络模型**：98% 准确率的文件类型识别
-- **261 维特征提取**：字节频率分布 + 熵 + 统计特征
-- **支持无签名文件**：txt、html、xml 等纯文本文件
-- **混合扫描模式**：签名扫描 + ML 扫描自动融合
+测试 SIMD 优化的签名匹配功能（验证 SSE2/AVX2 加速正确性）：
 
-```bash
-# 混合模式（默认）- 签名 + ML 融合
-carvepool C all D:\recovered\
+- **基础签名匹配** (7个)：ZIP, PDF, JPG, PNG, GIF, RAR, 7z
+- **不匹配测试** (2个)：错误签名, 部分匹配
+- **边界条件** (6个)：
+  - 数据大小 = 签名大小
+  - 数据 < 签名
+  - 空签名
+  - 极短签名 (1-2 字节)
+  - 16 字节边界 (SSE2 边界)
+- **SIMD 优化验证** (3个)：
+  - 短签名 (4 字节) - 触发 SSE2
+  - 中等签名 (8 字节, PNG) - SSE2 优化路径
+  - 长签名 (12+ 字节) - AVX2 或分段处理
+- **特殊模式** (3个)：全 0, 全 1, 交替模式 (0xAA/0x55)
+- **内存对齐** (2个)：非对齐访问测试（验证 `_mm_loadu_si128` 正确性）
 
-# 纯签名模式 - 仅使用文件头签名
-carvepool C jpg,png D:\recovered\ 8 sig
+**总计**: 19 个测试
 
-# 纯 ML 模式 - 仅使用神经网络
-carvepool C txt,html D:\recovered\ 8 ml
-```
+### 构建和运行
 
-#### 代码质量改进 (P0)
-- **内存安全**：原始指针全部替换为 `unique_ptr`
-- **线程安全**：`CarvingStats` 使用 `atomic` 成员
-- **RAII 资源管理**：自动释放，防止内存泄漏
+#### 前置条件
 
-#### ML 模型信息
-| 指标 | 值 |
-|------|-----|
-| 模型架构 | 3层全连接 (261→512→256→19) |
-| 训练准确率 | 98.23% |
-| 验证准确率 | 97.85% |
-| 支持类型 | 19 种 (jpg, png, pdf, doc, txt...) |
+1. **Visual Studio 2022** (带 C++ 工作负载)
+2. **NuGet 包管理器** (集成在 VS 中)
+3. **nuget.exe** (用于命令行包管理)
 
----
+#### 快速开始（推荐）
 
-## 核心功能
-
-### 1. MFT 文件恢复
-```bash
-listdeleted C              # 列出已删除文件
-searchdeleted C doc .docx  # 搜索文件
-restorebyrecord C 12345 D:\out.docx  # 恢复文件
-```
-
-### 2. 签名搜索恢复 (File Carving)
-```bash
-carve C zip D:\recovered\           # 异步扫描ZIP文件
-carvepool C jpg,png D:\recovered\   # 线程池扫描图片
-carvepool D all D:\recovered\ 8     # 指定8线程扫描所有类型
-```
-
-### 3. 混合扫描模式 (v0.3.0+)
-```bash
-# 自动选择最佳方式：有签名用签名，无签名用 ML
-carvepool C all D:\recovered\
-
-# 扫描纯文本文件（ML 模式）
-carvepool C txt,html,xml D:\recovered\ 8 ml
-```
-
-### 4. 覆盖检测
-```bash
-detectoverwrite C 12345           # 检测文件是否被覆盖
-detectoverwrite C 12345 fast      # 快速采样检测
-```
-
-### 5. 分页交互式恢复 (v0.3.1+)
-```bash
-crp D:\recovered\                           # 进入交互式恢复模式
-crp D:\recovered\ minconf=30 pagesize=20    # 自定义置信度和页面大小
-crp D:\recovered\ autoclean=100 all         # 设置自动清理阈值，显示所有文件
-
-# 交互命令
-# r          - 恢复当前页所有文件
-# r 0 2 4    - 恢复指定索引的文件
-# f 0 1      - 强制恢复低置信度文件
-# n/p        - 下一页/上一页
-# c          - 清空输出文件夹
-# q          - 退出
-```
-
-### 6. USN 日志搜索
-```bash
-searchusn C document.docx         # 搜索最近删除的文件
-scanusn C 24                      # 扫描最近24小时的删除记录
-```
-
----
-
-## 性能对比
-
-### 扫描模式（100GB 磁盘）
-| 模式 | 命令 | 16核+NVMe |
-|------|------|-----------|
-| 同步 | `carve ... sync` | ~500 MB/s |
-| 异步I/O | `carve ... async` | ~800 MB/s |
-| **线程池** | `carvepool` | **~2500 MB/s** |
-
-### 扫描策略
-| 策略 | 参数 | 说明 |
-|------|------|------|
-| 混合模式 | `hybrid`（默认） | 签名 + ML 融合，最全面 |
-| 签名模式 | `sig` | 仅签名扫描，最快速 |
-| ML 模式 | `ml` | 仅 ML 扫描，支持无签名文件 |
-
----
-
-## 命令参考
-
-### 文件恢复
-| 命令 | 说明 |
-|------|------|
-| `listdeleted <drive>` | 列出已删除文件 |
-| `searchdeleted <drive> <pattern> <ext>` | 搜索已删除文件 |
-| `restorebyrecord <drive> <record> <output>` | 恢复文件 |
-| `batchrestore <drive> <records> <dir>` | 批量恢复 |
-| `forcerestore <drive> <record> <output>` | 强制恢复（跳过检测）|
-
-### 签名搜索
-| 命令 | 说明 |
-|------|------|
-| `carve <drive> <types> <dir> [async/sync]` | 签名扫描恢复 |
-| `carvepool <drive> <types> <dir> [threads] [mode]` | 线程池并行扫描 |
-| `carvetypes` | 列出支持的文件类型 |
-| `carverecover <index> <output>` | 恢复扫描到的文件 |
-| `crp <dir> [options]` | 分页交互式恢复 |
-| `carvelist [page]` | 列出扫描结果 |
-
-### 诊断工具
-| 命令 | 说明 |
-|------|------|
-| `detectoverwrite <drive> <record> [mode]` | 覆盖检测 |
-| `searchusn <drive> <filename>` | USN搜索 |
-| `diagnosemft <drive>` | MFT碎片诊断 |
-
----
-
-## 支持的文件类型
-
-### 签名扫描（14 种）
-`zip` `pdf` `jpg` `png` `gif` `bmp` `mp4` `avi` `mp3` `7z` `rar` `doc` `xls` `ppt`
-
-### ML 分类（19 种）
-`jpg` `png` `gif` `bmp` `pdf` `doc` `xls` `ppt` `zip` `exe` `dll` `mp4` `mp3` `txt` `html` `xml` `json` `csv` `unknown`
-
----
-
-## 系统要求
-
-- **操作系统**: Windows 10/11 (x64)
-- **文件系统**: NTFS
-- **权限**: 管理员权限
-- **推荐**: SSD/NVMe + 多核CPU
-- **可选**: NVIDIA GPU（CUDA 版）
-
----
-
-## 构建说明
-
-> **注意**: 仓库不包含 ONNX Runtime 运行库，需要手动下载后才能编译。
-
-### 依赖项
-
-| 依赖 | 版本 | 说明 |
-|------|------|------|
-| Visual Studio | 2022+ | C++20 支持 |
-| ONNX Runtime | 1.16+ | ML 推理引擎 |
-| Windows SDK | 10.0+ | Windows API |
-
-### 配置 ONNX Runtime
-
-1. **下载 ONNX Runtime**
-   - 官网: https://github.com/microsoft/onnxruntime/releases
-   - 选择 `onnxruntime-win-x64-1.16.x.zip` (CPU) 或 `onnxruntime-win-x64-gpu-1.16.x.zip` (CUDA)
-
-2. **放置文件到项目目录**
-   ```
-   Filerestore_CLI/deps/onnxruntime/
-   ├── include/           # 头文件 (onnxruntime_cxx_api.h 等)
-   ├── lib/               # 库文件 (onnxruntime.lib)
-   └── README.md
-   ```
-
-3. **复制 DLL 到输出目录**
-   ```
-   x64/Release/
-   ├── onnxruntime.dll                    # 必需
-   ├── onnxruntime_providers_cuda.dll     # CUDA 版可选
-   ├── onnxruntime_providers_shared.dll   # CUDA 版可选
-   └── onnxruntime_providers_tensorrt.dll # CUDA 版可选
-   ```
-
-### 构建命令
+使用自动化脚本一键构建和测试：
 
 ```powershell
-# Release 构建
-& 'C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe' `
-  Filerestore_CLI.vcxproj /p:Configuration=Release /p:Platform=x64
+# 进入测试目录
+cd D:\Users\21405\source\repos\Filerestore_CLI\Filerestore_CLI_Tests
 
-# 或使用 Visual Studio 打开 .sln 文件直接构建
+# 运行所有测试（Debug）
+.\build_and_test.ps1
+
+# 运行 Release 配置
+.\build_and_test.ps1 -Configuration Release
+
+# 只运行 CLI 测试
+.\build_and_test.ps1 -TestFilter "CLITest.*"
+
+# 只运行签名匹配测试
+.\build_and_test.ps1 -TestFilter "SignatureScannerTest.*"
+
+# 运行特定测试
+.\build_and_test.ps1 -TestFilter "SignatureScannerTest.MatchZipSignature"
 ```
 
-### ML 模型训练（可选）
+#### 手动构建
 
-> 仅当需要重新训练文件分类模型时才需要配置 Python 环境。
-> 预训练模型已包含在 Release 包中，普通用户无需训练。
-
-**Python 依赖** (`ml/requirements.txt`):
-
-| 依赖 | 版本 | 用途 |
-|------|------|------|
-| torch | ≥2.8.0 | PyTorch 深度学习框架 |
-| numpy | ≥1.24.0 | 数值计算 |
-| scikit-learn | ≥1.3.0 | 数据集划分、评估指标 |
-| tqdm | ≥4.65.0 | 训练进度条 |
-| matplotlib | ≥3.7.0 | 训练曲线可视化 |
-| seaborn | ≥0.12.0 | 混淆矩阵可视化 |
-| onnx | ≥1.14.0 | ONNX 模型格式 |
-| onnxruntime | ≥1.16.0 | ONNX 推理验证 |
-
-**训练脚本** (`ml/src/`):
-
-| 脚本 | 用途 |
-|------|------|
-| `train.py` | 模型训练主脚本 |
-| `model.py` | 神经网络架构定义 (261→512→256→19) |
-| `dataset.py` | 数据集加载和预处理 |
-| `config.py` | 训练超参数配置 |
-| `export_onnx.py` | PyTorch → ONNX 模型导出 |
-| `cpp_dataset_loader.py` | 加载 C++ 生成的数据集 |
-
-**训练流程**:
+##### 步骤 1: 安装 Google Test
 
 ```bash
-# 1. 创建虚拟环境
-python -m venv pytorch_env
-pytorch_env\Scripts\activate
-
-# 2. 安装依赖
-pip install -r ml/requirements.txt
-
-# 3. 准备数据集（使用 mlscan 命令生成）
-Filerestore_CLI.exe
-> mlscan C:\samples\ ml\data\training_data.npz
-
-# 4. 训练模型
-python ml/src/train.py
-
-# 5. 导出 ONNX
-python ml/src/export_onnx.py
+# 首次构建需要安装 NuGet 包
+nuget restore Filerestore_CLI_Tests.vcxproj
 ```
 
----
+##### 步骤 2: 使用 MSBuild 构建
 
-## 快速开始
+```powershell
+# Debug 版本
+& 'C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe' `
+  'D:\Users\21405\source\repos\Filerestore_CLI\Filerestore_CLI_Tests\Filerestore_CLI_Tests.vcxproj' `
+  /p:Configuration=Debug /p:Platform=x64 /t:Build /v:minimal
+
+# Release 版本
+& 'C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe' `
+  'D:\Users\21405\source\repos\Filerestore_CLI\Filerestore_CLI_Tests\Filerestore_CLI_Tests.vcxproj' `
+  /p:Configuration=Release /p:Platform=x64 /t:Build /v:minimal
+```
+
+##### 步骤 3: 运行测试
+
+```powershell
+# 运行所有测试
+.\x64\Debug\Tests\Filerestore_CLI_Tests.exe
+
+# 运行特定测试套件
+.\x64\Debug\Tests\Filerestore_CLI_Tests.exe --gtest_filter=CLITest.*
+.\x64\Debug\Tests\Filerestore_CLI_Tests.exe --gtest_filter=SignatureScannerTest.*
+
+# 彩色输出
+.\x64\Debug\Tests\Filerestore_CLI_Tests.exe --gtest_color=yes
+
+# 生成 XML 报告
+.\x64\Debug\Tests\Filerestore_CLI_Tests.exe --gtest_output=xml:test_results.xml
+
+# 列出所有测试（不运行）
+.\x64\Debug\Tests\Filerestore_CLI_Tests.exe --gtest_list_tests
+```
+
+#### 使用 Visual Studio 运行
+
+1. 在 Visual Studio 中打开解决方案
+2. 右键点击 `Filerestore_CLI_Tests` 项目
+3. 选择 "设为启动项目"
+4. 按 **F5** 运行测试（调试模式）或 **Ctrl+F5**（非调试模式）
+5. 使用 **测试资源管理器** (Test Explorer, `Ctrl+E, T`) 查看结果
+
+### 输出示例
+
+```
+========================================
+  Filerestore_CLI Unit Test Runner
+========================================
+Configuration: Debug
+Test Filter:   *
+
+[1/3] Restoring NuGet packages...
+  Google Test already installed
+
+[2/3] Building test project...
+  Build succeeded
+
+[3/3] Running tests...
+
+Executing: D:\...\Filerestore_CLI_Tests.exe --gtest_color=yes
+
+[==========] Running 45 tests from 3 test suites.
+[----------] Global test environment set-up.
+[----------] 16 tests from CLITest
+[ RUN      ] CLITest.HelpCommand
+[       OK ] CLITest.HelpCommand (12 ms)
+[ RUN      ] CLITest.ExitCommand
+[       OK ] CLITest.ExitCommand (3 ms)
+[ RUN      ] CLITest.InvalidCommand
+[       OK ] CLITest.InvalidCommand (5 ms)
+...
+[----------] 16 tests from CLITest (187 ms total)
+
+[----------] 10 tests from CommandHelperTest
+[ RUN      ] CommandHelperTest.GetAllCommandNames
+[       OK ] CommandHelperTest.GetAllCommandNames (1 ms)
+[ RUN      ] CommandHelperTest.MatchCommandsPrefix
+[       OK ] CommandHelperTest.MatchCommandsPrefix (2 ms)
+...
+[----------] 10 tests from CommandHelperTest (23 ms total)
+
+[----------] 19 tests from SignatureScannerTest
+[ RUN      ] SignatureScannerTest.MatchZipSignature
+[       OK ] SignatureScannerTest.MatchZipSignature (0 ms)
+[ RUN      ] SignatureScannerTest.MatchPngSignature
+[       OK ] SignatureScannerTest.MatchPngSignature (0 ms)
+[ RUN      ] SignatureScannerTest.SimdEquivalenceShort
+[       OK ] SignatureScannerTest.SimdEquivalenceShort (1 ms)
+...
+[----------] 19 tests from SignatureScannerTest (34 ms total)
+
+[----------] Global test environment tear-down
+[==========] 45 tests from 3 test suites ran. (244 ms total)
+[  PASSED  ] 45 tests.
+
+========================================
+  All tests PASSED!
+========================================
+```
+
+### 测试覆盖率
+
+#### 当前覆盖模块
+
+- ✅ **CLI 参数解析** (`cli.cpp`, `CommandHelper.cpp`)
+  - 命令解析和匹配
+  - 参数验证
+  - 命令元数据管理
+
+- ✅ **签名匹配优化** (`SignatureScanThreadPool.cpp`)
+  - SIMD 加速验证 (SSE2/AVX2)
+  - 标量回退路径
+  - 边界条件和内存安全
+
+#### 待添加测试
+
+- ⏳ **MFT 解析** (`MFTReader.cpp`)
+  - 记录解析正确性
+  - 属性提取
+  - 文件名编码
+
+- ⏳ **USN 日志解析** (`UsnJournalParser.cpp`)
+  - 日志记录解析
+  - 时间戳处理
+  - 变更原因判断
+
+- ⏳ **文件修复** (`FileRepair.cpp`)
+  - ZIP 修复算法
+  - Office 文档修复
+  - PNG 修复
+
+- ⏳ **缓存系统** (`FileCache.cpp`)
+  - 序列化/反序列化
+  - 缓存命中率
+  - 并发安全
+
+### 持续集成
+
+#### GitHub Actions 示例
+
+```yaml
+name: Unit Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v1
+
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v1
+
+      - name: Restore NuGet packages
+        run: nuget restore Filerestore_CLI_Tests\Filerestore_CLI_Tests.vcxproj
+
+      - name: Build Tests
+        run: |
+          msbuild Filerestore_CLI_Tests\Filerestore_CLI_Tests.vcxproj `
+            /p:Configuration=Release /p:Platform=x64 /t:Build
+
+      - name: Run Tests
+        run: |
+          .\x64\Release\Tests\Filerestore_CLI_Tests.exe --gtest_output=xml:test_results.xml
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action/composite@v1
+        if: always()
+        with:
+          files: test_results.xml
+```
+
+### 故障排除
+
+#### 问题：NuGet 包无法下载
 
 ```bash
-# 1. 以管理员权限运行
-.\Filerestore_CLI.exe
+# 手动下载 Google Test
+nuget install gtest -Version 1.14.0 -OutputDirectory ..\packages
 
-# 2. 扫描已删除文件
-listdeleted C
-
-# 3. 签名搜索恢复（自动 ML 增强）
-carvepool C jpg,png,pdf D:\recovered\
-
-# 4. 恢复纯文本文件
-carvepool C txt,html D:\recovered\ 8 ml
-
-# 5. 查看帮助
-help carvepool
+# 或使用 Visual Studio 包管理器控制台
+Install-Package gtest -Version 1.14.0
 ```
 
----
+#### 问题：链接错误 (unresolved external symbol)
 
-## 项目结构
+确保包含路径正确：
 
-```
-Filerestore_CLI/
-├── src/
-│   ├── core/           # CLI核心 (cli, climodule, Main)
-│   ├── commands/       # 命令实现
-│   ├── fileRestore/    # 文件恢复组件
-│   │   ├── MFTReader/Parser        # MFT 操作
-│   │   ├── FileCarver              # 签名搜索
-│   │   ├── SignatureScanThreadPool # 线程池扫描
-│   │   ├── MLClassifier            # ML 文件分类 (NEW)
-│   │   ├── OverwriteDetector       # 覆盖检测
-│   │   └── UsnJournalReader        # USN 日志
-│   └── utils/          # 工具类
-├── ml/                 # ML 训练代码
-│   ├── train_model.py  # PyTorch 训练脚本
-│   └── models/         # 导出的 ONNX 模型
-└── document/           # 技术文档
+```xml
+<AdditionalIncludeDirectories>
+  $(SolutionDir)Filerestore_CLI\src;
+  $(SolutionDir)packages\gtest.1.14.0\build\native\include;
+</AdditionalIncludeDirectories>
 ```
 
+检查库路径：
+
+```xml
+<AdditionalLibraryDirectories>
+  $(SolutionDir)packages\gtest.1.14.0\build\native\lib\x64\v143\$(Configuration);
+</AdditionalLibraryDirectories>
+```
+
+#### 问题：测试运行时崩溃
+
+1. 检查 DLL 依赖：
+   ```powershell
+   dumpbin /dependents .\x64\Debug\Tests\Filerestore_CLI_Tests.exe
+   ```
+
+2. 确保测试 fixture 正确清理：
+   ```cpp
+   void TearDown() override {
+       // 清理资源
+   }
+   ```
+
+3. 检查静态变量初始化顺序
+
+#### 问题：某些测试在 CI 中失败
+
+- 文件路径硬编码：使用相对路径或环境变量
+- 权限问题：某些测试可能需要管理员权限（MFT/USN 访问）
+- 时区/语言依赖：使用固定的 locale 设置
+
+### 最佳实践
+
+1. **每次提交前运行测试**
+   ```bash
+   # 在 git commit 前执行
+   .\build_and_test.ps1
+   ```
+
+2. **TDD (测试驱动开发) 流程**
+   - 🔴 编写失败的测试
+   - 🟢 实现最小功能使测试通过
+   - 🔵 重构优化代码
+   - 🔁 重复
+
+3. **保持测试独立**
+   - 每个测试应该独立运行
+   - 不依赖其他测试的状态
+   - 使用 `SetUp()` 和 `TearDown()` 管理资源
+
+4. **使用有意义的测试名称**
+   - ✅ `MatchZipSignature` - 清晰描述测试内容
+   - ❌ `Test1`, `TestCase2` - 无意义
+
+5. **覆盖边界条件**
+   - 空输入
+   - 极大/极小值
+   - 非法参数
+   - 内存边界（对齐/非对齐）
+
+6. **性能测试使用 DISABLED_ 前缀**
+   ```cpp
+   TEST_F(MyTest, DISABLED_PerformanceBenchmark) {
+       // 仅在需要时手动运行
+   }
+   ```
+
+7. **Mock 外部依赖**
+   - 对于需要管理员权限的测试，创建 Mock 类
+   - 对于文件系统访问，使用虚拟文件系统
+
+### 项目结构
+
+```
+Filerestore_CLI_Tests/
+├── tests/
+│   ├── cli_test.cpp                  # CLI 参数解析测试 (26 个)
+│   └── signature_scanner_test.cpp    # SIMD 签名匹配测试 (19 个)
+├── mocks/                             # Mock 类（待添加）
+├── Filerestore_CLI_Tests.vcxproj     # Visual Studio 项目文件
+├── packages.config                    # NuGet 包配置
+├── build_and_test.ps1                # 自动化构建脚本
+└── README.md                         # 本文档
+```
+
+### 相关文档
+
+- [Google Test 官方文档](https://google.github.io/googletest/)
+- [Google Test Primer](https://google.github.io/googletest/primer.html)
+- [AUTO_TEST_GUIDE.md](../document/AUTO_TEST_GUIDE.md) - 自动化测试指南（集成测试）
+- [CLAUDE.md](../CLAUDE.md) - 项目构建配置
+
+### 贡献
+
+#### 添加新测试
+
+1. 在 `tests/` 目录创建 `<module>_test.cpp`
+2. 编写测试用例：
+   ```cpp
+   #include <gtest/gtest.h>
+   #include "../../Filerestore_CLI/src/<module>.h"
+
+   TEST(ModuleTest, TestName) {
+       // Arrange
+       // Act
+       // Assert
+   }
+   ```
+3. 在 `Filerestore_CLI_Tests.vcxproj` 添加：
+   ```xml
+   <ClCompile Include="tests\<module>_test.cpp" />
+   ```
+4. 重新构建并运行：
+   ```powershell
+   .\build_and_test.ps1
+   ```
+5. 更新本 README 的测试覆盖率部分
+
+#### 代码风格
+
+- 遵循 Google C++ Style Guide
+- 测试类名：`<Module>Test`
+- 测试用例名：描述性驼峰命名，如 `MatchZipSignature`
+- 使用 `EXPECT_*` 进行非致命断言，`ASSERT_*` 进行致命断言
+
 ---
 
-## 更新日志
+<a name="english"></a>
 
-### v0.3.1 (2026-01-07)
-- **新增** `crp` 分页交互式恢复命令
-- **新增** 输出文件夹自动清理功能
-- **新增** 低置信度文件强制恢复选项
-- **新增** 多语言支持（中/英文）
+## English
 
-### v0.3.0 (2026-01-07)
-- **新增** ML 文件类型分类（ONNX Runtime）
-- **新增** 混合扫描模式（签名 + ML 融合）
-- **新增** 支持 txt/html/xml 无签名文件检测
-- **改进** 内存安全：`unique_ptr` 替换原始指针
-- **改进** 线程安全：`CarvingStats` 原子化
-- **修复** carverecover 目录创建错误
+### Overview
 
-### v0.2.0 (2026-01-05)
-- 新增签名搜索恢复（File Carving）
-- 新增线程池并行扫描（carvepool）
-- 支持 14 种文件类型签名识别
-- 自动硬件检测和配置优化
+Google Test unit testing project for Filerestore_CLI.
 
-### v0.1.1 (2026-01-04)
-- 动态模块加载系统（DLL 插件）
-- 核心功能库分离（Filerestore_lib）
-- 优雅退出机制
-- 内存管理优化
+**Latest Progress** (2026-02-07):
+- ✅ Completed Google Test 1.14.0 integration (via NuGet)
+- ✅ Created CLI argument parsing test suite (26 tests)
+- ✅ Created SIMD signature matching test suite (19 tests)
+- ✅ Configured automated build script (`build_and_test.ps1`)
+- ✅ Total 45 unit tests covering core functionality
 
-### v0.1.0 (2025-12-31)
-- MFT 扫描和文件恢复
-- 智能覆盖检测（多线程）
-- USN 日志支持
-- 路径缓存优化
+### Test Suites
+
+#### 1. CLI Argument Parsing Tests (`cli_test.cpp`)
+
+Tests command-line interface argument parsing and command matching:
+
+- **Basic Command Tests** (5): help, exit, invalid commands, empty commands, extra spaces
+- **Argument Validation** (7): missing required arguments, invalid drive formats, parameter validation
+- **Command Matching** (2): prefix matching, case insensitivity
+- **Complex Commands** (3): multi-parameter, paths with spaces, special characters
+- **CommandHelper** (6): command metadata, parameter info, command assembly
+- **Boundary Conditions** (3): very long commands, many parameters, Unicode characters
+
+**Total**: 26 tests
+
+#### 2. Signature Matching Tests (`signature_scanner_test.cpp`)
+
+Tests SIMD-optimized signature matching (validates SSE2/AVX2 acceleration correctness):
+
+- **Basic Signature Matching** (7): ZIP, PDF, JPG, PNG, GIF, RAR, 7z
+- **No-Match Tests** (2): wrong signature, partial match
+- **Boundary Conditions** (6):
+  - Data size = signature size
+  - Data < signature
+  - Empty signature
+  - Very short signatures (1-2 bytes)
+  - 16-byte boundary (SSE2 boundary)
+- **SIMD Optimization Validation** (3):
+  - Short signature (4 bytes) - triggers SSE2
+  - Medium signature (8 bytes, PNG) - SSE2 optimized path
+  - Long signature (12+ bytes) - AVX2 or chunked processing
+- **Special Patterns** (3): all zeros, all ones, alternating pattern (0xAA/0x55)
+- **Memory Alignment** (2): unaligned access tests (validates `_mm_loadu_si128` correctness)
+
+**Total**: 19 tests
+
+### Build and Run
+
+#### Prerequisites
+
+1. **Visual Studio 2022** (with C++ workload)
+2. **NuGet Package Manager** (integrated in VS)
+3. **nuget.exe** (for command-line package management)
+
+#### Quick Start (Recommended)
+
+Use the automated script for one-click build and test:
+
+```powershell
+# Navigate to test directory
+cd D:\Users\21405\source\repos\Filerestore_CLI\Filerestore_CLI_Tests
+
+# Run all tests (Debug)
+.\build_and_test.ps1
+
+# Run Release configuration
+.\build_and_test.ps1 -Configuration Release
+
+# Run only CLI tests
+.\build_and_test.ps1 -TestFilter "CLITest.*"
+
+# Run only signature matching tests
+.\build_and_test.ps1 -TestFilter "SignatureScannerTest.*"
+
+# Run specific test
+.\build_and_test.ps1 -TestFilter "SignatureScannerTest.MatchZipSignature"
+```
+
+#### Manual Build
+
+##### Step 1: Install Google Test
+
+```bash
+# First-time build requires NuGet package installation
+nuget restore Filerestore_CLI_Tests.vcxproj
+```
+
+##### Step 2: Build with MSBuild
+
+```powershell
+# Debug build
+& 'C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe' `
+  'D:\Users\21405\source\repos\Filerestore_CLI\Filerestore_CLI_Tests\Filerestore_CLI_Tests.vcxproj' `
+  /p:Configuration=Debug /p:Platform=x64 /t:Build /v:minimal
+
+# Release build
+& 'C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe' `
+  'D:\Users\21405\source\repos\Filerestore_CLI\Filerestore_CLI_Tests\Filerestore_CLI_Tests.vcxproj' `
+  /p:Configuration=Release /p:Platform=x64 /t:Build /v:minimal
+```
+
+##### Step 3: Run Tests
+
+```powershell
+# Run all tests
+.\x64\Debug\Tests\Filerestore_CLI_Tests.exe
+
+# Run specific test suite
+.\x64\Debug\Tests\Filerestore_CLI_Tests.exe --gtest_filter=CLITest.*
+.\x64\Debug\Tests\Filerestore_CLI_Tests.exe --gtest_filter=SignatureScannerTest.*
+
+# Colored output
+.\x64\Debug\Tests\Filerestore_CLI_Tests.exe --gtest_color=yes
+
+# Generate XML report
+.\x64\Debug\Tests\Filerestore_CLI_Tests.exe --gtest_output=xml:test_results.xml
+
+# List all tests (without running)
+.\x64\Debug\Tests\Filerestore_CLI_Tests.exe --gtest_list_tests
+```
+
+#### Using Visual Studio
+
+1. Open solution in Visual Studio
+2. Right-click `Filerestore_CLI_Tests` project
+3. Select "Set as Startup Project"
+4. Press **F5** to run tests (debug mode) or **Ctrl+F5** (non-debug)
+5. Use **Test Explorer** (`Ctrl+E, T`) to view results
+
+### Output Example
+
+```
+========================================
+  Filerestore_CLI Unit Test Runner
+========================================
+Configuration: Debug
+Test Filter:   *
+
+[1/3] Restoring NuGet packages...
+  Google Test already installed
+
+[2/3] Building test project...
+  Build succeeded
+
+[3/3] Running tests...
+
+Executing: D:\...\Filerestore_CLI_Tests.exe --gtest_color=yes
+
+[==========] Running 45 tests from 3 test suites.
+[----------] Global test environment set-up.
+[----------] 16 tests from CLITest
+[ RUN      ] CLITest.HelpCommand
+[       OK ] CLITest.HelpCommand (12 ms)
+[ RUN      ] CLITest.ExitCommand
+[       OK ] CLITest.ExitCommand (3 ms)
+[ RUN      ] CLITest.InvalidCommand
+[       OK ] CLITest.InvalidCommand (5 ms)
+...
+[----------] 16 tests from CLITest (187 ms total)
+
+[----------] 10 tests from CommandHelperTest
+[ RUN      ] CommandHelperTest.GetAllCommandNames
+[       OK ] CommandHelperTest.GetAllCommandNames (1 ms)
+[ RUN      ] CommandHelperTest.MatchCommandsPrefix
+[       OK ] CommandHelperTest.MatchCommandsPrefix (2 ms)
+...
+[----------] 10 tests from CommandHelperTest (23 ms total)
+
+[----------] 19 tests from SignatureScannerTest
+[ RUN      ] SignatureScannerTest.MatchZipSignature
+[       OK ] SignatureScannerTest.MatchZipSignature (0 ms)
+[ RUN      ] SignatureScannerTest.MatchPngSignature
+[       OK ] SignatureScannerTest.MatchPngSignature (0 ms)
+[ RUN      ] SignatureScannerTest.SimdEquivalenceShort
+[       OK ] SignatureScannerTest.SimdEquivalenceShort (1 ms)
+...
+[----------] 19 tests from SignatureScannerTest (34 ms total)
+
+[----------] Global test environment tear-down
+[==========] 45 tests from 3 test suites ran. (244 ms total)
+[  PASSED  ] 45 tests.
+
+========================================
+  All tests PASSED!
+========================================
+```
+
+### Test Coverage
+
+#### Currently Covered Modules
+
+- ✅ **CLI Argument Parsing** (`cli.cpp`, `CommandHelper.cpp`)
+  - Command parsing and matching
+  - Argument validation
+  - Command metadata management
+
+- ✅ **Signature Matching Optimization** (`SignatureScanThreadPool.cpp`)
+  - SIMD acceleration validation (SSE2/AVX2)
+  - Scalar fallback path
+  - Boundary conditions and memory safety
+
+#### Tests To Be Added
+
+- ⏳ **MFT Parsing** (`MFTReader.cpp`)
+  - Record parsing correctness
+  - Attribute extraction
+  - Filename encoding
+
+- ⏳ **USN Journal Parsing** (`UsnJournalParser.cpp`)
+  - Journal record parsing
+  - Timestamp handling
+  - Change reason detection
+
+- ⏳ **File Repair** (`FileRepair.cpp`)
+  - ZIP repair algorithms
+  - Office document repair
+  - PNG repair
+
+- ⏳ **Cache System** (`FileCache.cpp`)
+  - Serialization/deserialization
+  - Cache hit rate
+  - Concurrency safety
+
+### Continuous Integration
+
+#### GitHub Actions Example
+
+```yaml
+name: Unit Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v1
+
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v1
+
+      - name: Restore NuGet packages
+        run: nuget restore Filerestore_CLI_Tests\Filerestore_CLI_Tests.vcxproj
+
+      - name: Build Tests
+        run: |
+          msbuild Filerestore_CLI_Tests\Filerestore_CLI_Tests.vcxproj `
+            /p:Configuration=Release /p:Platform=x64 /t:Build
+
+      - name: Run Tests
+        run: |
+          .\x64\Release\Tests\Filerestore_CLI_Tests.exe --gtest_output=xml:test_results.xml
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action/composite@v1
+        if: always()
+        with:
+          files: test_results.xml
+```
+
+### Troubleshooting
+
+#### Issue: NuGet Package Download Fails
+
+```bash
+# Manually download Google Test
+nuget install gtest -Version 1.14.0 -OutputDirectory ..\packages
+
+# Or use Visual Studio Package Manager Console
+Install-Package gtest -Version 1.14.0
+```
+
+#### Issue: Linker Error (unresolved external symbol)
+
+Ensure include paths are correct:
+
+```xml
+<AdditionalIncludeDirectories>
+  $(SolutionDir)Filerestore_CLI\src;
+  $(SolutionDir)packages\gtest.1.14.0\build\native\include;
+</AdditionalIncludeDirectories>
+```
+
+Check library paths:
+
+```xml
+<AdditionalLibraryDirectories>
+  $(SolutionDir)packages\gtest.1.14.0\build\native\lib\x64\v143\$(Configuration);
+</AdditionalLibraryDirectories>
+```
+
+#### Issue: Tests Crash at Runtime
+
+1. Check DLL dependencies:
+   ```powershell
+   dumpbin /dependents .\x64\Debug\Tests\Filerestore_CLI_Tests.exe
+   ```
+
+2. Ensure test fixtures clean up properly:
+   ```cpp
+   void TearDown() override {
+       // Clean up resources
+   }
+   ```
+
+3. Check static variable initialization order
+
+#### Issue: Some Tests Fail in CI
+
+- Hardcoded file paths: Use relative paths or environment variables
+- Permission issues: Some tests may require admin rights (MFT/USN access)
+- Timezone/locale dependency: Use fixed locale settings
+
+### Best Practices
+
+1. **Run Tests Before Each Commit**
+   ```bash
+   # Execute before git commit
+   .\build_and_test.ps1
+   ```
+
+2. **TDD (Test-Driven Development) Workflow**
+   - 🔴 Write a failing test
+   - 🟢 Implement minimum code to pass
+   - 🔵 Refactor and optimize
+   - 🔁 Repeat
+
+3. **Keep Tests Independent**
+   - Each test should run independently
+   - Don't depend on other test states
+   - Use `SetUp()` and `TearDown()` to manage resources
+
+4. **Use Meaningful Test Names**
+   - ✅ `MatchZipSignature` - clearly describes test content
+   - ❌ `Test1`, `TestCase2` - meaningless
+
+5. **Cover Boundary Conditions**
+   - Empty input
+   - Maximum/minimum values
+   - Invalid arguments
+   - Memory boundaries (aligned/unaligned)
+
+6. **Use DISABLED_ Prefix for Performance Tests**
+   ```cpp
+   TEST_F(MyTest, DISABLED_PerformanceBenchmark) {
+       // Only run manually when needed
+   }
+   ```
+
+7. **Mock External Dependencies**
+   - For tests requiring admin privileges, create mock classes
+   - For file system access, use virtual file systems
+
+### Project Structure
+
+```
+Filerestore_CLI_Tests/
+├── tests/
+│   ├── cli_test.cpp                  # CLI argument parsing tests (26)
+│   └── signature_scanner_test.cpp    # SIMD signature matching tests (19)
+├── mocks/                             # Mock classes (to be added)
+├── Filerestore_CLI_Tests.vcxproj     # Visual Studio project file
+├── packages.config                    # NuGet package configuration
+├── build_and_test.ps1                # Automated build script
+└── README.md                         # This document
+```
+
+### Related Documentation
+
+- [Google Test Official Documentation](https://google.github.io/googletest/)
+- [Google Test Primer](https://google.github.io/googletest/primer.html)
+- [AUTO_TEST_GUIDE.md](../document/AUTO_TEST_GUIDE.md) - Automated Testing Guide (Integration Tests)
+- [CLAUDE.md](../CLAUDE.md) - Project Build Configuration
+
+### Contributing
+
+#### Adding New Tests
+
+1. Create `<module>_test.cpp` in `tests/` directory
+2. Write test cases:
+   ```cpp
+   #include <gtest/gtest.h>
+   #include "../../Filerestore_CLI/src/<module>.h"
+
+   TEST(ModuleTest, TestName) {
+       // Arrange
+       // Act
+       // Assert
+   }
+   ```
+3. Add to `Filerestore_CLI_Tests.vcxproj`:
+   ```xml
+   <ClCompile Include="tests\<module>_test.cpp" />
+   ```
+4. Rebuild and run:
+   ```powershell
+   .\build_and_test.ps1
+   ```
+5. Update test coverage section in this README
+
+#### Code Style
+
+- Follow Google C++ Style Guide
+- Test class name: `<Module>Test`
+- Test case name: descriptive camelCase, e.g., `MatchZipSignature`
+- Use `EXPECT_*` for non-fatal assertions, `ASSERT_*` for fatal assertions
 
 ---
 
-## 许可证
-
-本项目基于 [MIT 许可证](LICENSE) 开源。
-
----
-
-## 链接
-
-- [GitHub Releases](https://github.com/Orange20000922/Filerestore_CLI/releases)
-- [问题反馈](https://github.com/Orange20000922/Filerestore_CLI/issues)
+**Version**: 1.0.0
+**Last Updated**: 2026-02-07
