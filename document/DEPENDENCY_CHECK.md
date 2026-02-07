@@ -5,6 +5,7 @@
 对 Filerestore_CLI 项目的所有依赖进行全面检查。
 
 **检查日期**: 2026-02-07
+**更新日期**: 2026-02-07 (ONNX Runtime CI 修复)
 
 ## 依赖清单
 
@@ -33,13 +34,15 @@
 ---
 
 ### 2. ONNX Runtime (ML 推理引擎)
-**位置**: `Filerestore_CLI/deps/onnxruntime/`  
-**类型**: 预编译二进制包  
-**状态**: ✅ 可选依赖，设计合理
+**位置**: `Filerestore_CLI/deps/onnxruntime/`
+**类型**: 预编译二进制包
+**状态**: ✅ **已修复 - CI 自动下载**
+
+**重要性**: 核心ML功能依赖（文件分类、类型识别、置信度评估）
 
 **配置** (`OnnxRuntime.props`):
 - 自动检测: 检查 `onnxruntime_cxx_api.h` 是否存在
-- 可选编译: 仅在可用时启用 `USE_ONNX_RUNTIME` 宏
+- 条件编译: 可用时启用 `USE_ONNX_RUNTIME` 宏，不可用时优雅降级
 - 自动复制 DLL: 构建后自动复制到输出目录
 
 **依赖结构**:
@@ -49,13 +52,18 @@ onnxruntime/
 │   └── onnxruntime_cxx_api.h
 ├── lib/
 │   ├── onnxruntime.lib
-│   └── *.dll
-└── bin/
+│   └── onnxruntime.dll
+├── LICENSE
+└── VERSION_NUMBER (1.16.3)
 ```
 
 **.gitignore**: ✅ 已忽略 `deps/onnxruntime/include/`, `deps/onnxruntime/lib/`
 
-**CI 处理**: ✅ 不需要（可选依赖，构建时会自动禁用）
+**CI 处理**: ✅ **已修复** - 在 `.github/workflows/msbuild.yml` 中添加自动下载步骤
+- 版本: v1.16.3 (CPU版, ~50MB)
+- 缓存: 使用 `actions/cache@v4` 缓存，首次1-2分钟，后续5秒
+- 来源: GitHub Releases (microsoft/onnxruntime)
+- 详见: `document/ONNX_RUNTIME_CI_FIX.md`
 
 ---
 
@@ -131,14 +139,16 @@ onnxruntime/
 
 ```yaml
 steps:
-  - Checkout code         # ✅ 获取代码
-  - Setup MSBuild         # ✅ MSBuild
-  - Setup Visual Studio   # ✅ VS 2022
-  - Install CMake         # ✅ CMake (用于 FTXUI)
-  - Cache FTXUI           # ✅ 缓存 FTXUI 构建
-  - Clone and Build FTXUI # ✅ 构建 FTXUI
-  - Build solution        # ✅ 构建主项目
-  - Upload artifacts      # ✅ 上传产物
+  - Checkout code              # ✅ 获取代码
+  - Setup MSBuild              # ✅ MSBuild
+  - Setup Visual Studio        # ✅ VS 2022
+  - Install CMake              # ✅ CMake (用于 FTXUI)
+  - Cache FTXUI                # ✅ 缓存 FTXUI 构建
+  - Clone and Build FTXUI      # ✅ 构建 FTXUI
+  - Cache ONNX Runtime         # ✅ 缓存 ONNX Runtime (2026-02-07新增)
+  - Download ONNX Runtime      # ✅ 下载 ONNX Runtime (2026-02-07新增)
+  - Build solution             # ✅ 构建主项目
+  - Upload artifacts           # ✅ 上传产物
 ```
 
 ### 缺少的依赖
@@ -146,7 +156,7 @@ steps:
 ✅ **无** - 所有必需依赖已处理：
 - nlohmann/json: ✅ 跟随代码仓库
 - FTXUI: ✅ 在 CI 中构建
-- ONNX Runtime: ✅ 可选，自动禁用
+- ONNX Runtime: ✅ **在 CI 中自动下载（2026-02-07修复）**
 
 ---
 
@@ -184,14 +194,14 @@ steps:
 ## 总结
 
 ### ✅ 已解决
-1. FTXUI 依赖 - CI 中自动构建 + 缓存
-2. ONNX Runtime - 可选依赖，设计合理
-3. nlohmann/json - Header-only，无问题
+1. **FTXUI 依赖** - CI 中自动构建 + 缓存
+2. **ONNX Runtime 依赖** - **CI 中自动下载 + 缓存（2026-02-07修复）**
+3. **nlohmann/json** - Header-only，无问题
+4. **PlatformToolset 统一** - 已统一为 v143
 
-### ⚠️ 建议修复
-1. **优先级 1**: 统一 PlatformToolset 为 `v143`
-2. **优先级 2**: 修复 Win32 FTXUI 链接（或移除 Win32 配置）
-3. **优先级 3**: 添加依赖文档到 README
+### ⚠️ 建议修复（可选）
+1. **优先级 2**: 修复 Win32 FTXUI 链接（或移除 Win32 配置）
+2. **优先级 3**: 添加依赖文档到 README
 
 ### ✅ 无问题
 - Windows SDK 版本
@@ -199,5 +209,6 @@ steps:
 - Include 路径
 - .gitignore 配置
 
-**检查者**: Claude Code  
-**状态**: ✅ 主要问题已修复，小问题待优化
+**检查者**: Claude Code
+**状态**: ✅ **所有依赖问题已修复**
+**最后更新**: 2026-02-07

@@ -78,6 +78,74 @@ jobs:
           Write-Host "FTXUI restored from cache"
         }
 
+    - name: Cache ONNX Runtime
+      id: cache-onnxruntime
+      uses: actions/cache@v4
+      with:
+        path: Filerestore_CLI/deps/onnxruntime
+        key: onnxruntime-${{ runner.os }}-1.16.3
+        restore-keys: |
+          onnxruntime-${{ runner.os }}-
+
+    - name: Download and Setup ONNX Runtime
+      if: steps.cache-onnxruntime.outputs.cache-hit != 'true'
+      shell: pwsh
+      run: |
+        # ONNX Runtime version
+        $version = "1.16.3"
+        $url = "https://github.com/microsoft/onnxruntime/releases/download/v$version/onnxruntime-win-x64-$version.zip"
+        $output = "onnxruntime.zip"
+
+        Write-Host "Downloading ONNX Runtime v$version..."
+        Invoke-WebRequest -Uri $url -OutFile $output -MaximumRetryCount 3
+
+        Write-Host "Extracting ONNX Runtime..."
+        Expand-Archive -Path $output -DestinationPath "temp_onnx" -Force
+
+        # Move to deps directory (structure: onnxruntime-win-x64-1.16.3/)
+        $extractedDir = Get-ChildItem -Path "temp_onnx" -Directory | Select-Object -First 1
+
+        # Create target directory
+        New-Item -ItemType Directory -Force -Path "Filerestore_CLI/deps" | Out-Null
+
+        # Move and rename to onnxruntime
+        Move-Item -Path $extractedDir.FullName -Destination "Filerestore_CLI/deps/onnxruntime" -Force
+
+        # Cleanup
+        Remove-Item -Path $output -Force
+        Remove-Item -Path "temp_onnx" -Recurse -Force
+
+        Write-Host "ONNX Runtime setup completed"
+
+        # Verify structure
+        if (Test-Path "Filerestore_CLI/deps/onnxruntime/include/onnxruntime_cxx_api.h") {
+          Write-Host "✓ ONNX Runtime headers found"
+        } else {
+          Write-Error "✗ ONNX Runtime headers NOT found"
+          exit 1
+        }
+
+        if (Test-Path "Filerestore_CLI/deps/onnxruntime/lib/onnxruntime.lib") {
+          Write-Host "✓ ONNX Runtime library found"
+        } else {
+          Write-Error "✗ ONNX Runtime library NOT found"
+          exit 1
+        }
+
+    - name: Verify ONNX Runtime (from cache)
+      if: steps.cache-onnxruntime.outputs.cache-hit == 'true'
+      shell: pwsh
+      run: |
+        Write-Host "ONNX Runtime restored from cache"
+
+        # Verify structure
+        if (Test-Path "Filerestore_CLI/deps/onnxruntime/include/onnxruntime_cxx_api.h") {
+          Write-Host "✓ ONNX Runtime headers found"
+        } else {
+          Write-Error "✗ Cache corrupted: ONNX Runtime headers NOT found"
+          exit 1
+        }
+
     - name: Build solution
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
