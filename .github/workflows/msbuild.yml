@@ -91,44 +91,79 @@ jobs:
       if: steps.cache-onnxruntime.outputs.cache-hit != 'true'
       shell: pwsh
       run: |
+        Write-Host "Current directory: $(Get-Location)"
+        Write-Host "Workspace: $env:GITHUB_WORKSPACE"
+
         # ONNX Runtime version
         $version = "1.16.3"
         $url = "https://github.com/microsoft/onnxruntime/releases/download/v$version/onnxruntime-win-x64-$version.zip"
         $output = "onnxruntime.zip"
 
-        Write-Host "Downloading ONNX Runtime v$version..."
-        Invoke-WebRequest -Uri $url -OutFile $output -MaximumRetryCount 3
+        Write-Host "Downloading ONNX Runtime v$version from:"
+        Write-Host $url
+
+        try {
+          Invoke-WebRequest -Uri $url -OutFile $output -MaximumRetryCount 3
+          Write-Host "✓ Download completed, size: $((Get-Item $output).Length / 1MB) MB"
+        } catch {
+          Write-Error "Failed to download ONNX Runtime: $_"
+          exit 1
+        }
 
         Write-Host "Extracting ONNX Runtime..."
         Expand-Archive -Path $output -DestinationPath "temp_onnx" -Force
 
-        # Move to deps directory (structure: onnxruntime-win-x64-1.16.3/)
+        Write-Host "Contents of temp_onnx:"
+        Get-ChildItem -Path "temp_onnx" | ForEach-Object { Write-Host "  $_" }
+
+        # Find extracted directory
         $extractedDir = Get-ChildItem -Path "temp_onnx" -Directory | Select-Object -First 1
 
+        if ($null -eq $extractedDir) {
+          Write-Error "No directory found in extracted archive"
+          exit 1
+        }
+
+        Write-Host "Extracted directory: $($extractedDir.FullName)"
+        Write-Host "Contents of extracted directory:"
+        Get-ChildItem -Path $extractedDir.FullName | ForEach-Object { Write-Host "  $_" }
+
         # Create target directory
+        Write-Host "Creating target directory: Filerestore_CLI/deps"
         New-Item -ItemType Directory -Force -Path "Filerestore_CLI/deps" | Out-Null
 
         # Move and rename to onnxruntime
+        Write-Host "Moving to Filerestore_CLI/deps/onnxruntime..."
+        if (Test-Path "Filerestore_CLI/deps/onnxruntime") {
+          Remove-Item -Path "Filerestore_CLI/deps/onnxruntime" -Recurse -Force
+        }
         Move-Item -Path $extractedDir.FullName -Destination "Filerestore_CLI/deps/onnxruntime" -Force
 
         # Cleanup
-        Remove-Item -Path $output -Force
-        Remove-Item -Path "temp_onnx" -Recurse -Force
+        Write-Host "Cleaning up temporary files..."
+        Remove-Item -Path $output -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path "temp_onnx" -Recurse -Force -ErrorAction SilentlyContinue
 
         Write-Host "ONNX Runtime setup completed"
 
         # Verify structure
+        Write-Host "Verifying installation..."
+        Write-Host "Contents of deps/onnxruntime:"
+        Get-ChildItem -Path "Filerestore_CLI/deps/onnxruntime" | ForEach-Object { Write-Host "  $_" }
+
         if (Test-Path "Filerestore_CLI/deps/onnxruntime/include/onnxruntime_cxx_api.h") {
           Write-Host "✓ ONNX Runtime headers found"
         } else {
-          Write-Error "✗ ONNX Runtime headers NOT found"
+          Write-Host "✗ ONNX Runtime headers NOT found"
+          Write-Host "Directory structure:"
+          Get-ChildItem -Path "Filerestore_CLI/deps/onnxruntime" -Recurse | Select-Object -First 20 | ForEach-Object { Write-Host "  $($_.FullName)" }
           exit 1
         }
 
         if (Test-Path "Filerestore_CLI/deps/onnxruntime/lib/onnxruntime.lib") {
           Write-Host "✓ ONNX Runtime library found"
         } else {
-          Write-Error "✗ ONNX Runtime library NOT found"
+          Write-Host "✗ ONNX Runtime library NOT found"
           exit 1
         }
 
