@@ -104,3 +104,9 @@ ml/datasets/
 
 # Release packages
 release_packages/
+
+# FTXUI dependency (built in CI)
+Filerestore_CLI/deps/ftxui/.git/
+Filerestore_CLI/deps/ftxui/build/
+Filerestore_CLI/deps/ftxui/.cache/
+Filerestore_CLI/deps/ftxui/cmake-build-*/
