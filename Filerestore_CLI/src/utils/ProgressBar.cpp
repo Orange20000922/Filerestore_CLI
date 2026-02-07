@@ -1,4 +1,5 @@
 ﻿#include "ProgressBar.h"
+#include "../tui/TuiProgressTracker.h"
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -21,6 +22,12 @@ void ProgressBar::Update(ULONGLONG currentItems, ULONGLONG extra) {
     current = currentItems;
     extraInfo = extra;
 
+    // TUI 模式：转发给 TuiProgressTracker
+    if (TuiProgressTracker::Instance().IsEnabled()) {
+        TuiProgressTracker::Instance().UpdateProgress("Progress", current, total, extra);
+        return;
+    }
+
     // 限制更新频率(每100ms更新一次)
     auto now = chrono::steady_clock::now();
     auto elapsed = chrono::duration_cast<chrono::milliseconds>(now - lastUpdate).count();
@@ -38,6 +45,14 @@ void ProgressBar::Update(ULONGLONG currentItems, ULONGLONG extra) {
 
 void ProgressBar::Finish() {
     current = total;
+
+    // TUI 模式：通知完成
+    if (TuiProgressTracker::Instance().IsEnabled()) {
+        TuiProgressTracker::Instance().UpdateProgress("Progress", total, total, extraInfo);
+        TuiProgressTracker::Instance().FinishProgress();
+        return;
+    }
+
     if (isVisible) {
         Render();
         cout << endl;

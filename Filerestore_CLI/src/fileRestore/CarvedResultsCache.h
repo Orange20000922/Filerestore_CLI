@@ -9,7 +9,7 @@ using namespace std;
 
 // 序列化的魔术字节标识
 constexpr DWORD CARVED_CACHE_MAGIC = 0x43525645;  // "CRVE"
-constexpr DWORD CARVED_CACHE_VERSION = 1;
+constexpr DWORD CARVED_CACHE_VERSION = 2;  // v2: 增加 sizeIsEstimated, validationScore, 删除状态, ML 分类
 
 // 缓存文件头
 struct CarvedCacheHeader {

@@ -76,6 +76,9 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="源文件\UI">
+      <UniqueIdentifier>{49429d5e-1246-424f-b324-c316128f69a0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <!-- ============================================================================ -->
   <!-- 源文件 (.cpp) -->
@@ -219,6 +222,24 @@
     <ClCompile Include="src\fileRestore\ZipStructureParser.cpp">
       <Filter>源文件\Commands</Filter>
     </ClCompile>
+    <ClCompile Include="src\tui\TuiApp.cpp">
+      <Filter>源文件\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\TripleValidator.cpp">
+      <Filter>源文件\FileRestore\Carving</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utils\SimdSignatureScanner.cpp">
+      <Filter>源文件\FileRestore\Carving</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\MFTCache.cpp">
+      <Filter>源文件\FileRestore\Carving</Filter>
+    </ClCompile>
+    <ClCompile Include="src\utils\CpuFeatures.cpp">
+      <Filter>源文件\FileRestore\Carving</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tui\components\OutputCapture.cpp">
+      <Filter>源文件\UI</Filter>
+    </ClCompile>
   </ItemGroup>
   <!-- ============================================================================ -->
   <!-- 头文件 (.h) -->
@@ -355,6 +376,24 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\fileRestore\ZipStructureParser.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\CpuFeatures.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\SimdSignatureScanner.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\TripleValidator.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\MFTCache.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tui\TuiApp.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tui\components\OutputCapture.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

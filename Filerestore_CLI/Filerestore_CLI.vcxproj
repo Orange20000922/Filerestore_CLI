@@ -92,10 +92,10 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;$(ProjectDir)src\platform;$(ProjectDir)third_party;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;$(ProjectDir)src\platform;$(ProjectDir)src\tui;$(ProjectDir)third_party;$(ProjectDir)deps\ftxui\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /arch:AVX2 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -111,10 +111,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;$(ProjectDir)src\platform;$(ProjectDir)third_party;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;$(ProjectDir)src\platform;$(ProjectDir)src\tui;$(ProjectDir)third_party;$(ProjectDir)deps\ftxui\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /arch:AVX2 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -128,10 +128,10 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;$(ProjectDir)src\platform;$(ProjectDir)third_party;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;$(ProjectDir)src\platform;$(ProjectDir)src\tui;$(ProjectDir)third_party;$(ProjectDir)deps\ftxui\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /arch:AVX2 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -139,6 +139,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
       <UACUIAccess>false</UACUIAccess>
+      <AdditionalLibraryDirectories>$(ProjectDir)deps\ftxui\build\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>ftxui-component.lib;ftxui-dom.lib;ftxui-screen.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -147,10 +149,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_CONSOLE;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;$(ProjectDir)src\platform;$(ProjectDir)third_party;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;$(ProjectDir)src\platform;$(ProjectDir)src\tui;$(ProjectDir)third_party;$(ProjectDir)deps\ftxui\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /arch:AVX2 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
@@ -158,6 +160,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
       <UACUIAccess>false</UACUIAccess>
+      <AdditionalLibraryDirectories>$(ProjectDir)deps\ftxui\build\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>ftxui-component.lib;ftxui-dom.lib;ftxui-screen.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -208,6 +212,10 @@
     <ClCompile Include="src\fileRestore\ZipStructureParser.cpp" />
     <ClCompile Include="src\fileRestore\TripleValidator.cpp" />
     <ClCompile Include="src\fileRestore\MFTCache.cpp" />
+    <ClCompile Include="src\tui\TuiApp.cpp" />
+    <ClCompile Include="src\tui\CommandHelper.cpp" />
+    <ClCompile Include="src\tui\TuiProgressTracker.cpp" />
+    <ClCompile Include="src\tui\components\OutputCapture.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\cli.h" />
@@ -253,6 +261,10 @@
     <ClInclude Include="src\fileRestore\ZipStructureParser.h" />
     <ClInclude Include="src\fileRestore\TripleValidator.h" />
     <ClInclude Include="src\fileRestore\MFTCache.h" />
+    <ClInclude Include="src\tui\TuiApp.h" />
+    <ClInclude Include="src\tui\CommandHelper.h" />
+    <ClInclude Include="src\tui\TuiProgressTracker.h" />
+    <ClInclude Include="src\tui\components\OutputCapture.h" />
     <ClInclude Include="src\platform\PlatformConfig.h" />
     <ClInclude Include="src\platform\PlatformTypes.h" />
   </ItemGroup>

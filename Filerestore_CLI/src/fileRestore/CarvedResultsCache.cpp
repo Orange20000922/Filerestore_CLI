@@ -42,7 +42,9 @@ void CarvedResultsCache::SerializeFileInfo(ofstream& out, const CarvedFileInfo& 
     out.write((const char*)&info.startOffset, sizeof(info.startOffset));
     out.write((const char*)&info.fileSize, sizeof(info.fileSize));
     out.write((const char*)&info.hasValidFooter, sizeof(info.hasValidFooter));
+    out.write((const char*)&info.sizeIsEstimated, sizeof(info.sizeIsEstimated));
     out.write((const char*)&info.confidence, sizeof(info.confidence));
+    out.write((const char*)&info.validationScore, sizeof(info.validationScore));
 
     // 写入字符串（长度 + 数据）
     DWORD extLen = (DWORD)info.extension.length();
@@ -79,6 +81,19 @@ void CarvedResultsCache::SerializeFileInfo(ofstream& out, const CarvedFileInfo& 
     if (diagLen > 0) {
         out.write(info.integrityDiagnosis.c_str(), diagLen);
     }
+
+    // 写入删除状态信息
+    out.write((const char*)&info.isDeleted, sizeof(info.isDeleted));
+    out.write((const char*)&info.deletionChecked, sizeof(info.deletionChecked));
+    out.write((const char*)&info.isActiveFile, sizeof(info.isActiveFile));
+
+    // 写入 ML 分类信息
+    DWORD mlClassLen = (DWORD)info.mlClassification.length();
+    out.write((const char*)&mlClassLen, sizeof(mlClassLen));
+    if (mlClassLen > 0) {
+        out.write(info.mlClassification.c_str(), mlClassLen);
+    }
+    out.write((const char*)&info.mlConfidence, sizeof(info.mlConfidence));
 }
 
 // ============================================================================
@@ -90,7 +105,9 @@ bool CarvedResultsCache::DeserializeFileInfo(ifstream& in, CarvedFileInfo& info)
     in.read((char*)&info.startOffset, sizeof(info.startOffset));
     in.read((char*)&info.fileSize, sizeof(info.fileSize));
     in.read((char*)&info.hasValidFooter, sizeof(info.hasValidFooter));
+    in.read((char*)&info.sizeIsEstimated, sizeof(info.sizeIsEstimated));
     in.read((char*)&info.confidence, sizeof(info.confidence));
+    in.read((char*)&info.validationScore, sizeof(info.validationScore));
 
     if (in.fail()) return false;
 
@@ -138,6 +155,21 @@ bool CarvedResultsCache::DeserializeFileInfo(ifstream& in, CarvedFileInfo& info)
         in.read(buffer, diagLen);
         info.integrityDiagnosis = string(buffer, diagLen);
     }
+
+    // 读取删除状态信息
+    in.read((char*)&info.isDeleted, sizeof(info.isDeleted));
+    in.read((char*)&info.deletionChecked, sizeof(info.deletionChecked));
+    in.read((char*)&info.isActiveFile, sizeof(info.isActiveFile));
+
+    // 读取 ML 分类信息
+    DWORD mlClassLen = 0;
+    in.read((char*)&mlClassLen, sizeof(mlClassLen));
+    if (mlClassLen > 0 && mlClassLen < 256) {
+        char buffer[256];
+        in.read(buffer, mlClassLen);
+        info.mlClassification = string(buffer, mlClassLen);
+    }
+    in.read((char*)&info.mlConfidence, sizeof(info.mlConfidence));
 
     return !in.fail();
 }

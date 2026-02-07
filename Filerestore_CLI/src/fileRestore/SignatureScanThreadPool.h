@@ -10,9 +10,10 @@
 #include <unordered_map>
 #include <functional>
 #include <string>
+#include <immintrin.h>
 #include "CarvedFileTypes.h"
 #include "MLClassifier.h"
-#include "../utils/SimdSignatureScanner.h"
+#include "../utils/CpuFeatures.h"
 
 using namespace std;
 
@@ -103,9 +104,16 @@ private:
     // ==================== 配置 ====================
     ScanThreadPoolConfig config;
 
-    // ==================== SIMD扫描 ====================
-    SimdSignatureScanner simdScanner;
+    // ==================== SIMD扫描（流式设计，零额外内存分配） ====================
     atomic<bool> useSimdScan;
+    CpuFeatures::SimdLevel simdLevel_;
+    std::vector<BYTE> simdTargetBytes_;          // 目标首字节列表
+    uint64_t targetByteBitmap_[4] = { 0 };       // 256-bit 快速查找表
+
+    // 内联首字节查找
+    inline bool IsTargetByte(BYTE b) const {
+        return (targetByteBitmap_[b / 64] & (1ULL << (b % 64))) != 0;
+    }
 
     // ==================== 私有方法 ====================
 
@@ -118,8 +126,14 @@ private:
     // SIMD加速扫描
     void ScanChunkSimd(const ScanTask& task, vector<CarvedFileInfo>& localResults);
 
-    // 匹配签名
+    // 匹配签名（统一入口，根据SIMD级别和签名长度自动选择实现）
     bool MatchSignature(const BYTE* data, size_t dataSize, const vector<BYTE>& signature);
+
+    // SIMD优化的签名匹配（SSE2/AVX2，中长签名 >= 4 字节）
+    bool MatchSignatureSimd(const BYTE* data, size_t dataSize, const vector<BYTE>& signature);
+
+    // 标量签名匹配（memcmp回退，短签名或不支持SIMD时使用）
+    bool MatchSignatureScalar(const BYTE* data, const vector<BYTE>& signature);
 
     // 估算文件大小（轻量级O(1)，仅解析头部字段，用于扫描热循环）
     ULONGLONG EstimateFileSize(const BYTE* data, size_t dataSize, const FileSignature& sig);

@@ -1,6 +1,3 @@
-﻿// ConsoleApplication5.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
-//
-
 #include <iostream>
 #include <Windows.h>
 #include <string>
@@ -12,10 +9,11 @@
 #include "Logger.h"
 #include "CrashHandler.h"
 #include "LocalizationManager.h"
+#include "TuiApp.h"
 using namespace std;
 // 所有命令的静态成员现在通过 DEFINE_COMMAND_BASE 宏在 cmd.cpp 中定义
 // 并通过 REGISTER_COMMAND 宏自动注册到 CommandRegistry
-int main()
+int main(int argc, char* argv[])
 {
 	// ========== 系统初始化 ==========
 
@@ -57,37 +55,102 @@ int main()
 	// ========== CLI 初始化 ==========
 
 	CLI cli = CLI();
-	cout << endl;
-	cout << "==============================================\n";
-	cout << "  NTFS File Recovery Tool (Public Version)\n";
-	cout << "  File Recovery & Analysis Tool\n";
-	cout << "  Version: 0.1.1\n";
-	cout << "==============================================\n";
-	cout << endl;
-	cout << "输入 'help' 获取帮助信息" << endl;
-	cout << "Type 'help' for command list" << endl;
-	cout << endl;
 
-	// ========== 命令循环 ==========
+	// ========== 检查启动模式 ==========
 
-	while (!CLI::ShouldExit()) {
-		string command = string();
-		cout << "Command> ";
-		getline(cin, command);
+	bool useTui = false;
+	std::string cmdArg;
+	bool hasCmd = false;
 
-		// 记录命令到日志
-		LOG_INFO_FMT("User command: %s", command.c_str());
+	for (int i = 1; i < argc; i++) {
+		std::string arg = argv[i];
+		if (arg == "--tui" || arg == "-t") {
+			useTui = true;
+		}
+		else if (arg == "--cmd" || arg == "-c") {
+			// 下一个参数是命令字符串
+			if (i + 1 < argc) {
+				cmdArg = argv[i + 1];
+				hasCmd = true;
+				i++; // 跳过命令参数
+			}
+			else {
+				cout << "Error: --cmd requires a command string argument" << endl;
+				cout << "Usage: Filerestore_CLI.exe --cmd \"listdeleted D:\"" << endl;
+				return 1;
+			}
+		}
+	}
+
+	// --cmd 模式优先级最高（直接执行命令并退出）
+	if (hasCmd) {
+		cout << "Executing command: " << cmdArg << endl;
+		LOG_INFO_FMT("Direct command mode: %s", cmdArg.c_str());
 
 		try {
-			cli.Run(command);
+			cli.Run(cmdArg);
 		}
 		catch (const exception& e) {
 			cout << "Error executing command: " << e.what() << endl;
 			LOG_ERROR_FMT("Exception in command execution: %s", e.what());
+			logger.Close();
+			CrashHandler::Uninstall();
+			return 1;
 		}
 		catch (...) {
 			cout << "Unknown error occurred." << endl;
 			LOG_ERROR("Unknown exception in command execution");
+			logger.Close();
+			CrashHandler::Uninstall();
+			return 1;
+		}
+
+		// 命令执行完成，退出
+		LOG_INFO("Command execution completed.");
+		logger.Close();
+		CrashHandler::Uninstall();
+		return 0;
+	}
+
+	if (useTui) {
+		// TUI 模式
+		LOG_INFO("Starting in TUI mode...");
+		TuiApp app;
+		app.Run();
+	} else {
+		// 传统 CLI 模式（原有逻辑不变）
+		cout << endl;
+		cout << "==============================================\n";
+		cout << "  NTFS File Recovery Tool (Public Version)\n";
+		cout << "  File Recovery & Analysis Tool\n";
+		cout << "  Version: 0.1.1\n";
+		cout << "==============================================\n";
+		cout << endl;
+		cout << "输入 'help' 获取帮助信息" << endl;
+		cout << "Type 'help' for command list" << endl;
+		cout << endl;
+
+		// ========== 命令循环 ==========
+
+		while (!CLI::ShouldExit()) {
+			string command = string();
+			cout << "Command> ";
+			getline(cin, command);
+
+			// 记录命令到日志
+			LOG_INFO_FMT("User command: %s", command.c_str());
+
+			try {
+				cli.Run(command);
+			}
+			catch (const exception& e) {
+				cout << "Error executing command: " << e.what() << endl;
+				LOG_ERROR_FMT("Exception in command execution: %s", e.what());
+			}
+			catch (...) {
+				cout << "Unknown error occurred." << endl;
+				LOG_ERROR("Unknown exception in command execution");
+			}
 		}
 	}
 

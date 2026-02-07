@@ -9,6 +9,7 @@
 #include <sstream>
 #include <algorithm>
 #include "Logger.h"
+#include "../tui/TuiProgressTracker.h"
 
 using namespace std;
 
@@ -184,6 +185,31 @@ void CLI::Run(const string& command) {
             delete (string*)ptr;
         }
         return;
+    }
+
+    // ========== TUI 状态更新（在命令执行前）==========
+    if (TuiProgressTracker::Instance().IsEnabled()) {
+        // 提取驱动器参数（如果有）
+        if (!args.empty() && args.size() >= 1) {
+            string potentialDrive = args[0];
+            // 检查是否是驱动器格式 (C, C:, C:\)
+            if (potentialDrive.size() >= 1 && isalpha(potentialDrive[0])) {
+                char driveLetter = toupper(potentialDrive[0]);
+                TuiProgressTracker::Instance().SetDrive(string(1, driveLetter) + ":");
+            }
+        }
+
+        // 根据命令类型设置预期状态
+        string cmdBase = bestMatch[0]; // 第一个 token（命令基础名）
+        if (cmdBase == "listdeleted" || cmdBase == "searchdeleted" || cmdBase == "recover") {
+            TuiProgressTracker::Instance().SetMftStatus("Loading...");
+            TuiProgressTracker::Instance().SetUsnStatus("Loading...");
+        } else if (cmdBase == "carvepool" || cmdBase == "carve") {
+            TuiProgressTracker::Instance().SetMftStatus("N/A");
+            TuiProgressTracker::Instance().SetUsnStatus("N/A");
+        } else if (cmdBase == "usnrecover" || cmdBase == "searchusn") {
+            TuiProgressTracker::Instance().SetUsnStatus("Loading...");
+        }
     }
 
     // 使用多态分发执行命令

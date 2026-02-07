@@ -4,6 +4,7 @@
 #include <iostream>
 #include <algorithm>
 #include <chrono>
+#include <immintrin.h>
 
 using namespace std;
 using namespace std::chrono;
@@ -30,20 +31,25 @@ SignatureScanThreadPool::SignatureScanThreadPool(
     , mlMismatchCount(0)
     , mlSkippedCount(0)
     , mlUnknownCount(0)
-    , useSimdScan(true)
+    , useSimdScan(false)
+    , simdLevel_(CpuFeatures::SimdLevel::SCALAR)
 {
     // 如果启用自动检测，计算最优线程数
     if (config.autoDetectThreads) {
         config.workerCount = GetOptimalThreadCount();
     }
 
-    // 初始化SIMD扫描器
+    // 初始化流式SIMD扫描所需的预计算数据
+    simdLevel_ = CpuFeatures::Instance().GetBestSimdLevel();
     if (signatureIndex) {
-        std::set<BYTE> targetBytes;
+        // 收集目标首字节
         for (const auto& pair : *signatureIndex) {
-            targetBytes.insert(pair.first);
+            simdTargetBytes_.push_back(pair.first);
         }
-        simdScanner.SetTargetBytes(targetBytes);
+        // 构建256-bit快速查找表
+        for (BYTE b : simdTargetBytes_) {
+            targetByteBitmap_[b / 64] |= (1ULL << (b % 64));
+        }
     }
 
     LOG_INFO_FMT("SignatureScanThreadPool created with %d workers, chunk size: %zu MB",
@@ -343,133 +349,432 @@ void SignatureScanThreadPool::ScanChunk(const ScanTask& task,
 }
 
 // ============================================================================
-// SIMD加速扫描（使用SIMD首字节匹配加速）
+// SIMD加速扫描（流式设计，零额外内存分配）
+// 使用SIMD批量检测目标首字节，命中后立即就地验证签名
 // ============================================================================
 void SignatureScanThreadPool::ScanChunkSimd(const ScanTask& task,
                                               vector<CarvedFileInfo>& localResults) {
     if (!task.data || task.dataSize == 0) return;
 
+    // 不支持 SSE2 时回退到标量
+    if (simdLevel_ < CpuFeatures::SimdLevel::SSE2) {
+        ScanChunk(task, localResults);
+        return;
+    }
+
     const BYTE* data = task.data;
     size_t dataSize = task.dataSize;
+    size_t offset = 0;
 
-    // 使用SIMD扫描器找出所有首字节匹配位置
-    std::vector<SimdSignatureScanner::MatchResult> matches;
-    matches.reserve(dataSize / 512);  // 预分配
-    simdScanner.Scan(data, dataSize, matches);
+    // 根据SIMD级别选择步长和处理方式
+    const bool useAVX2 = (simdLevel_ >= CpuFeatures::SimdLevel::AVX2);
+    const size_t simdWidth = useAVX2 ? 32 : 16;
+    const size_t alignedEnd = dataSize & ~(simdWidth - 1);
 
-    size_t skipUntil = 0;  // 用于跳过已识别文件区域
+    // 预计算 SIMD 目标字节向量（栈上分配，线程安全）
+    if (useAVX2) {
+        // ===== AVX2 路径：32 字节步进 =====
+        // 在栈上构建目标向量，避免堆分配
+        const size_t targetCount = simdTargetBytes_.size();
+        // AVX2 寄存器：每个目标字节一个
+        std::vector<__m256i> targetVecs;
+        targetVecs.reserve(targetCount);
+        for (BYTE b : simdTargetBytes_) {
+            targetVecs.push_back(_mm256_set1_epi8(static_cast<char>(b)));
+        }
 
-    for (const auto& match : matches) {
-        if (stopFlag.load()) break;
-        if (match.offset < skipUntil) continue;
+        while (offset < alignedEnd && !stopFlag.load()) {
+            __m256i chunk = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(data + offset));
 
-        size_t offset = match.offset;
+            // 对所有目标字节做并行比较
+            __m256i anyMatch = _mm256_setzero_si256();
+            for (const __m256i& target : targetVecs) {
+                anyMatch = _mm256_or_si256(anyMatch, _mm256_cmpeq_epi8(chunk, target));
+            }
 
-        // 查找该首字节对应的签名
-        auto it = signatureIndex->find(match.matchedByte);
-        if (it == signatureIndex->end()) continue;
-
-        for (const FileSignature* sig : it->second) {
-            if (activeSignatures->find(sig->extension) == activeSignatures->end()) {
+            int mask = _mm256_movemask_epi8(anyMatch);
+            if (mask == 0) {
+                offset += 32;  // 快速跳过：整个 32 字节无目标首字节
                 continue;
             }
 
-            size_t remaining = dataSize - offset;
-            if (remaining < sig->header.size()) continue;
+            // 有匹配 → 逐位处理每个命中位置
+            size_t windowEnd = offset + 32;
+            while (mask) {
+                unsigned long pos;
+                _BitScanForward(&pos, mask);
+                size_t matchOffset = offset + pos;
+                mask &= (mask - 1);  // 清除已处理位
 
-            if (!MatchSignature(data + offset, remaining, sig->header)) continue;
+                // 就地执行完整签名验证（与 ScanChunk 相同逻辑）
+                BYTE currentByte = data[matchOffset];
+                auto it = signatureIndex->find(currentByte);
+                if (it == signatureIndex->end()) continue;
 
-            // AVI/WAV 区分
-            if (sig->extension == "avi" || sig->extension == "wav") {
-                if (remaining >= 12) {
-                    bool isAvi = (data[offset + 8] == 'A' && data[offset + 9] == 'V' &&
-                                  data[offset + 10] == 'I');
-                    bool isWav = (data[offset + 8] == 'W' && data[offset + 9] == 'A' &&
-                                  data[offset + 10] == 'V' && data[offset + 11] == 'E');
-                    if ((sig->extension == "avi" && !isAvi) ||
-                        (sig->extension == "wav" && !isWav)) {
+                bool fileFound = false;
+                for (const FileSignature* sig : it->second) {
+                    if (activeSignatures->find(sig->extension) == activeSignatures->end()) {
                         continue;
                     }
-                } else {
-                    continue;
+
+                    size_t remaining = dataSize - matchOffset;
+                    if (remaining < sig->header.size()) continue;
+
+                    if (!MatchSignature(data + matchOffset, remaining, sig->header)) continue;
+
+                    // AVI/WAV 区分
+                    if (sig->extension == "avi" || sig->extension == "wav") {
+                        if (remaining >= 12) {
+                            bool isAvi = (data[matchOffset + 8] == 'A' && data[matchOffset + 9] == 'V' &&
+                                          data[matchOffset + 10] == 'I');
+                            bool isWav = (data[matchOffset + 8] == 'W' && data[matchOffset + 9] == 'A' &&
+                                          data[matchOffset + 10] == 'V' && data[matchOffset + 11] == 'E');
+                            if ((sig->extension == "avi" && !isAvi) ||
+                                (sig->extension == "wav" && !isWav)) {
+                                continue;
+                            }
+                        } else {
+                            continue;
+                        }
+                    }
+
+                    // MP4 ftyp 验证
+                    if (sig->extension == "mp4" && remaining >= 8) {
+                        if (!(data[matchOffset + 4] == 'f' && data[matchOffset + 5] == 't' &&
+                              data[matchOffset + 6] == 'y' && data[matchOffset + 7] == 'p')) {
+                            continue;
+                        }
+                    }
+
+                    // 估算文件大小
+                    ULONGLONG footerPos = 0;
+                    bool isComplete = false;
+                    ULONGLONG estimatedSize;
+
+                    if (sig->extension == "zip") {
+                        estimatedSize = FileCarver::EstimateFileSizeStatic(
+                            data + matchOffset, remaining, *sig, &footerPos, &isComplete);
+                    } else {
+                        estimatedSize = EstimateFileSize(data + matchOffset, remaining, *sig);
+                        isComplete = false;
+                    }
+
+                    double confidence = ValidateFile(data + matchOffset,
+                                                      min(remaining, (size_t)sig->maxSize),
+                                                      *sig);
+
+                    if (footerPos > 0) {
+                        confidence = min(1.0, confidence + 0.1);
+                    }
+                    if (!isComplete) {
+                        confidence *= 0.9;
+                    }
+
+                    if (confidence >= 0.6) {
+                        ULONGLONG absoluteLCN = task.baseLCN + (matchOffset / task.bytesPerCluster);
+                        ULONGLONG clusterOffset = matchOffset % task.bytesPerCluster;
+
+                        CarvedFileInfo info;
+                        info.startLCN = absoluteLCN;
+                        info.startOffset = clusterOffset;
+                        info.fileSize = estimatedSize;
+                        info.extension = sig->extension;
+                        info.description = sig->description;
+                        info.hasValidFooter = (footerPos > 0);
+                        info.sizeIsEstimated = !isComplete;
+                        info.confidence = confidence;
+
+                        // OOXML 检测
+                        if (sig->extension == "zip") {
+                            string ooxmlType = FileCarver::DetectOOXMLTypeStatic(data + matchOffset, remaining);
+                            if (!ooxmlType.empty()) {
+                                info.extension = ooxmlType;
+                                if (ooxmlType == "docx") {
+                                    info.description = "Microsoft Word Document (OOXML)";
+                                } else if (ooxmlType == "xlsx") {
+                                    info.description = "Microsoft Excel Spreadsheet (OOXML)";
+                                } else if (ooxmlType == "pptx") {
+                                    info.description = "Microsoft PowerPoint Presentation (OOXML)";
+                                } else if (ooxmlType == "ooxml") {
+                                    info.description = "Microsoft Office Document (OOXML)";
+                                }
+                            }
+                        }
+
+                        // ML增强
+                        if (IsMLEnabled()) {
+                            size_t mlDataSize = (size_t)(std::min)(remaining, (size_t)4096);
+                            EnhanceWithML(data + matchOffset, mlDataSize, info);
+                        }
+
+                        localResults.push_back(info);
+
+                        // 跳过已识别文件区域
+                        size_t skipSize = (size_t)min(estimatedSize, (ULONGLONG)remaining);
+                        offset = matchOffset + skipSize;
+                        fileFound = true;
+                        break;  // 跳出签名循环
+                    }
+                }
+
+                if (fileFound) {
+                    // 文件匹配导致 offset 跳跃，需要跳出当前窗口的 mask 处理
+                    break;
                 }
             }
 
-            // MP4 ftyp 验证
-            if (sig->extension == "mp4" && remaining >= 8) {
-                if (!(data[offset + 4] == 'f' && data[offset + 5] == 't' &&
-                      data[offset + 6] == 'y' && data[offset + 7] == 'p')) {
-                    continue;
+            // 只有在没有文件跳跃的情况下才正常步进
+            if (offset < windowEnd) {
+                offset = windowEnd;
+            }
+        }
+
+        _mm256_zeroupper();
+
+    } else {
+        // ===== SSE2 路径：16 字节步进 =====
+        const size_t targetCount = simdTargetBytes_.size();
+        std::vector<__m128i> targetVecs;
+        targetVecs.reserve(targetCount);
+        for (BYTE b : simdTargetBytes_) {
+            targetVecs.push_back(_mm_set1_epi8(static_cast<char>(b)));
+        }
+
+        while (offset < alignedEnd && !stopFlag.load()) {
+            __m128i chunk = _mm_loadu_si128(reinterpret_cast<const __m128i*>(data + offset));
+
+            __m128i anyMatch = _mm_setzero_si128();
+            for (const __m128i& target : targetVecs) {
+                anyMatch = _mm_or_si128(anyMatch, _mm_cmpeq_epi8(chunk, target));
+            }
+
+            int mask = _mm_movemask_epi8(anyMatch);
+            if (mask == 0) {
+                offset += 16;
+                continue;
+            }
+
+            size_t windowEnd = offset + 16;
+            while (mask) {
+                unsigned long pos;
+                _BitScanForward(&pos, mask);
+                size_t matchOffset = offset + pos;
+                mask &= (mask - 1);
+
+                BYTE currentByte = data[matchOffset];
+                auto it = signatureIndex->find(currentByte);
+                if (it == signatureIndex->end()) continue;
+
+                bool fileFound = false;
+                for (const FileSignature* sig : it->second) {
+                    if (activeSignatures->find(sig->extension) == activeSignatures->end()) {
+                        continue;
+                    }
+
+                    size_t remaining = dataSize - matchOffset;
+                    if (remaining < sig->header.size()) continue;
+
+                    if (!MatchSignature(data + matchOffset, remaining, sig->header)) continue;
+
+                    // AVI/WAV 区分
+                    if (sig->extension == "avi" || sig->extension == "wav") {
+                        if (remaining >= 12) {
+                            bool isAvi = (data[matchOffset + 8] == 'A' && data[matchOffset + 9] == 'V' &&
+                                          data[matchOffset + 10] == 'I');
+                            bool isWav = (data[matchOffset + 8] == 'W' && data[matchOffset + 9] == 'A' &&
+                                          data[matchOffset + 10] == 'V' && data[matchOffset + 11] == 'E');
+                            if ((sig->extension == "avi" && !isAvi) ||
+                                (sig->extension == "wav" && !isWav)) {
+                                continue;
+                            }
+                        } else {
+                            continue;
+                        }
+                    }
+
+                    // MP4 ftyp 验证
+                    if (sig->extension == "mp4" && remaining >= 8) {
+                        if (!(data[matchOffset + 4] == 'f' && data[matchOffset + 5] == 't' &&
+                              data[matchOffset + 6] == 'y' && data[matchOffset + 7] == 'p')) {
+                            continue;
+                        }
+                    }
+
+                    ULONGLONG footerPos = 0;
+                    bool isComplete = false;
+                    ULONGLONG estimatedSize;
+
+                    if (sig->extension == "zip") {
+                        estimatedSize = FileCarver::EstimateFileSizeStatic(
+                            data + matchOffset, remaining, *sig, &footerPos, &isComplete);
+                    } else {
+                        estimatedSize = EstimateFileSize(data + matchOffset, remaining, *sig);
+                        isComplete = false;
+                    }
+
+                    double confidence = ValidateFile(data + matchOffset,
+                                                      min(remaining, (size_t)sig->maxSize),
+                                                      *sig);
+
+                    if (footerPos > 0) {
+                        confidence = min(1.0, confidence + 0.1);
+                    }
+                    if (!isComplete) {
+                        confidence *= 0.9;
+                    }
+
+                    if (confidence >= 0.6) {
+                        ULONGLONG absoluteLCN = task.baseLCN + (matchOffset / task.bytesPerCluster);
+                        ULONGLONG clusterOffset = matchOffset % task.bytesPerCluster;
+
+                        CarvedFileInfo info;
+                        info.startLCN = absoluteLCN;
+                        info.startOffset = clusterOffset;
+                        info.fileSize = estimatedSize;
+                        info.extension = sig->extension;
+                        info.description = sig->description;
+                        info.hasValidFooter = (footerPos > 0);
+                        info.sizeIsEstimated = !isComplete;
+                        info.confidence = confidence;
+
+                        if (sig->extension == "zip") {
+                            string ooxmlType = FileCarver::DetectOOXMLTypeStatic(data + matchOffset, remaining);
+                            if (!ooxmlType.empty()) {
+                                info.extension = ooxmlType;
+                                if (ooxmlType == "docx") {
+                                    info.description = "Microsoft Word Document (OOXML)";
+                                } else if (ooxmlType == "xlsx") {
+                                    info.description = "Microsoft Excel Spreadsheet (OOXML)";
+                                } else if (ooxmlType == "pptx") {
+                                    info.description = "Microsoft PowerPoint Presentation (OOXML)";
+                                } else if (ooxmlType == "ooxml") {
+                                    info.description = "Microsoft Office Document (OOXML)";
+                                }
+                            }
+                        }
+
+                        if (IsMLEnabled()) {
+                            size_t mlDataSize = (size_t)(std::min)(remaining, (size_t)4096);
+                            EnhanceWithML(data + matchOffset, mlDataSize, info);
+                        }
+
+                        localResults.push_back(info);
+
+                        size_t skipSize = (size_t)min(estimatedSize, (ULONGLONG)remaining);
+                        offset = matchOffset + skipSize;
+                        fileFound = true;
+                        break;
+                    }
+                }
+
+                if (fileFound) {
+                    break;
                 }
             }
 
-            // 估算文件大小（ZIP用重量级，其他用轻量级）
-            ULONGLONG footerPos = 0;
-            bool isComplete = false;
-            ULONGLONG estimatedSize;
-
-            if (sig->extension == "zip") {
-                estimatedSize = FileCarver::EstimateFileSizeStatic(
-                    data + offset, remaining, *sig, &footerPos, &isComplete);
-            } else {
-                estimatedSize = EstimateFileSize(data + offset, remaining, *sig);
-                isComplete = false;
+            if (offset < windowEnd) {
+                offset = windowEnd;
             }
+        }
+    }
 
-            double confidence = ValidateFile(data + offset,
-                                              min(remaining, (size_t)sig->maxSize),
-                                              *sig);
+    // ===== 剩余字节：标量处理（使用 bitmap 快速检查）=====
+    while (offset < dataSize && !stopFlag.load()) {
+        BYTE currentByte = data[offset];
 
-            if (footerPos > 0) {
-                confidence = min(1.0, confidence + 0.1);
-            }
-            if (!isComplete) {
-                confidence *= 0.9;
-            }
+        if (IsTargetByte(currentByte)) {
+            auto it = signatureIndex->find(currentByte);
+            if (it != signatureIndex->end()) {
+                for (const FileSignature* sig : it->second) {
+                    if (activeSignatures->find(sig->extension) == activeSignatures->end()) {
+                        continue;
+                    }
 
-            if (confidence >= 0.6) {
-                ULONGLONG absoluteLCN = task.baseLCN + (offset / task.bytesPerCluster);
-                ULONGLONG clusterOffset = offset % task.bytesPerCluster;
+                    size_t remaining = dataSize - offset;
+                    if (remaining < sig->header.size()) continue;
 
-                CarvedFileInfo info;
-                info.startLCN = absoluteLCN;
-                info.startOffset = clusterOffset;
-                info.fileSize = estimatedSize;
-                info.extension = sig->extension;
-                info.description = sig->description;
-                info.hasValidFooter = (footerPos > 0);
-                info.sizeIsEstimated = !isComplete;
-                info.confidence = confidence;
+                    if (MatchSignature(data + offset, remaining, sig->header)) {
+                        // AVI/WAV 区分
+                        if (sig->extension == "avi" || sig->extension == "wav") {
+                            if (remaining >= 12) {
+                                bool isAvi = (data[offset + 8] == 'A' && data[offset + 9] == 'V' &&
+                                              data[offset + 10] == 'I');
+                                bool isWav = (data[offset + 8] == 'W' && data[offset + 9] == 'A' &&
+                                              data[offset + 10] == 'V' && data[offset + 11] == 'E');
+                                if ((sig->extension == "avi" && !isAvi) ||
+                                    (sig->extension == "wav" && !isWav)) {
+                                    continue;
+                                }
+                            } else {
+                                continue;
+                            }
+                        }
 
-                // OOXML 检测
-                if (sig->extension == "zip") {
-                    string ooxmlType = FileCarver::DetectOOXMLTypeStatic(data + offset, remaining);
-                    if (!ooxmlType.empty()) {
-                        info.extension = ooxmlType;
-                        if (ooxmlType == "docx") {
-                            info.description = "Microsoft Word Document (OOXML)";
-                        } else if (ooxmlType == "xlsx") {
-                            info.description = "Microsoft Excel Spreadsheet (OOXML)";
-                        } else if (ooxmlType == "pptx") {
-                            info.description = "Microsoft PowerPoint Presentation (OOXML)";
-                        } else if (ooxmlType == "ooxml") {
-                            info.description = "Microsoft Office Document (OOXML)";
+                        if (sig->extension == "mp4" && remaining >= 8) {
+                            if (!(data[offset + 4] == 'f' && data[offset + 5] == 't' &&
+                                  data[offset + 6] == 'y' && data[offset + 7] == 'p')) {
+                                continue;
+                            }
+                        }
+
+                        ULONGLONG footerPos = 0;
+                        bool isComplete = false;
+                        ULONGLONG estimatedSize;
+
+                        if (sig->extension == "zip") {
+                            estimatedSize = FileCarver::EstimateFileSizeStatic(
+                                data + offset, remaining, *sig, &footerPos, &isComplete);
+                        } else {
+                            estimatedSize = EstimateFileSize(data + offset, remaining, *sig);
+                            isComplete = false;
+                        }
+
+                        double confidence = ValidateFile(data + offset,
+                                                          min(remaining, (size_t)sig->maxSize), *sig);
+                        if (footerPos > 0) confidence = min(1.0, confidence + 0.1);
+                        if (!isComplete) confidence *= 0.9;
+
+                        if (confidence >= 0.6) {
+                            ULONGLONG absoluteLCN = task.baseLCN + (offset / task.bytesPerCluster);
+                            ULONGLONG clusterOffset = offset % task.bytesPerCluster;
+
+                            CarvedFileInfo info;
+                            info.startLCN = absoluteLCN;
+                            info.startOffset = clusterOffset;
+                            info.fileSize = estimatedSize;
+                            info.extension = sig->extension;
+                            info.description = sig->description;
+                            info.hasValidFooter = (footerPos > 0);
+                            info.sizeIsEstimated = !isComplete;
+                            info.confidence = confidence;
+
+                            if (sig->extension == "zip") {
+                                string ooxmlType = FileCarver::DetectOOXMLTypeStatic(data + offset, remaining);
+                                if (!ooxmlType.empty()) {
+                                    info.extension = ooxmlType;
+                                    if (ooxmlType == "docx") info.description = "Microsoft Word Document (OOXML)";
+                                    else if (ooxmlType == "xlsx") info.description = "Microsoft Excel Spreadsheet (OOXML)";
+                                    else if (ooxmlType == "pptx") info.description = "Microsoft PowerPoint Presentation (OOXML)";
+                                    else if (ooxmlType == "ooxml") info.description = "Microsoft Office Document (OOXML)";
+                                }
+                            }
+
+                            if (IsMLEnabled()) {
+                                size_t mlDataSize = (size_t)(std::min)(remaining, (size_t)4096);
+                                EnhanceWithML(data + offset, mlDataSize, info);
+                            }
+
+                            localResults.push_back(info);
+                            offset += (size_t)min(estimatedSize, (ULONGLONG)remaining);
+                            goto simd_tail_next;
                         }
                     }
                 }
-
-                // ML增强
-                if (IsMLEnabled()) {
-                    size_t mlDataSize = (size_t)(std::min)(remaining, (size_t)4096);
-                    EnhanceWithML(data + offset, mlDataSize, info);
-                }
-
-                localResults.push_back(info);
-
-                skipUntil = offset + (size_t)min(estimatedSize, (ULONGLONG)remaining);
-                break;  // 跳出签名循环，处理下一个SIMD匹配
             }
         }
+
+        offset++;
+        simd_tail_next:;
     }
 }
 
@@ -477,24 +782,97 @@ void SignatureScanThreadPool::ScanChunkSimd(const ScanTask& task,
 // 获取SIMD信息
 // ============================================================================
 std::string SignatureScanThreadPool::GetSimdInfo() const {
-    auto level = simdScanner.GetSimdLevel();
-    switch (level) {
+    switch (simdLevel_) {
         case CpuFeatures::SimdLevel::AVX512: return "AVX-512";
         case CpuFeatures::SimdLevel::AVX2: return "AVX2";
+        case CpuFeatures::SimdLevel::SSE42: return "SSE4.2";
         case CpuFeatures::SimdLevel::SSE2: return "SSE2";
         default: return "Scalar";
     }
 }
 
 // ============================================================================
-// 签名匹配
+// 签名匹配（统一入口）
+// 根据签名长度和SIMD级别自动选择最优实现
 // ============================================================================
 bool SignatureScanThreadPool::MatchSignature(const BYTE* data, size_t dataSize,
                                               const vector<BYTE>& signature) {
-    if (dataSize < signature.size()) {
-        return false;
+    if (dataSize < signature.size()) return false;
+
+    size_t sigLen = signature.size();
+
+    // 短签名（< 4 字节）或不支持 SIMD：标量 memcmp 更快
+    if (sigLen < 4 || simdLevel_ < CpuFeatures::SimdLevel::SSE2) {
+        return MatchSignatureScalar(data, signature);
     }
+
+    // SIMD 需要至少读取 16 字节，数据不足时回退标量
+    if (dataSize < 16) {
+        return MatchSignatureScalar(data, signature);
+    }
+
+    return MatchSignatureSimd(data, dataSize, signature);
+}
+
+// ============================================================================
+// 标量签名匹配（memcmp 回退实现）
+// ============================================================================
+bool SignatureScanThreadPool::MatchSignatureScalar(const BYTE* data,
+                                                     const vector<BYTE>& signature) {
     return memcmp(data, signature.data(), signature.size()) == 0;
+}
+
+// ============================================================================
+// SIMD 优化签名匹配
+// SSE2：单次 16 字节比较覆盖 4-16 字节签名
+// AVX2：单次 32 字节比较覆盖 17-32 字节签名（预留扩展）
+// ============================================================================
+bool SignatureScanThreadPool::MatchSignatureSimd(const BYTE* data, size_t dataSize,
+                                                   const vector<BYTE>& signature) {
+    size_t sigLen = signature.size();
+    const BYTE* sigData = signature.data();
+
+    if (sigLen <= 16) {
+        // SSE2 路径：单次 16 字节比较
+        // data 侧：调用方已保证 dataSize >= 16
+        __m128i data_vec = _mm_loadu_si128(reinterpret_cast<const __m128i*>(data));
+
+        // signature 侧：可能不足 16 字节，使用栈缓冲区安全加载
+        alignas(16) BYTE sigBuf[16] = { 0 };
+        memcpy(sigBuf, sigData, sigLen);
+        __m128i sig_vec = _mm_load_si128(reinterpret_cast<const __m128i*>(sigBuf));
+
+        __m128i cmp = _mm_cmpeq_epi8(data_vec, sig_vec);
+        int mask = _mm_movemask_epi8(cmp);
+
+        // 只检查签名长度对应的低位
+        // 例如 sigLen=4 → expected_mask = 0x0F (0b00001111)
+        int expected_mask = (1 << sigLen) - 1;
+        return (mask & expected_mask) == expected_mask;
+    }
+    else if (simdLevel_ >= CpuFeatures::SimdLevel::AVX2 && sigLen <= 32) {
+        // AVX2 路径：单次 32 字节比较（当前签名最长 8 字节，此分支预留扩展）
+        if (dataSize < 32) {
+            return MatchSignatureScalar(data, signature);
+        }
+
+        __m256i data_vec = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(data));
+
+        alignas(32) BYTE sigBuf[32] = { 0 };
+        memcpy(sigBuf, sigData, sigLen);
+        __m256i sig_vec = _mm256_load_si256(reinterpret_cast<const __m256i*>(sigBuf));
+
+        __m256i cmp = _mm256_cmpeq_epi8(data_vec, sig_vec);
+        int mask = _mm256_movemask_epi8(cmp);
+
+        // 使用 unsigned 避免 sigLen >= 31 时的移位溢出
+        unsigned int expected_mask = (1u << sigLen) - 1u;
+        return (static_cast<unsigned int>(mask) & expected_mask) == expected_mask;
+    }
+    else {
+        // 超长签名（> 32 字节）：回退标量
+        return MatchSignatureScalar(data, signature);
+    }
 }
 
 // ============================================================================

@@ -36,6 +36,12 @@ x86/
 # Build directories
 # (已统一输出到解决方案根目录的 x64/)
 x64/
+
+# NuGet packages (can be restored via nuget restore)
+packages/
+*.nupkg
+*.snupkg
+
 # Cache files
 *.cache
 path_cache_*.bin
@@ -43,7 +49,20 @@ deleted_files_cache_*.bin
 
 # Debug logs
 debug*.log
-/nul
+
+# Temporary device files (Windows null device and similar)
+nul
+null
+NUL
+NULL
+*.tmp
+*.temp
+
+# Unit testing
+TestResults/
+test_results.xml
+test_report_*.json
+*.trx
 
 # Claude output
 .claude/
