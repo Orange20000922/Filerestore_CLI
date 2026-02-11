@@ -240,6 +240,12 @@
     <ClCompile Include="src\tui\components\OutputCapture.cpp">
       <Filter>源文件\UI</Filter>
     </ClCompile>
+    <ClCompile Include="src\tui\CommandHelper.cpp">
+      <Filter>源文件\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tui\TuiProgressTracker.cpp">
+      <Filter>源文件\UI</Filter>
+    </ClCompile>
   </ItemGroup>
   <!-- ============================================================================ -->
   <!-- 头文件 (.h) -->
@@ -394,6 +400,12 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\tui\components\OutputCapture.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tui\CommandHelper.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tui\TuiProgressTracker.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

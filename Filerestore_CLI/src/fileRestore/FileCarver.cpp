@@ -496,7 +496,10 @@ string FileCarver::DetectOOXMLType(const BYTE* data, size_t dataSize) {
     WORD filenameLen = *(WORD*)(data + 26);
     WORD extraLen = *(WORD*)(data + 28);
 
-    if (filenameLen == 0 || 30 + filenameLen > dataSize) {
+    // 安全检查：文件名长度不应超过 1KB（合理的最大值）
+    const WORD MAX_FILENAME_LEN = 1024;
+    if (filenameLen == 0 || filenameLen > MAX_FILENAME_LEN ||
+        30 + filenameLen > dataSize) {
         return "";
     }
 
@@ -543,7 +546,9 @@ string FileCarver::DetectOOXMLType(const BYTE* data, size_t dataSize) {
                 WORD exLen = *(WORD*)(data + offset + 28);
                 DWORD cmpSize = *(DWORD*)(data + offset + 18);
 
-                if (fnLen > 0 && offset + 30 + fnLen <= dataSize) {
+                // 安全检查：文件名长度不应超过 1KB
+                if (fnLen > 0 && fnLen <= MAX_FILENAME_LEN &&
+                    offset + 30 + fnLen <= dataSize) {
                     string fn((char*)(data + offset + 30), fnLen);
 
                     if (fn.substr(0, 5) == "word/" || fn == "word") {
@@ -1939,6 +1944,13 @@ vector<CarvedFileInfo> FileCarver::ScanForFileTypesThreadPool(const vector<strin
     cout << "Total tasks: " << scanThreadPool->GetTotalTasks() << endl;
     cout << "Completed tasks: " << scanThreadPool->GetCompletedTasks() << endl;
 
+    // 内存限制警告
+    if (scanThreadPool->IsMemoryLimitExceeded()) {
+        cout << "\n[WARNING] Scan was truncated due to memory limit (1GB)." << endl;
+        cout << "Results memory usage: " << (scanThreadPool->GetTotalResultsMemory() / (1024 * 1024)) << " MB" << endl;
+        cout << "Some files may not have been detected. Consider scanning in smaller regions." << endl;
+    }
+
     // 显示ML分类统计
     if (mlEnabled) {
         cout << "\n--- ML Classification Statistics ---" << endl;
@@ -2965,7 +2977,10 @@ string FileCarver::DetectOOXMLTypeStatic(const BYTE* data, size_t dataSize) {
     WORD filenameLen = *(WORD*)(data + 26);
     WORD extraLen = *(WORD*)(data + 28);
 
-    if (filenameLen == 0 || 30 + filenameLen > dataSize) {
+    // 安全检查：文件名长度不应超过 1KB
+    const WORD MAX_FILENAME_LEN = 1024;
+    if (filenameLen == 0 || filenameLen > MAX_FILENAME_LEN ||
+        30 + filenameLen > dataSize) {
         return "";
     }
 
@@ -2998,7 +3013,9 @@ string FileCarver::DetectOOXMLTypeStatic(const BYTE* data, size_t dataSize) {
                 WORD exLen = *(WORD*)(data + offset + 28);
                 DWORD cmpSize = *(DWORD*)(data + offset + 18);
 
-                if (fnLen > 0 && offset + 30 + fnLen <= dataSize) {
+                // 安全检查：文件名长度不应超过 1KB
+                if (fnLen > 0 && fnLen <= MAX_FILENAME_LEN &&
+                    offset + 30 + fnLen <= dataSize) {
                     string fn((char*)(data + offset + 30), fnLen);
 
                     if (fn.substr(0, 5) == "word/" || fn == "word") {
@@ -3275,7 +3292,7 @@ ULONGLONG FileCarver::EstimateFileSizeStatic(const BYTE* data, size_t dataSize,
         return min((ULONGLONG)dataSize, sig.maxSize);
     }
 
-    // ZIP 文件特殊处理：优先使用 EOCD 查找，失败则遍历头部估算
+	// ZIP 文件特殊处理：使用EOCD定位文件结束，并验证结构合理性
     if (sig.extension == "zip") {
         footerPos = FindZipEndOfCentralDirectoryStatic(data, dataSize);
         if (footerPos > 0) {
@@ -3619,7 +3636,7 @@ vector<CarvedFileInfo> FileCarver::ScanHybridMode(
 }
 
 // ============================================================================
-// 基于结构的 ZIP 恢复（扫描到 EOCD）
+// 基于结构的 ZIP 恢复（扫描到 EOCD）- 智能路由器
 // ============================================================================
 
 FileCarver::ZipRecoveryResult FileCarver::RecoverZipWithEOCDScan(
@@ -3627,10 +3644,50 @@ FileCarver::ZipRecoveryResult FileCarver::RecoverZipWithEOCDScan(
     const string& outputPath,
     const ZipRecoveryConfig& config
 ) {
+    // 智能策略选择：根据预期大小决定使用内存缓冲还是流式写入
+    ULONGLONG estimatedSize = config.expectedSize;
+    bool useStreamingMode = false;
+
+    // 决策逻辑
+    if (estimatedSize == 0) {
+        // 大小未知 → 流式写入 + 硬限制（防止内存泄漏）
+        useStreamingMode = true;
+        LOG_INFO("Unknown size: using streaming mode with " +
+                 to_string(MAX_STREAMING_LIMIT / (1024 * 1024)) + "MB limit");
+    } else if (estimatedSize <= MEMORY_BUFFER_THRESHOLD) {
+        // 小文件 (≤256MB) → 内存缓冲（性能优先）
+        useStreamingMode = false;
+        LOG_INFO("Small file (" + to_string(estimatedSize / (1024 * 1024)) +
+                 "MB): using memory buffer");
+    } else {
+        // 大文件 (>256MB) → 流式写入
+        useStreamingMode = true;
+        LOG_INFO("Large file (" + to_string(estimatedSize / (1024 * 1024)) +
+                 "MB): using streaming mode");
+    }
+
+    // 路由到对应实现
+    if (useStreamingMode) {
+        return RecoverZipWithEOCDScan_Streaming(startLCN, outputPath, config, estimatedSize);
+    } else {
+        return RecoverZipWithEOCDScan_MemoryBuffer(startLCN, outputPath, config, estimatedSize);
+    }
+}
+
+// ============================================================================
+// 内存缓冲模式（小文件/已知大小 ≤256MB）
+// ============================================================================
+
+FileCarver::ZipRecoveryResult FileCarver::RecoverZipWithEOCDScan_MemoryBuffer(
+    ULONGLONG startLCN,
+    const string& outputPath,
+    const ZipRecoveryConfig& config,
+    ULONGLONG estimatedSize
+) {
     ZipRecoveryResult result;
     result.diagnosis = "";
 
-    LOG_INFO("Starting ZIP recovery with EOCD scan from LCN " + to_string(startLCN));
+    LOG_INFO("Starting ZIP recovery (memory buffer mode) from LCN " + to_string(startLCN));
 
     // 获取簇大小
     ULONGLONG bytesPerCluster = reader->GetBytesPerCluster();
@@ -3712,6 +3769,20 @@ FileCarver::ZipRecoveryResult FileCarver::RecoverZipWithEOCDScan(
             }
         } else {
             // 未找到 EOCD，追加整个块
+
+            // 安全检查：防止内存缓冲区无限增长（防御性编程）
+            ULONGLONG maxBufferSize = estimatedSize > 0 ?
+                min(estimatedSize * 2, MAX_STREAMING_LIMIT) : MAX_STREAMING_LIMIT;
+
+            if (fileBuffer.size() + chunkSize > maxBufferSize) {
+                result.success = false;
+                result.diagnosis = "Memory buffer limit (" +
+                                  to_string(maxBufferSize / (1024 * 1024)) +
+                                  "MB) exceeded without finding EOCD. File likely corrupted.";
+                LOG_WARNING(result.diagnosis);
+                break;
+            }
+
             fileBuffer.insert(fileBuffer.end(), chunk.begin(), chunk.end());
             bytesRead += chunkSize;
         }
@@ -3801,6 +3872,190 @@ FileCarver::ZipRecoveryResult FileCarver::RecoverZipWithEOCDScan(
 
     LOG_INFO("ZIP recovery completed: " + to_string(result.actualSize) +
              " bytes written to " + outputPath);
+    cout << "Recovered " << (result.actualSize / 1024) << " KB to " << outputPath << endl;
+
+    return result;
+}
+
+// ============================================================================
+// 流式写入模式（大文件/未知大小）
+// ============================================================================
+
+FileCarver::ZipRecoveryResult FileCarver::RecoverZipWithEOCDScan_Streaming(
+    ULONGLONG startLCN,
+    const string& outputPath,
+    const ZipRecoveryConfig& config,
+    ULONGLONG estimatedSize
+) {
+    ZipRecoveryResult result;
+    result.diagnosis = "";
+
+    LOG_INFO("Starting ZIP recovery (streaming mode) from LCN " + to_string(startLCN));
+
+    // 获取簇大小
+    ULONGLONG bytesPerCluster = reader->GetBytesPerCluster();
+    if (bytesPerCluster == 0) {
+        result.diagnosis = "Invalid bytes per cluster";
+        LOG_ERROR(result.diagnosis);
+        return result;
+    }
+
+    // 流式写入配置
+    const size_t STREAM_BUFFER_SIZE = 32 * 1024 * 1024;  // 32MB 滚动缓冲区
+    const size_t CHUNK_SIZE = 4 * 1024 * 1024;           // 4MB 读取块
+    const size_t CLUSTERS_PER_CHUNK = CHUNK_SIZE / static_cast<size_t>(bytesPerCluster);
+
+    // 确定最大搜索大小
+    ULONGLONG maxSearchSize = config.maxSize;
+    if (estimatedSize > 0) {
+        // 如果有预期大小，使用 1.2x 容差
+        maxSearchSize = min(maxSearchSize, static_cast<ULONGLONG>(estimatedSize * 1.2));
+    } else {
+        // 未知大小：使用硬限制防止内存泄漏
+        maxSearchSize = min(maxSearchSize, MAX_STREAMING_LIMIT);
+    }
+
+    LOG_INFO("Streaming mode: maxSearch=" + to_string(maxSearchSize / (1024 * 1024)) + "MB");
+
+    // 打开输出文件（流式写入）
+    HANDLE hFile = CreateFileA(outputPath.c_str(), GENERIC_WRITE, 0, NULL,
+                               CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        result.diagnosis = "Failed to create output file: " + outputPath;
+        LOG_ERROR(result.diagnosis);
+        return result;
+    }
+
+    // 小缓冲区（用于滚动）
+    vector<BYTE> streamBuffer;
+    streamBuffer.reserve(STREAM_BUFFER_SIZE);
+
+    vector<BYTE> chunk(CHUNK_SIZE);
+    ULONGLONG currentLCN = startLCN;
+    ULONGLONG bytesRead = 0;
+    ULONGLONG bytesWritten = 0;
+    bool foundEOCD = false;
+    ULONGLONG eocdPosition = 0;
+
+    cout << "Streaming ZIP recovery (max " << (maxSearchSize / (1024 * 1024))
+         << " MB)..." << endl;
+
+    while (bytesRead < maxSearchSize && !shouldStop) {
+        // 读取块
+        if (!reader->ReadClusters(currentLCN, CLUSTERS_PER_CHUNK, chunk)) {
+            result.diagnosis = "Failed to read cluster at LCN " + to_string(currentLCN);
+            LOG_WARNING(result.diagnosis);
+
+            if (config.allowFragmented) {
+                // 跳过无法读取的块，继续搜索
+                result.isFragmented = true;
+                currentLCN += CLUSTERS_PER_CHUNK;
+                bytesRead += CHUNK_SIZE;
+                continue;
+            } else {
+                break;
+            }
+        }
+
+        if (chunk.empty()) {
+            break;
+        }
+
+        size_t chunkSize = chunk.size();
+
+        // 在当前块中搜索 EOCD
+        ULONGLONG eocdInChunk = FindZipEndOfCentralDirectoryStatic(chunk.data(), chunkSize);
+
+        if (eocdInChunk > 0) {
+            // ✅ 找到 EOCD！
+            foundEOCD = true;
+            eocdPosition = bytesRead + eocdInChunk;
+
+            // 1. 刷新缓冲区中的数据
+            if (!streamBuffer.empty()) {
+                DWORD written = 0;
+                WriteFile(hFile, streamBuffer.data(),
+                         static_cast<DWORD>(streamBuffer.size()), &written, NULL);
+                bytesWritten += written;
+                streamBuffer.clear();
+            }
+
+            // 2. 写入 EOCD 之前的数据
+            DWORD written = 0;
+            WriteFile(hFile, chunk.data(), static_cast<DWORD>(eocdInChunk), &written, NULL);
+            bytesWritten += written;
+
+            LOG_INFO("EOCD found at position " + to_string(eocdPosition));
+            result.diagnosis = "EOCD found at offset " + to_string(eocdPosition);
+
+            if (config.stopOnFirstEOCD) {
+                break;
+            }
+        } else {
+            // 未找到 EOCD，追加到缓冲区
+            streamBuffer.insert(streamBuffer.end(), chunk.begin(), chunk.end());
+            bytesRead += chunkSize;
+
+            // 缓冲区满了，刷新到磁盘
+            if (streamBuffer.size() >= STREAM_BUFFER_SIZE) {
+                DWORD written = 0;
+                BOOL success = WriteFile(hFile, streamBuffer.data(),
+                                        static_cast<DWORD>(streamBuffer.size()),
+                                        &written, NULL);
+                if (!success) {
+                    CloseHandle(hFile);
+                    result.diagnosis = "Failed to write to file";
+                    LOG_ERROR(result.diagnosis);
+                    return result;
+                }
+
+                bytesWritten += written;
+                streamBuffer.clear();
+
+                LOG_DEBUG("Flushed " + to_string(written / (1024 * 1024)) + "MB to disk");
+            }
+        }
+
+        currentLCN += CLUSTERS_PER_CHUNK;
+
+        // 进度显示（每 16MB）
+        if (bytesRead % (16 * 1024 * 1024) == 0) {
+            cout << "\rStreaming: " << (bytesRead / (1024 * 1024)) << " MB"
+                 << " (written: " << (bytesWritten / (1024 * 1024)) << " MB)" << flush;
+        }
+    }
+
+    // 刷新剩余缓冲区
+    if (!streamBuffer.empty()) {
+        DWORD written = 0;
+        WriteFile(hFile, streamBuffer.data(),
+                 static_cast<DWORD>(streamBuffer.size()), &written, NULL);
+        bytesWritten += written;
+    }
+
+    CloseHandle(hFile);
+    cout << "\r                                                " << endl;
+
+    // 结果处理
+    result.actualSize = bytesWritten;
+    result.bytesWritten = bytesWritten;
+
+    if (!foundEOCD) {
+        result.success = false;
+        result.diagnosis = "EOCD not found within " + to_string(bytesRead) + " bytes";
+        LOG_WARNING(result.diagnosis);
+
+        // 保存为不完整文件
+        string incompletePath = outputPath + ".incomplete";
+        if (MoveFileA(outputPath.c_str(), incompletePath.c_str())) {
+            result.diagnosis += "; Incomplete data saved to " + incompletePath;
+        }
+
+        return result;
+    }
+
+    result.success = true;
+    LOG_INFO("ZIP streaming recovery successful: " + to_string(bytesWritten) + " bytes");
     cout << "Recovered " << (result.actualSize / 1024) << " KB to " << outputPath << endl;
 
     return result;

@@ -168,6 +168,12 @@ void SignatureScanThreadPool::WorkerFunction() {
         // 通知可能在等待队列空位的生产者
         queueNotFull.notify_one();
 
+        // 内存超限检查：跳过扫描，只消费任务队列
+        if (memoryLimitExceeded.load()) {
+            completedTasks++;
+            continue;
+        }
+
         // 执行扫描任务
         vector<CarvedFileInfo> localResults;
 
@@ -185,8 +191,33 @@ void SignatureScanThreadPool::WorkerFunction() {
             LOG_ERROR("Unknown exception in worker thread");
         }
 
-        // 保存结果
+        // 保存结果（含内存限制检查）
         {
+            // 估算本次结果内存占用
+            ULONGLONG resultMemory = localResults.size() * sizeof(CarvedFileInfo);
+            ULONGLONG currentTotal = totalResultsMemory.fetch_add(resultMemory) + resultMemory;
+
+            // 检查是否超过 1GB 硬限制
+            if (currentTotal > MAX_RESULTS_MEMORY) {
+                if (!memoryLimitExceeded.exchange(true)) {
+                    // 只输出一次警告
+                    LOG_ERROR_FMT("Memory limit exceeded: results memory = %llu MB (limit: %llu MB). "
+                                  "Stopping scan to prevent OOM.",
+                                  currentTotal / (1024 * 1024),
+                                  MAX_RESULTS_MEMORY / (1024 * 1024));
+                    cerr << "\n[ERROR] Scan results memory exceeded 1GB limit ("
+                         << (currentTotal / (1024 * 1024)) << " MB). "
+                         << "Stopping scan. Found " << totalFilesFound.load()
+                         << " files so far." << endl;
+                }
+                // 丢弃本次结果，回退内存计数
+                totalResultsMemory.fetch_sub(resultMemory);
+                localResults.clear();
+                completedTasks++;
+                totalBytesScanned += task.dataSize;
+                continue;
+            }
+
             lock_guard<mutex> lock(resultsMutex);
             ScanTaskResult result;
             result.taskId = task.taskId;
@@ -275,6 +306,12 @@ void SignatureScanThreadPool::ScanChunk(const ScanTask& task,
                     if (sig->extension == "zip") {
                         estimatedSize = FileCarver::EstimateFileSizeStatic(
                             data + offset, remaining, *sig, &footerPos, &isComplete);
+
+                        // ZIP 必须找到 EOCD 才有效，无 EOCD 的 ZIP 完全跳过
+                        if (estimatedSize == 0) {
+                            offset += sig->header.size();
+                            goto next_position;
+                        }
                     } else {
                         estimatedSize = EstimateFileSize(data + offset, remaining, *sig);
                         isComplete = false;  // 轻量级估算无法确定完整性
@@ -336,7 +373,9 @@ void SignatureScanThreadPool::ScanChunk(const ScanTask& task,
                         localResults.push_back(info);
 
                         // 跳过当前文件区域（避免重复检测）
-                        offset += (size_t)min(estimatedSize, (ULONGLONG)remaining);
+                        // 如果 estimatedSize 为 0（如 ZIP 找不到 EOCD），跳过最小签名长度避免死循环
+                        size_t skipSize = (estimatedSize > 0) ? (size_t)min(estimatedSize, (ULONGLONG)remaining) : sig->header.size();
+                        offset += skipSize;
                         goto next_position;
                     }
                 }
@@ -454,6 +493,13 @@ void SignatureScanThreadPool::ScanChunkSimd(const ScanTask& task,
                     if (sig->extension == "zip") {
                         estimatedSize = FileCarver::EstimateFileSizeStatic(
                             data + matchOffset, remaining, *sig, &footerPos, &isComplete);
+
+                        // ZIP 必须找到 EOCD 才有效
+                        if (estimatedSize == 0) {
+                            offset = matchOffset + sig->header.size();
+                            fileFound = true;
+                            break;
+                        }
                     } else {
                         estimatedSize = EstimateFileSize(data + matchOffset, remaining, *sig);
                         isComplete = false;
@@ -510,7 +556,8 @@ void SignatureScanThreadPool::ScanChunkSimd(const ScanTask& task,
                         localResults.push_back(info);
 
                         // 跳过已识别文件区域
-                        size_t skipSize = (size_t)min(estimatedSize, (ULONGLONG)remaining);
+                        // 如果 estimatedSize 为 0（如 ZIP 找不到 EOCD），跳过最小签名长度避免死循环
+                        size_t skipSize = (estimatedSize > 0) ? (size_t)min(estimatedSize, (ULONGLONG)remaining) : sig->header.size();
                         offset = matchOffset + skipSize;
                         fileFound = true;
                         break;  // 跳出签名循环
@@ -607,6 +654,13 @@ void SignatureScanThreadPool::ScanChunkSimd(const ScanTask& task,
                     if (sig->extension == "zip") {
                         estimatedSize = FileCarver::EstimateFileSizeStatic(
                             data + matchOffset, remaining, *sig, &footerPos, &isComplete);
+
+                        // ZIP 必须找到 EOCD 才有效
+                        if (estimatedSize == 0) {
+                            offset = matchOffset + sig->header.size();
+                            fileFound = true;
+                            break;
+                        }
                     } else {
                         estimatedSize = EstimateFileSize(data + matchOffset, remaining, *sig);
                         isComplete = false;
@@ -660,7 +714,8 @@ void SignatureScanThreadPool::ScanChunkSimd(const ScanTask& task,
 
                         localResults.push_back(info);
 
-                        size_t skipSize = (size_t)min(estimatedSize, (ULONGLONG)remaining);
+                        // 如果 estimatedSize 为 0（如 ZIP 找不到 EOCD），跳过最小签名长度避免死循环
+                        size_t skipSize = (estimatedSize > 0) ? (size_t)min(estimatedSize, (ULONGLONG)remaining) : sig->header.size();
                         offset = matchOffset + skipSize;
                         fileFound = true;
                         break;
@@ -724,6 +779,12 @@ void SignatureScanThreadPool::ScanChunkSimd(const ScanTask& task,
                         if (sig->extension == "zip") {
                             estimatedSize = FileCarver::EstimateFileSizeStatic(
                                 data + offset, remaining, *sig, &footerPos, &isComplete);
+
+                            // ZIP 必须找到 EOCD 才有效
+                            if (estimatedSize == 0) {
+                                offset += sig->header.size();
+                                goto simd_tail_next;
+                            }
                         } else {
                             estimatedSize = EstimateFileSize(data + offset, remaining, *sig);
                             isComplete = false;
@@ -765,7 +826,9 @@ void SignatureScanThreadPool::ScanChunkSimd(const ScanTask& task,
                             }
 
                             localResults.push_back(info);
-                            offset += (size_t)min(estimatedSize, (ULONGLONG)remaining);
+                            // 如果 estimatedSize 为 0（如 ZIP 找不到 EOCD），跳过最小签名长度避免死循环
+                            size_t skipSize = (estimatedSize > 0) ? (size_t)min(estimatedSize, (ULONGLONG)remaining) : sig->header.size();
+                            offset += skipSize;
                             goto simd_tail_next;
                         }
                     }

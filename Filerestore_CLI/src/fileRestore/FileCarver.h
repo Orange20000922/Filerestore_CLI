@@ -110,7 +110,6 @@ private:
     CarvingStats stats;
     atomic<bool> shouldStop;                    // 中断标志（线程安全）
 
-    // ==================== 异步I/O 双缓冲 ====================
     // 双缓冲区
     ScanBuffer buffers[2];
     int currentReadBuffer;                      // 当前正在读取的缓冲区
@@ -478,6 +477,25 @@ public:
     static ZipRecoveryResult ValidateZipData(const BYTE* data, size_t dataSize);
 
 private:
+    // ZIP 恢复的内部实现（根据大小自动选择策略）
+    static constexpr ULONGLONG MEMORY_BUFFER_THRESHOLD = 256ULL * 1024 * 1024;  // 256MB 阈值
+    static constexpr ULONGLONG MAX_STREAMING_LIMIT = 512ULL * 1024 * 1024;      // 512MB 流式硬限制
+
+    // 内存缓冲模式（小文件/已知大小 ≤256MB）
+    ZipRecoveryResult RecoverZipWithEOCDScan_MemoryBuffer(
+        ULONGLONG startLCN,
+        const string& outputPath,
+        const ZipRecoveryConfig& config,
+        ULONGLONG estimatedSize
+    );
+
+    // 流式写入模式（大文件/未知大小）
+    ZipRecoveryResult RecoverZipWithEOCDScan_Streaming(
+        ULONGLONG startLCN,
+        const string& outputPath,
+        const ZipRecoveryConfig& config,
+        ULONGLONG estimatedSize
+    );
     // 完整性验证相关成员
     bool integrityValidationEnabled;
     size_t validatedCount;

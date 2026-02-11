@@ -96,7 +96,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;$(ProjectDir)src\platform;$(ProjectDir)src\tui;$(ProjectDir)third_party;$(ProjectDir)deps\ftxui\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>/utf-8 /arch:AVX2 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/utf-8 /arch:AVX2 /MP %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -115,7 +115,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;$(ProjectDir)src\platform;$(ProjectDir)src\tui;$(ProjectDir)third_party;$(ProjectDir)deps\ftxui\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>/utf-8 /arch:AVX2 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/utf-8 /arch:AVX2 /MP %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -132,7 +132,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;$(ProjectDir)src\platform;$(ProjectDir)src\tui;$(ProjectDir)third_party;$(ProjectDir)deps\ftxui\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>/utf-8 /arch:AVX2 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/utf-8 /arch:AVX2 /MP %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -153,7 +153,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;$(ProjectDir)src\platform;$(ProjectDir)src\tui;$(ProjectDir)third_party;$(ProjectDir)deps\ftxui\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalOptions>/utf-8 /arch:AVX2 %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/utf-8 /arch:AVX2 /MP %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

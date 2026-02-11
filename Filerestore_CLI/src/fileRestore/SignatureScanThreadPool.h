@@ -101,6 +101,11 @@ private:
     atomic<ULONGLONG> totalFilesFound;
     atomic<ULONGLONG> totalBytesScanned;
 
+    // ==================== 内存安全限制 ====================
+    static constexpr size_t MAX_RESULTS_MEMORY = 1ULL * 1024 * 1024 * 1024;  // 1GB 硬限制
+    atomic<ULONGLONG> totalResultsMemory{0};   // 全局结果内存占用追踪
+    atomic<bool> memoryLimitExceeded{false};    // 内存超限标志
+
     // ==================== 配置 ====================
     ScanThreadPoolConfig config;
 
@@ -192,6 +197,8 @@ public:
     int GetTotalTasks() const { return totalTasks.load(); }
     int GetPendingTasks() const { return totalTasks.load() - completedTasks.load(); }
     ULONGLONG GetTotalFilesFound() const { return totalFilesFound.load(); }
+    bool IsMemoryLimitExceeded() const { return memoryLimitExceeded.load(); }
+    ULONGLONG GetTotalResultsMemory() const { return totalResultsMemory.load(); }
     ULONGLONG GetTotalBytesScanned() const { return totalBytesScanned.load(); }
 
     // 检查是否正在运行

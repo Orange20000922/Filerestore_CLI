@@ -142,38 +142,55 @@ static string GetTimestampSourceStr(TimestampSource source) {
 static void SaveScanResults(const vector<CarvedFileInfo>& results, char driveLetter) {
 	lastCarveDrive = driveLetter;
 
-	if (results.size() >= 1000) {
-		cout << "\n=== Saving " << results.size() << " results to cache ===" << endl;
+	// 所有通过筛选的结果都保存到cache（高质量候选文件）
+	if (results.empty()) {
+		cout << "\nNo results to save." << endl;
+		lastCarveResults.clear();
+		useMemoryMapping = false;
+		return;
+	}
 
-		if (!resultsCache) {
-			resultsCache = make_unique<CarvedResultsCache>();
+	cout << "\n=== Saving " << results.size() << " results to cache ===" << endl;
+
+	if (!resultsCache) {
+		resultsCache = make_unique<CarvedResultsCache>();
+	}
+
+	if (resultsCache->SaveResults(results, driveLetter)) {
+		cout << "Results saved to cache file: " << resultsCache->GetCachePath() << endl;
+
+		ULONGLONG cacheSize = resultsCache->GetCacheSize(driveLetter);
+		if (cacheSize > 0) {
+			cout << "Cache size: " << (cacheSize / 1024) << " KB";
+			if (cacheSize >= 1024 * 1024) {
+				cout << " (" << (cacheSize / (1024 * 1024)) << " MB)";
+			}
+			cout << endl;
+		} else {
+			cout << "Warning: Cache file created but size is 0 (possible write issue)" << endl;
 		}
 
-		if (resultsCache->SaveResults(results, driveLetter)) {
-			cout << "Results saved to cache file: " << resultsCache->GetCachePath() << endl;
-			cout << "Cache size: " << (resultsCache->GetCacheSize(driveLetter) / (1024 * 1024)) << " MB" << endl;
+		lastCarveResults.clear();
 
-			lastCarveResults.clear();
+		// 大结果集使用内存映射
+		if (MemoryMappedResults::ShouldUseMemoryMapping(results.size())) {
+			cout << "\nUsing memory-mapped files for large result set..." << endl;
 
-			if (MemoryMappedResults::ShouldUseMemoryMapping(results.size())) {
-				cout << "\nUsing memory-mapped files for large result set..." << endl;
-
-				if (!mappedResults) {
-					mappedResults = make_unique<MemoryMappedResults>();
-				}
-
-				if (mappedResults->OpenFromCache(resultsCache->GetCachePath())) {
-					useMemoryMapping = true;
-					cout << "Memory mapping enabled (" << results.size() << " records)" << endl;
-				}
+			if (!mappedResults) {
+				mappedResults = make_unique<MemoryMappedResults>();
 			}
 
-			currentPageIndex = 0;
+			if (mappedResults->OpenFromCache(resultsCache->GetCachePath())) {
+				useMemoryMapping = true;
+				cout << "Memory mapping enabled (" << results.size() << " records)" << endl;
+			}
 		} else {
-			cout << "Failed to save cache, keeping results in memory" << endl;
-			lastCarveResults = results;
+			useMemoryMapping = false;
 		}
+
+		currentPageIndex = 0;
 	} else {
+		cout << "Failed to save cache, keeping results in memory" << endl;
 		lastCarveResults = results;
 		useMemoryMapping = false;
 	}
@@ -379,7 +396,26 @@ void CarveCommand::Execute(string command) {
 				}
 				outputPath += "carved_" + to_string(i) + "." + info.extension;
 
-				if (carver.RecoverCarvedFile(info, outputPath)) {
+				// ZIP/OOXML 使用智能恢复（EOCD扫描 + CRC校验）
+				bool isZipType = (info.extension == "zip" || info.extension == "docx" ||
+				                  info.extension == "xlsx" || info.extension == "pptx" ||
+				                  info.extension == "ooxml");
+
+				if (isZipType) {
+					FileCarver::ZipRecoveryConfig config;
+					config.verifyCRC = true;
+					config.stopOnFirstEOCD = true;
+					if (info.fileSize > 0) {
+						config.expectedSize = info.fileSize;
+						config.expectedSizeTolerance = info.fileSize / 5;
+					}
+					auto result = carver.RecoverZipWithEOCDScan(info.startLCN, outputPath, config);
+					if (result.success) {
+						recoveredCount++;
+					} else if (carver.RecoverCarvedFile(info, outputPath)) {
+						recoveredCount++;
+					}
+				} else if (carver.RecoverCarvedFile(info, outputPath)) {
 					recoveredCount++;
 				}
 
@@ -1802,14 +1838,45 @@ void CarveRecoverPageCommand::Execute(string command) {
 
 							string outputPath = outputDir + filename;
 
-							// 检查是否为 ZIP 且大小是估算的，提示使用 'z' 命令
-							bool needEOCDScan = (info.extension == "zip" && info.sizeIsEstimated) ||
-							                    (info.extension == "zip" && forceScanEOCD);
-							if (needEOCDScan) {
-								cout << "  [" << pageIdx << "] Note: ZIP with estimated size. Consider using 'z " << pageIdx << "' for smart recovery." << endl;
-							}
+							// ZIP/OOXML 使用智能恢复（EOCD扫描 + CRC校验）
+							bool isZipType = (info.extension == "zip" || info.extension == "docx" ||
+							                  info.extension == "xlsx" || info.extension == "pptx" ||
+							                  info.extension == "ooxml");
 
-							if (carver.RecoverCarvedFile(info, outputPath)) {
+							if (isZipType) {
+								FileCarver::ZipRecoveryConfig config;
+								config.verifyCRC = true;
+								config.stopOnFirstEOCD = true;
+								if (info.fileSize > 0) {
+									config.expectedSize = info.fileSize;
+									config.expectedSizeTolerance = info.fileSize / 5;  // 20% 容差
+								}
+
+								auto result = carver.RecoverZipWithEOCDScan(info.startLCN, outputPath, config);
+
+								if (result.success) {
+									cout << "  [" << pageIdx << "] Recovered: " << filename;
+									if (result.crcValid) {
+										cout << " [CRC OK]";
+									} else {
+										cout << " [CRC WARN]";
+									}
+									if (result.actualSize != info.fileSize) {
+										long long delta = (long long)result.actualSize - (long long)info.fileSize;
+										cout << " (" << (delta > 0 ? "+" : "") << (delta / 1024) << " KB)";
+									}
+									cout << endl;
+									pageRecovered++;
+								} else {
+									// EOCD扫描失败，回退到普通恢复
+									if (carver.RecoverCarvedFile(info, outputPath)) {
+										cout << "  [" << pageIdx << "] Recovered (fallback): " << filename << " [NO EOCD]" << endl;
+										pageRecovered++;
+									} else {
+										cout << "  [" << pageIdx << "] FAILED to recover" << endl;
+									}
+								}
+							} else if (carver.RecoverCarvedFile(info, outputPath)) {
 								cout << "  [" << pageIdx << "] Recovered: " << filename;
 								if (forceMode && info.confidence < 0.5) {
 									cout << " [FORCED]";

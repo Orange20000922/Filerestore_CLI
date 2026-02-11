@@ -748,10 +748,42 @@ void RecoverCommand::Execute(string command) {
 
         cout << "\n正在恢复到: " << outputPath << " ..." << endl;
 
-        if (carver.RecoverCarvedFile(selected.carveInfo, outputPath)) {
-            cout << "恢复成功!" << endl;
-            cout << "文件大小: " << selected.carveInfo.fileSize << " bytes" << endl;
+        // ZIP/OOXML 使用智能恢复（EOCD扫描 + CRC校验）
+        bool isZipType = (selected.carveInfo.extension == "zip" || selected.carveInfo.extension == "docx" ||
+                          selected.carveInfo.extension == "xlsx" || selected.carveInfo.extension == "pptx" ||
+                          selected.carveInfo.extension == "ooxml");
+
+        bool recovered = false;
+        if (isZipType) {
+            FileCarver::ZipRecoveryConfig config;
+            config.verifyCRC = true;
+            config.stopOnFirstEOCD = true;
+            if (selected.carveInfo.fileSize > 0) {
+                config.expectedSize = selected.carveInfo.fileSize;
+                config.expectedSizeTolerance = selected.carveInfo.fileSize / 5;
+            }
+            auto result = carver.RecoverZipWithEOCDScan(selected.carveInfo.startLCN, outputPath, config);
+            if (result.success) {
+                recovered = true;
+                cout << "恢复成功!" << endl;
+                cout << "文件大小: " << result.actualSize << " bytes" << endl;
+                cout << "CRC校验: " << (result.crcValid ? "通过" : "警告") << endl;
+            } else {
+                // 回退到普通恢复
+                recovered = carver.RecoverCarvedFile(selected.carveInfo, outputPath);
+                if (recovered) {
+                    cout << "恢复成功 (无EOCD，使用估算大小)" << endl;
+                }
+            }
         } else {
+            recovered = carver.RecoverCarvedFile(selected.carveInfo, outputPath);
+            if (recovered) {
+                cout << "恢复成功!" << endl;
+                cout << "文件大小: " << selected.carveInfo.fileSize << " bytes" << endl;
+            }
+        }
+
+        if (!recovered) {
             cout << "恢复失败" << endl;
         }
     } else {
@@ -779,10 +811,41 @@ void RecoverCommand::Execute(string command) {
 
         cout << "\n正在恢复最佳匹配到: " << outputPath << " ..." << endl;
 
-        if (carver.RecoverCarvedFile(best.carveInfo, outputPath)) {
-            cout << "恢复成功!" << endl;
-            cout << "文件大小: " << best.carveInfo.fileSize << " bytes" << endl;
+        // ZIP/OOXML 使用智能恢复（EOCD扫描 + CRC校验）
+        bool isZipType = (best.carveInfo.extension == "zip" || best.carveInfo.extension == "docx" ||
+                          best.carveInfo.extension == "xlsx" || best.carveInfo.extension == "pptx" ||
+                          best.carveInfo.extension == "ooxml");
+
+        bool recovered = false;
+        if (isZipType) {
+            FileCarver::ZipRecoveryConfig config;
+            config.verifyCRC = true;
+            config.stopOnFirstEOCD = true;
+            if (best.carveInfo.fileSize > 0) {
+                config.expectedSize = best.carveInfo.fileSize;
+                config.expectedSizeTolerance = best.carveInfo.fileSize / 5;
+            }
+            auto result = carver.RecoverZipWithEOCDScan(best.carveInfo.startLCN, outputPath, config);
+            if (result.success) {
+                recovered = true;
+                cout << "恢复成功!" << endl;
+                cout << "文件大小: " << result.actualSize << " bytes" << endl;
+                cout << "CRC校验: " << (result.crcValid ? "通过" : "警告") << endl;
+            } else {
+                recovered = carver.RecoverCarvedFile(best.carveInfo, outputPath);
+                if (recovered) {
+                    cout << "恢复成功 (无EOCD，使用估算大小)" << endl;
+                }
+            }
         } else {
+            recovered = carver.RecoverCarvedFile(best.carveInfo, outputPath);
+            if (recovered) {
+                cout << "恢复成功!" << endl;
+                cout << "文件大小: " << best.carveInfo.fileSize << " bytes" << endl;
+            }
+        }
+
+        if (!recovered) {
             cout << "恢复失败" << endl;
         }
     }
