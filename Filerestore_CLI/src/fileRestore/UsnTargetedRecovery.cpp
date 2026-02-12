@@ -1,4 +1,5 @@
 #include "UsnTargetedRecovery.h"
+#include "OverwriteDetector.h"
 #include "../utils/Logger.h"
 #include <fstream>
 #include <algorithm>
@@ -499,8 +500,34 @@ UsnTargetedRecoveryResult UsnTargetedRecovery::Validate(const UsnDeletedFileInfo
             result.canRecover = true;
         }
         else {
-            result.status = UsnRecoveryStatus::SIGNATURE_MISMATCH;
-            result.canRecover = false;  // 可用 --force 强制恢复
+            // 签名验证失败 - 使用覆盖检测确认数据状态
+            LOG_INFO("签名验证失败，执行覆盖检测...");
+
+            // 读取 MFT 记录用于覆盖检测
+            vector<BYTE> mftRecord;
+            if (reader->ReadMFT(result.mftRecordNumber, mftRecord)) {
+                OverwriteDetector detector(reader);
+                detector.SetDetectionMode(MODE_FAST);  // 快速模式
+                OverwriteDetectionResult overwriteResult = detector.DetectOverwrite(mftRecord);
+
+                if (overwriteResult.overwritePercentage > 50.0) {
+                    // 数据确实被覆盖
+                    result.status = UsnRecoveryStatus::DATA_OVERWRITTEN;
+                    result.canRecover = false;
+                    LOG_WARNING_FMT("覆盖检测: %.1f%% 数据被覆盖，无法恢复",
+                                   overwriteResult.overwritePercentage);
+                } else {
+                    // 数据未被覆盖，可能是无签名文件（txt等）
+                    result.status = UsnRecoveryStatus::SIGNATURE_MISMATCH;
+                    result.canRecover = true;  // 允许恢复，因为数据未被覆盖
+                    LOG_INFO_FMT("覆盖检测: %.1f%% 数据被覆盖，数据可能有效，允许恢复",
+                                overwriteResult.overwritePercentage);
+                }
+            } else {
+                // 无法读取 MFT 记录，回退到原逻辑
+                result.status = UsnRecoveryStatus::SIGNATURE_MISMATCH;
+                result.canRecover = false;
+            }
         }
     }
     else {
@@ -636,6 +663,13 @@ vector<UsnFileListItem> UsnTargetedRecovery::ValidateBatch(
         item.confidence = validation.confidence;
         item.status = validation.status;
         item.statusMessage = validation.statusMessage;
+
+        // 填充 MFT 信息（文件大小）
+        if (validation.fileSize > 0) {
+            item.usnInfo.FileSize = validation.fileSize;
+            item.usnInfo.MftInfoValid = true;
+            item.usnInfo.MftRecordReused = !validation.sequenceMatched;
+        }
 
         results.push_back(item);
     }

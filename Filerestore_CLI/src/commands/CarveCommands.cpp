@@ -17,7 +17,7 @@
 #include "CarvedResultEnricher.h"
 #include "FileIntegrityValidator.h"
 #include "CarvedResultsCache.h"
-#include "MemoryMappedResults.h"
+#include "MFTCache.h"
 #include "CpuFeatures.h"
 #include "components/TuiInputBridge.h"
 
@@ -27,10 +27,8 @@ using namespace std;
 static vector<CarvedFileInfo> lastCarveResults;
 static char lastCarveDrive = 0;
 
-// 缓存和内存映射管理（大数据集模式）
+// 缓存管理（大数据集模式）
 static unique_ptr<CarvedResultsCache> resultsCache;
-static unique_ptr<MemoryMappedResults> mappedResults;
-static bool useMemoryMapping = false;
 static size_t currentPageIndex = 0;
 static size_t pageSize = 50;  // 每页显示50条记录
 
@@ -55,9 +53,7 @@ static bool TryInitFromDiskCache() {
 
 // 辅助函数：获取总记录数
 static size_t GetTotalResultCount() {
-    if (useMemoryMapping && mappedResults && mappedResults->IsValid()) {
-        return (size_t)mappedResults->GetTotalRecords();
-    } else if (resultsCache && resultsCache->IsValid()) {
+    if (resultsCache && resultsCache->IsValid()) {
         ULONGLONG count;
         char drive;
         if (resultsCache->GetCacheInfo(count, drive)) {
@@ -83,9 +79,7 @@ static size_t GetTotalResultCount() {
 static bool LoadResultPage(size_t pageIndex, vector<CarvedFileInfo>& outResults) {
     size_t startIndex = pageIndex * pageSize;
 
-    if (useMemoryMapping && mappedResults && mappedResults->IsValid()) {
-        return mappedResults->GetRecordBatch(startIndex, pageSize, outResults);
-    } else if (resultsCache && resultsCache->IsValid()) {
+    if (resultsCache && resultsCache->IsValid()) {
         char drive;
         return resultsCache->LoadResultRange(outResults, startIndex, pageSize, drive);
     } else {
@@ -99,22 +93,14 @@ static bool LoadResultPage(size_t pageIndex, vector<CarvedFileInfo>& outResults)
     }
 }
 
-// 辅助函数：获取单个结果（支持缓存/内存映射/内存三种模式）
+// 辅助函数：获取单个结果（支持缓存/内存两种模式）
 static bool GetSingleResult(size_t index, CarvedFileInfo& outResult, char& outDrive) {
     size_t totalCount = GetTotalResultCount();
     if (index >= totalCount) {
         return false;
     }
 
-    if (useMemoryMapping && mappedResults && mappedResults->IsValid()) {
-        // 内存映射模式
-        vector<CarvedFileInfo> batch;
-        if (mappedResults->GetRecordBatch(index, 1, batch) && !batch.empty()) {
-            outResult = batch[0];
-            outDrive = lastCarveDrive;
-            return true;
-        }
-    } else if (resultsCache && resultsCache->IsValid()) {
+    if (resultsCache && resultsCache->IsValid()) {
         // 缓存模式
         vector<CarvedFileInfo> batch;
         if (resultsCache->LoadResultRange(batch, index, 1, outDrive) && !batch.empty()) {
@@ -149,7 +135,6 @@ static void SaveScanResults(const vector<CarvedFileInfo>& results, char driveLet
 	if (results.empty()) {
 		cout << "\nNo results to save." << endl;
 		lastCarveResults.clear();
-		useMemoryMapping = false;
 		return;
 	}
 
@@ -174,28 +159,10 @@ static void SaveScanResults(const vector<CarvedFileInfo>& results, char driveLet
 		}
 
 		lastCarveResults.clear();
-
-		// 大结果集使用内存映射
-		if (MemoryMappedResults::ShouldUseMemoryMapping(results.size())) {
-			cout << "\nUsing memory-mapped files for large result set..." << endl;
-
-			if (!mappedResults) {
-				mappedResults = make_unique<MemoryMappedResults>();
-			}
-
-			if (mappedResults->OpenFromCache(resultsCache->GetCachePath())) {
-				useMemoryMapping = true;
-				cout << "Memory mapping enabled (" << results.size() << " records)" << endl;
-			}
-		} else {
-			useMemoryMapping = false;
-		}
-
 		currentPageIndex = 0;
 	} else {
 		cout << "Failed to save cache, keeping results in memory" << endl;
 		lastCarveResults = results;
-		useMemoryMapping = false;
 	}
 }
 
@@ -691,22 +658,26 @@ void CarveCommandThreadPool::Execute(string command) {
 		return;
 	}
 
-	if (GET_ARG_COUNT() < 3) {
+	if (GET_ARG_COUNT() < 1) {
 		cout << "Usage: carvepool <drive> <type|types|all> <output_dir> [threads] [options...]" << endl;
+		cout << "       carvepool <drive> --types=<types> --output=<dir> [options...]" << endl;
 		cout << "\nThread Pool Parallel Signature Scanner with Timestamp Sorting" << endl;
 		cout << "Files are sorted by: 1) Confidence (high first) 2) Date (earlier first)\n" << endl;
 		cout << "Examples:" << endl;
 		cout << "  carvepool C zip D:\\recovered\\" << endl;
 		cout << "  carvepool C jpg,png,txt D:\\recovered\\ 8" << endl;
 		cout << "  carvepool D all D:\\recovered\\ 0 hybrid" << endl;
-		cout << "  carvepool D txt,html,xml D:\\recovered\\ 0 ml" << endl;
+		cout << "  carvepool D --types=txt,html,xml --output=D:\\recovered\\ --mode=ml" << endl;
 		cout << "\nOptions:" << endl;
-		cout << "  [threads]     - Worker threads (0 = auto-detect)" << endl;
-		cout << "  notimestamp   - Skip timestamp extraction (faster)" << endl;
-		cout << "  nosimd        - Disable SIMD optimization (for benchmarking)" << endl;
-		cout << "  hybrid        - Hybrid mode: signature + ML scan (default)" << endl;
-		cout << "  sig           - Signature-only scan (fastest)" << endl;
-		cout << "  ml            - ML-only scan (for txt/html/xml)" << endl;
+		cout << "  [threads]       - Worker threads (0 = auto-detect)" << endl;
+		cout << "  --output=<dir>  - Output directory" << endl;
+		cout << "  --types=<types> - File types to scan (comma-separated or 'all')" << endl;
+		cout << "  --mode=<mode>   - Scan mode: hybrid (default), sig, ml" << endl;
+		cout << "  notimestamp     - Skip timestamp extraction (faster)" << endl;
+		cout << "  nosimd          - Disable SIMD optimization (for benchmarking)" << endl;
+		cout << "  hybrid          - Hybrid mode: signature + ML scan (default)" << endl;
+		cout << "  sig             - Signature-only scan (fastest)" << endl;
+		cout << "  ml              - ML-only scan (for txt/html/xml)" << endl;
 		cout << "\nFor large ZIP recovery, use 'carverecover' with --scaneocd option." << endl;
 		cout << "ML-only types (no signature): txt, html, xml" << endl;
 		cout << "Use 'carvetypes' to see supported signature types." << endl;
@@ -714,35 +685,69 @@ void CarveCommandThreadPool::Execute(string command) {
 	}
 
 	try {
-		string& driveStr = GET_ARG_STRING(0);
-		string& fileTypeArg = GET_ARG_STRING(1);
-		string& outputDir = GET_ARG_STRING(2);
-
-		// 解析选项
+		// ========== 统一解析位置参数和命名参数 ==========
+		string driveStr;
+		string fileTypeArg;
+		string outputDir;
 		int threadCount = 0;
 		bool extractTimestamps = true;
 		string scanMode = "hybrid";  // 默认混合模式
 		bool useSimd = true;  // 默认启用 SIMD
 
-		// 遍历所有可选参数
-		for (size_t i = 3; i < GET_ARG_COUNT(); i++) {
+		// 收集位置参数
+		vector<string> positionalArgs;
+
+		for (size_t i = 0; i < GET_ARG_COUNT(); i++) {
 			string arg = GET_ARG_STRING(i);
 
-			if (arg == "notimestamp" || arg == "nots") {
+			if (arg.find("--output=") == 0) {
+				outputDir = arg.substr(9);
+			} else if (arg.find("--types=") == 0) {
+				fileTypeArg = arg.substr(8);
+			} else if (arg.find("--mode=") == 0) {
+				string mode = arg.substr(7);
+				if (mode == "hybrid" || mode == "sig" || mode == "ml") {
+					scanMode = mode;
+				}
+			} else if (arg.find("--threads=") == 0) {
+				threadCount = stoi(arg.substr(10));
+			} else if (arg == "notimestamp" || arg == "nots") {
 				extractTimestamps = false;
 			} else if (arg == "nosimd") {
-				useSimd = false;  // 禁用 SIMD（用于基准测试）
+				useSimd = false;
 			} else if (arg == "hybrid" || arg == "sig" || arg == "signature" || arg == "ml") {
 				scanMode = arg;
 				if (arg == "signature") scanMode = "sig";
-			} else {
-				try {
-					int tc = stoi(arg);
-					if (tc >= 0 && tc <= 64) {
-						threadCount = tc;
-					}
-				} catch (...) {}
+			} else if (arg[0] != '-') {
+				// 位置参数
+				positionalArgs.push_back(arg);
 			}
+		}
+
+		// 从位置参数中提取值
+		if (positionalArgs.size() >= 1) {
+			driveStr = positionalArgs[0];
+		}
+		if (positionalArgs.size() >= 2 && fileTypeArg.empty()) {
+			fileTypeArg = positionalArgs[1];
+		}
+		if (positionalArgs.size() >= 3 && outputDir.empty()) {
+			outputDir = positionalArgs[2];
+		}
+		// 线程数可以从第4个位置参数获取
+		if (positionalArgs.size() >= 4 && threadCount == 0) {
+			try {
+				threadCount = stoi(positionalArgs[3]);
+			} catch (...) {}
+		}
+
+		// 验证必要参数
+		if (driveStr.empty()) {
+			cout << "Error: Missing drive argument" << endl;
+			return;
+		}
+		if (fileTypeArg.empty()) {
+			fileTypeArg = "all";  // 默认扫描所有类型
 		}
 
 		char driveLetter;
@@ -825,7 +830,89 @@ void CarveCommandThreadPool::Execute(string command) {
 			return;
 		}
 
-		// 保存结果到缓存（纯签名扫描结果，不含 MFT 关联）
+		// ========== 删除状态检查和过滤 ==========
+		cout << "\n=== Checking Deletion Status ===" << endl;
+		size_t originalCount = results.size();
+
+		// 尝试使用现有 MFT 缓存，如果没有则自动构建
+		MFTCache* mftCache = MFTCacheManager::GetCache(driveLetter, false);
+
+		if (!mftCache || !mftCache->IsValid()) {
+			cout << "No valid MFT cache found. Building now..." << endl;
+			mftCache = MFTCacheManager::GetCache(driveLetter, true);  // forceRebuild = true
+
+			if (mftCache && mftCache->IsValid()) {
+				// 保存缓存供后续使用
+				if (mftCache->SaveToFile()) {
+					cout << "MFT cache saved for future use." << endl;
+				}
+			}
+		} else {
+			cout << "Using existing MFT cache..." << endl;
+		}
+
+		if (mftCache && mftCache->IsValid()) {
+			// 标记删除状态
+			size_t activeCount = 0;
+			size_t deletedCount = 0;
+			size_t unknownCount = 0;
+
+			for (auto& info : results) {
+				const MFTCacheEntry* entry = mftCache->GetByLCN(info.startLCN);
+				if (entry) {
+					info.deletionChecked = true;
+					if (entry->isDeleted) {
+						info.isDeleted = true;
+						info.isActiveFile = false;
+						deletedCount++;
+					} else {
+						info.isDeleted = false;
+						info.isActiveFile = true;
+						activeCount++;
+					}
+				} else {
+					// 未匹配到 MFT 记录，可能是已删除文件的残留数据
+					info.deletionChecked = true;
+					info.isDeleted = true;
+					info.isActiveFile = false;
+					unknownCount++;
+				}
+			}
+
+			cout << "Status check complete:" << endl;
+			cout << "  Active files (will be filtered): " << activeCount << endl;
+			cout << "  Deleted files (will be kept): " << deletedCount << endl;
+			cout << "  Unknown (no MFT match, treated as deleted): " << unknownCount << endl;
+
+			// 过滤掉活动文件（使用 remove_if + erase，O(n) 复杂度）
+			if (activeCount > 0) {
+				auto newEnd = std::remove_if(results.begin(), results.end(),
+					[](const CarvedFileInfo& info) {
+						return info.deletionChecked && info.isActiveFile;
+					});
+				results.erase(newEnd, results.end());
+
+				cout << "\nFiltered: " << originalCount << " -> " << results.size()
+				     << " files (removed " << activeCount << " active files)" << endl;
+			}
+		} else {
+			cout << "[WARNING] Failed to build MFT cache. Keeping all results." << endl;
+			cout << "(Results may include active files that already exist on disk)" << endl;
+
+			// 标记为未检查
+			for (auto& info : results) {
+				info.deletionChecked = false;
+				info.isDeleted = false;
+				info.isActiveFile = false;
+			}
+		}
+
+		if (results.empty()) {
+			cout << "\nNo deleted files found after filtering." << endl;
+			return;
+		}
+
+		// 保存结果到缓存
 		SaveScanResults(results, driveLetter);
 
 		// ========== 显示结果 ==========
@@ -1036,10 +1123,10 @@ void CarveListCommand::Execute(string command) {
 
 	// 加载结果
 	vector<CarvedFileInfo> displayResults;
-	if (useMemoryMapping || resultsCache) {
-		// 从缓存或内存映射加载
+	if (resultsCache) {
+		// 从缓存加载
 		if (!LoadResultPage(isPageMode ? currentPageIndex : (startIndex / pageSize), displayResults)) {
-			cout << "Failed to load results from cache/memory-mapping" << endl;
+			cout << "Failed to load results from cache" << endl;
 			return;
 		}
 

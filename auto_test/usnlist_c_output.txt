@@ -1,0 +1,1019 @@
+Crash handler installed. Dump files will be created on crash.
+Crash handler initialized.
+Logger initialized: D:\Users\21405\source\repos\Filerestore_CLI\x64\Release\debug.log
+Language loaded: en (257 translations)
+Language loaded: en (257 translations)
+Executing command: usnlist C 720 --validate
+卷打开成功。
+每扇区字节数: 512
+每簇扇区数: 8
+MFT 起始 LCN: 786432
+每文件记录字节数: 1024
+
+[usnlist.title]
+========================================
+[usnlist.drive]: C:/
+[usnlist.time_range]: 720 [usnlist.hours]
+[usnlist.validate]: Yes
+========================================
+
+[usnlist.scanning]...
+正在扫描 USN 日志...
+  扫描完成: 共扫描 32236 条记录, 发现 1000 条删除记录
+
+[usnlist.found]: 1000 [usnlist.files]
+
+[usnlist.col_idx][usnlist.col_name]                      [usnlist.col_size][usnlist.col_time]  [usnlist.col_status][usnlist.col_conf]
+--------------------------------------------------------------------------------------------------
+0     ccba5a5986c77e43.customDestinations-ms  -           2026-02-11 20:13:59 [MFT_REUSED]-       
+1     ccba5a5986c77e43.customDestinations...  6.9 MB      2026-02-11 20:13:59 [MFT_REUSED]-       
+2     .claude.json.tmp.30328.1770840833227    3.6 KB      2026-02-11 20:13:53 [OK]        60      %
+3     .claude.json                            786432.00 GB2026-02-11 20:13:53 [OK]        60      %
+4     .claude.json.backup.1770835233771       3.6 KB      2026-02-11 20:13:53 [OK]        60      %
+5     21.json                                 18.9 KB     2026-02-11 20:13:53 [MFT_REUSED]-       
+6     20.json                                 41.0 KB     2026-02-11 20:13:53 [MFT_REUSED]-       
+7     19.json                                 19.6 KB     2026-02-11 20:13:53 [OK]        60      %
+8     Network Persistent State                6.9 MB      2026-02-11 20:13:48 [MFT_REUSED]-       
+9     Network Persistent State~RF3378d68.TMP  6.9 MB      2026-02-11 20:13:48 [MFT_REUSED]-       
+10    2cddfd84-508f-4ca9-a7a0-a69193cb01e...  2.0 KB      2026-02-11 20:13:48 [OK]        60      %
+11    Network Persistent State~RF3378d68.TMP  893.4 KB    2026-02-11 20:13:48 [MFT_REUSED]-       
+12    tmpd2e697ccd3db4a52819c3bfb2e53f7ba...  44 B        2026-02-11 20:13:43 [OK]        60      %
+13    tmpdf42f9e9c1734f3986ce8f514e341df2...  893.4 KB    2026-02-11 20:13:43 [MFT_REUSED]-       
+14    lnk{A3E037E1-B3A1-4F70-9745-A9BF61D...  2.0 KB      2026-02-11 20:13:43 [OK]        60      %
+15    lnk{8037D7CE-4EA1-4444-9C2D-54E5AC0...  10.2 KB     2026-02-11 20:13:43 [OK]        60      %
+16    lnk{259FB917-47AB-4532-916C-B044936...  368.9 KB    2026-02-11 20:13:43 [OK]        60      %
+17    lnk{F2C091E1-B87C-4443-9CDC-99CC48B...  1.0 MB      2026-02-11 20:13:43 [MFT_REUSED]-       
+18    lnk{9C57894B-EA20-421C-8F6B-B0673AA...  1.0 MB      2026-02-11 20:13:42 [MFT_REUSED]-       
+19    RDa34688                                255 B       2026-02-11 20:13:42 [OK]        -       
+20    RCa34688                                368.9 KB    2026-02-11 20:13:42 [OK]        60      %
+21    dyntelconfig[1].cache                   2.0 KB      2026-02-11 20:13:42 [OK]        60      %
+22    dyntelconfig[1].cache                   44 B        2026-02-11 20:13:40 [OK]        60      %
+23    tmp1aa3799e2b8f4d4cb371c592c5a19d2c...  2.0 KB      2026-02-11 20:13:40 [OK]        60      %
+24    tmpb989d7238e6d40bfb5875e70ca9a4938...  893.4 KB    2026-02-11 20:13:40 [MFT_REUSED]-       
+25    _CL_e9fc5de785b8c20dadea50101fbeee9fex  312 B       2026-02-11 20:13:40 [OK]        -       
+26    _CL_411be99cbf9c93f644a784672c19d5d3in  354 B       2026-02-11 20:13:40 [OK]        -       
+27    _CL_411be99cbf9c93f644a784672c19d5d3db  1835008.00 GB2026-02-11 20:13:40 [MFT_REUSED]-       
+28    _CL_e9fc5de785b8c20dadea50101fbeee9fdb  8.4 KB      2026-02-11 20:13:40 [OK]        60      %
+29    _CL_411be99cbf9c93f644a784672c19d5d3gl  274 B       2026-02-11 20:13:40 [OK]        -       
+30    _CL_e9fc5de785b8c20dadea50101fbeee9fin  -           2026-02-11 20:13:40 [MFT_REUSED]-       
+31    _CL_411be99cbf9c93f644a784672c19d5d3sy  241 B       2026-02-11 20:13:40 [OK]        -       
+32    _CL_e9fc5de785b8c20dadea50101fbeee9fgl  882 B       2026-02-11 20:13:40 [MFT_REUSED]-       
+33    _CL_411be99cbf9c93f644a784672c19d5d3ex  -           2026-02-11 20:13:40 [MFT_REUSED]-       
+34    _CL_e9fc5de785b8c20dadea50101fbeee9fsy  1048576.00 GB2026-02-11 20:13:40 [MFT_REUSED]-       
+35    {525F0BA2-5EB9-4405-8CF5-319298BC87CD}  232 B       2026-02-11 20:13:40 [OK]        -       
+36    {B5F57632-C635-42AE-B7A4-A819B067CE0D}  -           2026-02-11 20:13:40 [MFT_REUSED]-       
+37    _CL_bb5647a6cca2566f43608b96f68e5c5fdb  62.2 KB     2026-02-11 20:13:40 [MFT_REUSED]-       
+38    _CL_bb5647a6cca2566f43608b96f68e5c5fin  544 B       2026-02-11 20:13:40 [OK]        -       
+39    _CL_f9f0c078ba762cb87eb2cb6ebe4bfc6adb  -           2026-02-11 20:13:40 [MFT_REUSED]-       
+40    _CL_bb5647a6cca2566f43608b96f68e5c5fgl  68.3 KB     2026-02-11 20:13:40 [MFT_REUSED]-       
+41    _CL_f9f0c078ba762cb87eb2cb6ebe4bfc6ain  -           2026-02-11 20:13:40 [MFT_REUSED]-       
+42    _CL_f9f0c078ba762cb87eb2cb6ebe4bfc6agl  542 B       2026-02-11 20:13:40 [OK]        -       
+43    _CL_bb5647a6cca2566f43608b96f68e5c5fsy  4.0 KB      2026-02-11 20:13:40 [MFT_REUSED]-       
+44    _CL_bb5647a6cca2566f43608b96f68e5c5fex  46.4 KB     2026-02-11 20:13:40 [OK]        60      %
+45    _CL_f9f0c078ba762cb87eb2cb6ebe4bfc6asy  -           2026-02-11 20:13:40 [NO_DATA]   -       
+46    _CL_f9f0c078ba762cb87eb2cb6ebe4bfc6aex  -           2026-02-11 20:13:40 [MFT_REUSED]-       
+47    _CL_b5d615c77727de4bd63994121880601cdb  255 B       2026-02-11 20:13:40 [OK]        -       
+48    _CL_b5d615c77727de4bd63994121880601cin  368.9 KB    2026-02-11 20:13:40 [OK]        60      %
+49    _CL_b5d615c77727de4bd63994121880601cgl  1.0 MB      2026-02-11 20:13:40 [MFT_REUSED]-       
+50    _CL_b5d615c77727de4bd63994121880601csy  10.2 KB     2026-02-11 20:13:40 [OK]        60      %
+51    _CL_b5d615c77727de4bd63994121880601cex  1.1 KB      2026-02-11 20:13:40 [MFT_REUSED]-       
+52    {53882779-49C8-4154-933E-8BD52DFC2894}  1.3 KB      2026-02-11 20:13:40 [MFT_REUSED]-       
+53    {C92836EB-412E-4DFE-9DFC-F0D16F506455}  237.5 KB    2026-02-11 20:13:40 [MFT_REUSED]-       
+54    {4D32141D-AF22-4330-ACB9-5EB5DDF77536}  1.0 MB      2026-02-11 20:13:40 [MFT_REUSED]-       
+55    CASESENSITIVETEST0f6f353299e840fc89...  2.0 KB      2026-02-11 20:13:37 [OK]        60      %
+56    CASESENSITIVETEST0e9b568094324969bb...  2.0 KB      2026-02-11 20:13:37 [OK]        60      %
+57    CASESENSITIVETEST5c74778273c14638b7...  9.6 KB      2026-02-11 20:13:37 [OK]        60      %
+58    CASESENSITIVETEST09d0c0e4222d43448c...  9.6 KB      2026-02-11 20:13:37 [OK]        60      %
+59    CASESENSITIVETEST16d3df7b74784da680...  9.6 KB      2026-02-11 20:13:37 [OK]        60      %
+60    CASESENSITIVETEST8c2e04cac96146b487...  9.6 KB      2026-02-11 20:13:37 [OK]        60      %
+61    CASESENSITIVETESTbf86457f28ad4aa684...  9.6 KB      2026-02-11 20:13:37 [OK]        60      %
+62    CASESENSITIVETEST933ce5d27cde4e2eb1...  9.6 KB      2026-02-11 20:13:37 [OK]        60      %
+63    __PSScriptPolicyTest_wr2gqcan.f5e.psm1  9.6 KB      2026-02-11 20:13:36 [OK]        60      %
+64    __PSScriptPolicyTest_iqfsgtme.c3t.ps1   117.1 KB    2026-02-11 20:13:36 [MFT_REUSED]-       
+65    1p_failed_events.7acaf91f-b3d4-45c0...  117.1 KB    2026-02-11 20:13:34 [MFT_REUSED]-       
+66    scene_rc-journal                        -           2026-02-11 20:13:25 [NO_DATA]   -       
+67    scene_rc-journal                        -           2026-02-11 20:13:25 [NO_DATA]   -       
+68    scene_rc-journal                        -           2026-02-11 20:13:25 [NO_DATA]   -       
+69    scene_rc-journal                        -           2026-02-11 20:13:25 [NO_DATA]   -       
+70    1p_failed_events.7acaf91f-b3d4-45c0...  117.1 KB    2026-02-11 20:13:02 [MFT_REUSED]-       
+71    1p_failed_events.7acaf91f-b3d4-45c0...  117.1 KB    2026-02-11 20:12:29 [MFT_REUSED]-       
+72    nvlog.nvlgstg                           1.2 KB      2026-02-11 20:12:28 [MFT_REUSED]-       
+73    b7c56216-0f3d-4038-8507-44e6be42542...  -           2026-02-11 20:12:11 [NO_DATA]   -       
+74    1p_failed_events.7acaf91f-b3d4-45c0...  117.1 KB    2026-02-11 20:11:56 [MFT_REUSED]-       
+75    scene_rc-journal                        9.6 KB      2026-02-11 20:11:55 [OK]        60      %
+76    scene_rc-journal                        9.6 KB      2026-02-11 20:11:55 [OK]        60      %
+77    scene_rc-journal                        9.6 KB      2026-02-11 20:11:55 [OK]        60      %
+78    scene_rc-journal                        9.6 KB      2026-02-11 20:11:55 [OK]        60      %
+79    prefs.json~RF335c0c6.TMP                20.9 KB     2026-02-11 20:11:50 [OK]        60      %
+80    prefs.json                              20.9 KB     2026-02-11 20:11:50 [OK]        60      %
+81    prefs.json~RF335c0c6.TMP                9.6 KB      2026-02-11 20:11:50 [OK]        60      %
+82    cf1aa00a-2904-40d9-a95e-19860e7132e...  5.7 KB      2026-02-11 20:11:50 [MFT_REUSED]-       
+83    Local State                             2.0 KB      2026-02-11 20:11:50 [OK]        60      %
+84    Local State~RF335bf9d.TMP               5.7 KB      2026-02-11 20:11:50 [MFT_REUSED]-       
+85    Local State~RF335bf9d.TMP               2.0 KB      2026-02-11 20:11:50 [OK]        60      %
+86    Edge-Local-State-Tmp-baada87c-2d36-...  1.0 MB      2026-02-11 20:11:50 [OK]        90      %
+87    Preferences~RF335bb67.TMP               1.0 MB      2026-02-11 20:11:49 [OK]        90      %
+88    31539738-eceb-44d3-bf3d-e7839949236...  236.2 KB    2026-02-11 20:11:49 [MFT_REUSED]-       
+89    Preferences                             1.0 MB      2026-02-11 20:11:49 [OK]        90      %
+90    Preferences~RF335bb67.TMP               5.7 KB      2026-02-11 20:11:49 [MFT_REUSED]-       
+91    f_003962                                -           2026-02-11 20:11:32 [MFT_REUSED]-       
+92    f_00395c                                -           2026-02-11 20:11:32 [NO_DATA]   -       
+93    UTForPC.db-journal                      1.0 MB      2026-02-11 20:11:29 [MFT_REUSED]-       
+94    UTForPC.db-journal                      1.0 MB      2026-02-11 20:11:29 [MFT_REUSED]-       
+95    1p_failed_events.7acaf91f-b3d4-45c0...  117.1 KB    2026-02-11 20:11:24 [MFT_REUSED]-       
+96    f_00395b                                1.0 MB      2026-02-11 20:11:15 [MFT_REUSED]-       
+97    f_00395a                                9.6 KB      2026-02-11 20:11:15 [OK]        60      %
+98    hc~RF335332c.TMP                        1.0 MB      2026-02-11 20:11:14 [MFT_REUSED]-       
+99    hc._tmp                                 1048576.00 GB2026-02-11 20:11:14 [OK]        60      %
+100   hc                                      1.0 MB      2026-02-11 20:11:14 [MFT_REUSED]-       
+101   hc~RF335332c.TMP                        1.0 MB      2026-02-11 20:11:14 [MFT_REUSED]-       
+102   MANIFEST-000001                         248.8 KB    2026-02-11 20:11:13 [MFT_REUSED]-       
+103   MANIFEST-000722                         236.2 KB    2026-02-11 20:11:13 [MFT_REUSED]-       
+104   CURRENT                                 1.0 MB      2026-02-11 20:11:13 [MFT_REUSED]-       
+105   CURRENT~RF335236d.TMP                   1.0 MB      2026-02-11 20:11:10 [MFT_REUSED]-       
+106   000001.dbtmp                            1.0 MB      2026-02-11 20:11:10 [MFT_REUSED]-       
+107   CURRENT                                 1.0 MB      2026-02-11 20:11:10 [MFT_REUSED]-       
+108   CURRENT~RF335236d.TMP                   5.7 KB      2026-02-11 20:11:10 [MFT_REUSED]-       
+109   000001.dbtmp                            248.8 KB    2026-02-11 20:11:10 [MFT_REUSED]-       
+110   MANIFEST-000722                         236.2 KB    2026-02-11 20:11:10 [MFT_REUSED]-       
+111   prefs.json~RF335233e.TMP                5.7 KB      2026-02-11 20:11:10 [MFT_REUSED]-       
+112   prefs.json~RF335233e.TMP                1.0 MB      2026-02-11 20:11:10 [MFT_REUSED]-       
+113   c230841d-a67a-4f79-a6e8-09d32f568ec...  20.9 KB     2026-02-11 20:11:10 [OK]        60      %
+114   prefs.json                              1.0 MB      2026-02-11 20:11:10 [MFT_REUSED]-       
+115   05dcab1b-768f-40c0-b818-4ce96cf85f8...  5.7 KB      2026-02-11 20:11:08 [MFT_REUSED]-       
+116   CURRENT                                 1.1 KB      2026-02-11 20:11:06 [MFT_REUSED]-       
+117   000632.ldb                              1048576.00 GB2026-02-11 20:11:06 [OK]        60      %
+118   MANIFEST-000001                         20.9 KB     2026-02-11 20:11:06 [OK]        60      %
+119   CURRENT                                 893.4 KB    2026-02-11 20:11:03 [MFT_REUSED]-       
+120   CURRENT~RF33507e6.TMP                   893.4 KB    2026-02-11 20:11:03 [MFT_REUSED]-       
+121   000001.dbtmp                            1.1 KB      2026-02-11 20:11:03 [MFT_REUSED]-       
+122   CURRENT~RF33507e6.TMP                   10.2 KB     2026-02-11 20:11:03 [OK]        60      %
+123   000001.dbtmp                            20.9 KB     2026-02-11 20:11:03 [OK]        60      %
+124   Geofence.dat                            48 B        2026-02-11 20:11:01 [OK]        -       
+125   Geofence.dat                            48 B        2026-02-11 20:11:01 [OK]        -       
+126   UTForPC.db-journal                      1048576.00 GB2026-02-11 20:11:00 [OK]        60      %
+127   hc~RF334fb82.TMP                        1048576.00 GB2026-02-11 20:11:00 [OK]        60      %
+128   hc~RF334fb82.TMP                        248.8 KB    2026-02-11 20:11:00 [MFT_REUSED]-       
+129   hc._tmp                                 1.0 MB      2026-02-11 20:11:00 [MFT_REUSED]-       
+130   hc                                      1048576.00 GB2026-02-11 20:11:00 [OK]        60      %
+131   MANIFEST-000001                         1.0 MB      2026-02-11 20:11:00 [MFT_REUSED]-       
+132   CURRENT~RF334fb05.TMP                   20.9 KB     2026-02-11 20:11:00 [OK]        60      %
+133   000723.log                              248.8 KB    2026-02-11 20:11:00 [MFT_REUSED]-       
+134   000002.dbtmp                            1.0 MB      2026-02-11 20:11:00 [MFT_REUSED]-       
+135   CURRENT                                 20.9 KB     2026-02-11 20:11:00 [OK]        60      %
+136   CURRENT~RF334fb05.TMP                   51 B        2026-02-11 20:11:00 [OK]        60      %
+137   000001.dbtmp                            20.9 KB     2026-02-11 20:11:00 [OK]        60      %
+138   MANIFEST-000001                         1.0 MB      2026-02-11 20:11:00 [MFT_REUSED]-       
+139   000630.log                              20.9 KB     2026-02-11 20:11:00 [OK]        60      %
+140   CURRENT~RF334fb05.TMP                   -           2026-02-11 20:11:00 [NO_DATA]   -       
+141   000002.dbtmp                            893.4 KB    2026-02-11 20:11:00 [MFT_REUSED]-       
+142   CURRENT                                 -           2026-02-11 20:11:00 [NO_DATA]   -       
+143   CURRENT~RF334fb05.TMP                   503.4 KB    2026-02-11 20:11:00 [OK]        60      %
+144   000001.dbtmp                            -           2026-02-11 20:11:00 [NO_DATA]   -       
+145   UTForPC.db-journal                      1.0 MB      2026-02-11 20:10:59 [MFT_REUSED]-       
+146   UTForPC.db-journal                      1.0 MB      2026-02-11 20:10:59 [MFT_REUSED]-       
+147   f_003959                                1.0 MB      2026-02-11 20:10:57 [MFT_REUSED]-       
+148   f_003957                                1.0 MB      2026-02-11 20:10:57 [MFT_REUSED]-       
+149   1p_failed_events.7acaf91f-b3d4-45c0...  1.0 MB      2026-02-11 20:10:52 [MFT_REUSED]-       
+150   Preferences~RF334cf80.TMP               117.1 KB    2026-02-11 20:10:48 [MFT_REUSED]-       
+151   3f243160-8df9-4c68-8549-4d96ea22b4e...  1.0 MB      2026-02-11 20:10:48 [OK]        90      %
+152   Preferences                             117.1 KB    2026-02-11 20:10:48 [MFT_REUSED]-       
+153   Preferences~RF334cf80.TMP               1.0 MB      2026-02-11 20:10:48 [MFT_REUSED]-       
+154   Local State~RF334c966.TMP               1.0 MB      2026-02-11 20:10:47 [OK]        90      %
+155   Edge-Local-State-Tmp-7dafc184-8d1c-...  2.0 KB      2026-02-11 20:10:47 [OK]        60      %
+156   Local State                             1.0 MB      2026-02-11 20:10:47 [OK]        90      %
+157   Local State~RF334c966.TMP               1.0 MB      2026-02-11 20:10:47 [MFT_REUSED]-       
+158   ccba5a5986c77e43.customDestinations...  2.0 KB      2026-02-11 20:10:39 [OK]        60      %
+159   HB0O614EYIPEKE0JD2GB.temp               -           2026-02-11 20:10:39 [MFT_REUSED]-       
+160   ccba5a5986c77e43.customDestinations-ms  2.0 KB      2026-02-11 20:10:39 [OK]        60      %
+161   ccba5a5986c77e43.customDestinations...  1.0 MB      2026-02-11 20:10:39 [MFT_REUSED]-       
+162   scene_rc-journal                        5.7 KB      2026-02-11 20:10:38 [MFT_REUSED]-       
+163   scene_rc-journal                        5.7 KB      2026-02-11 20:10:38 [MFT_REUSED]-       
+164   scene_rc-journal                        5.7 KB      2026-02-11 20:10:38 [MFT_REUSED]-       
+165   scene_rc-journal                        5.7 KB      2026-02-11 20:10:38 [MFT_REUSED]-       
+166   Local State~RF3349565.TMP               5.7 KB      2026-02-11 20:10:34 [MFT_REUSED]-       
+167   Edge-Local-State-Tmp-1064391f-a210-...  1.0 MB      2026-02-11 20:10:34 [OK]        90      %
+168   Local State                             5.7 KB      2026-02-11 20:10:34 [MFT_REUSED]-       
+169   Local State~RF3349565.TMP               -           2026-02-11 20:10:34 [MFT_REUSED]-       
+170   scene_rc-journal                        1.0 MB      2026-02-11 20:10:25 [OK]        90      %
+171   scene_rc-journal                        1.0 MB      2026-02-11 20:10:25 [OK]        90      %
+172   scene_rc-journal                        1.0 MB      2026-02-11 20:10:25 [OK]        90      %
+173   scene_rc-journal                        1.0 MB      2026-02-11 20:10:25 [OK]        90      %
+174   1p_failed_events.7acaf91f-b3d4-45c0...  1.0 MB      2026-02-11 20:10:20 [MFT_REUSED]-       
+175   1667c7a4-fbc8-4e59-ad24-c4c71242c8e...  1.0 MB      2026-02-11 20:10:17 [OK]        90      %
+176   1p_failed_events.7acaf91f-b3d4-45c0...  1.0 MB      2026-02-11 20:09:49 [MFT_REUSED]-       
+177   0ad1ae9a-f6fe-46a0-80c2-10c1924fcdb...  1.0 MB      2026-02-11 20:09:39 [OK]        90      %
+178   f_003955                                1.0 MB      2026-02-11 20:09:30 [MFT_REUSED]-       
+179   f_003952                                968.8 KB    2026-02-11 20:09:30 [MFT_REUSED]-       
+180   f_003943                                1.0 MB      2026-02-11 20:09:22 [MFT_REUSED]-       
+181   f_003942                                1.0 MB      2026-02-11 20:09:22 [OK]        90      %
+182   Local State~RF3337138.TMP               1.0 MB      2026-02-11 20:09:19 [MFT_REUSED]-       
+183   Local State~RF3337138.TMP               1.4 MB      2026-02-11 20:09:19 [MFT_REUSED]-       
+184   Edge-Local-State-Tmp-3ec5cea6-2812-...  5.7 KB      2026-02-11 20:09:19 [MFT_REUSED]-       
+185   Local State                             1.0 MB      2026-02-11 20:09:19 [MFT_REUSED]-       
+186   Preferences~RF3336adf.TMP               1.0 MB      2026-02-11 20:09:17 [MFT_REUSED]-       
+187   70cd3a7d-aba6-4eb4-9db3-ec34506539a...  117.1 KB    2026-02-11 20:09:17 [MFT_REUSED]-       
+188   Preferences                             1.0 MB      2026-02-11 20:09:17 [MFT_REUSED]-       
+189   Preferences~RF3336adf.TMP               5.7 KB      2026-02-11 20:09:17 [MFT_REUSED]-       
+190   1p_failed_events.7acaf91f-b3d4-45c0...  117.1 KB    2026-02-11 20:09:17 [MFT_REUSED]-       
+191   f_00391e                                5.7 KB      2026-02-11 20:09:05 [MFT_REUSED]-       
+192   f_00391f                                1.4 MB      2026-02-11 20:09:05 [MFT_REUSED]-       
+193   f_003908                                1.0 MB      2026-02-11 20:09:05 [OK]        90      %
+194   SRUtmp.log                              8.8 KB      2026-02-11 20:09:00 [MFT_REUSED]-       
+195   SRU.log                                 7.7 KB      2026-02-11 20:09:00 [MFT_REUSED]-       
+196   scene_rc-journal                        515 B       2026-02-11 20:08:55 [OK]        -       
+197   scene_rc-journal                        515 B       2026-02-11 20:08:55 [OK]        -       
+198   scene_rc-journal                        515 B       2026-02-11 20:08:55 [OK]        -       
+199   scene_rc-journal                        515 B       2026-02-11 20:08:55 [OK]        -       
+200   f_003900                                3.2 KB      2026-02-11 20:08:51 [OK]        60      %
+201   1p_failed_events.7acaf91f-b3d4-45c0...  117.1 KB    2026-02-11 20:08:45 [MFT_REUSED]-       
+202   Network Persistent State~RF332dca9.TMP  515 B       2026-02-11 20:08:41 [OK]        -       
+203   786b3b93-fdc7-46bc-88c8-12010cc448d...  1.0 MB      2026-02-11 20:08:41 [MFT_REUSED]-       
+204   Network Persistent State                515 B       2026-02-11 20:08:41 [OK]        -       
+205   Network Persistent State~RF332dca9.TMP  1.0 MB      2026-02-11 20:08:41 [MFT_REUSED]-       
+206   3ca72693-a8b3-4f9a-9e96-a1c15b11a8d...  1.0 MB      2026-02-11 20:08:40 [MFT_REUSED]-       
+207   f_0038ff                                -           2026-02-11 20:08:28 [MFT_REUSED]-       
+208   f_0038fb                                44 B        2026-02-11 20:08:28 [OK]        60      %
+209   ImageVector.db.tmp                      7.8 KB      2026-02-11 20:08:25 [MFT_REUSED]-       
+210   ImageVector.db                          1.0 MB      2026-02-11 20:08:25 [MFT_REUSED]-       
+211   Preferences~RF33292b0.TMP               1.0 MB      2026-02-11 20:08:22 [MFT_REUSED]-       
+212   c5d81164-60e8-4350-9c70-b66651e957d...  1.0 MB      2026-02-11 20:08:22 [MFT_REUSED]-       
+213   Preferences                             1.0 MB      2026-02-11 20:08:22 [MFT_REUSED]-       
+214   Preferences~RF33292b0.TMP               7.8 KB      2026-02-11 20:08:22 [MFT_REUSED]-       
+215   Local State~RF33283fa.TMP               528.1 KB    2026-02-11 20:08:18 [MFT_REUSED]-       
+216   Edge-Local-State-Tmp-e22980a9-399a-...  1.0 MB      2026-02-11 20:08:18 [MFT_REUSED]-       
+217   Local State                             528.1 KB    2026-02-11 20:08:18 [MFT_REUSED]-       
+218   Local State~RF33283fa.TMP               1.0 MB      2026-02-11 20:08:18 [MFT_REUSED]-       
+219   nvlog.nvlgstg                           1.2 KB      2026-02-11 20:08:17 [MFT_REUSED]-       
+220   1p_failed_events.7acaf91f-b3d4-45c0...  117.1 KB    2026-02-11 20:08:13 [MFT_REUSED]-       
+221   ccba5a5986c77e43.customDestinations...  1.0 MB      2026-02-11 20:08:10 [MFT_REUSED]-       
+222   COM512GMHUI7PDYO9NAJ.temp               2.0 KB      2026-02-11 20:08:10 [OK]        60      %
+223   ccba5a5986c77e43.customDestinations-ms  1.0 MB      2026-02-11 20:08:10 [MFT_REUSED]-       
+224   ccba5a5986c77e43.customDestinations...  1.0 MB      2026-02-11 20:08:10 [MFT_REUSED]-       
+225   Preferences~RF332300e.TMP               -           2026-02-11 20:07:57 [MFT_REUSED]-       
+226   d389a7fd-64c0-4661-af90-b6777635beb...  1.0 MB      2026-02-11 20:07:57 [MFT_REUSED]-       
+227   Preferences                             -           2026-02-11 20:07:57 [MFT_REUSED]-       
+228   Preferences~RF332300e.TMP               405.6 KB    2026-02-11 20:07:57 [MFT_REUSED]-       
+229   1p_failed_events.7acaf91f-b3d4-45c0...  117.1 KB    2026-02-11 20:07:42 [MFT_REUSED]-       
+230   Preferences~RF331d470.TMP               1.0 MB      2026-02-11 20:07:33 [MFT_REUSED]-       
+231   7c403805-7f9d-4c37-a6ac-5119cb73374...  -           2026-02-11 20:07:33 [MFT_REUSED]-       
+232   Preferences                             1.0 MB      2026-02-11 20:07:33 [MFT_REUSED]-       
+233   Preferences~RF331d470.TMP               -           2026-02-11 20:07:33 [NO_DATA]   -       
+234   Local State~RF331d470.TMP               405.6 KB    2026-02-11 20:07:33 [MFT_REUSED]-       
+235   Edge-Local-State-Tmp-b807339d-2f2b-...  528.1 KB    2026-02-11 20:07:33 [MFT_REUSED]-       
+236   Local State                             405.6 KB    2026-02-11 20:07:33 [MFT_REUSED]-       
+237   Local State~RF331d470.TMP               -           2026-02-11 20:07:33 [NO_DATA]   -       
+238   scene_rc-journal                        520 B       2026-02-11 20:07:25 [OK]        -       
+239   scene_rc-journal                        520 B       2026-02-11 20:07:25 [OK]        -       
+240   scene_rc-journal                        520 B       2026-02-11 20:07:25 [OK]        -       
+241   scene_rc-journal                        520 B       2026-02-11 20:07:25 [OK]        -       
+242   005839.log                              -           2026-02-11 20:07:19 [MFT_REUSED]-       
+243   f_0038f9                                44 B        2026-02-11 20:07:18 [OK]        60      %
+244   f_0038f7                                528.1 KB    2026-02-11 20:07:18 [MFT_REUSED]-       
+245   the-real-index~RF3318ac5.TMP            1.0 MB      2026-02-11 20:07:14 [MFT_REUSED]-       
+246   the-real-index~RF3318ac5.TMP            18.9 KB     2026-02-11 20:07:14 [MFT_REUSED]-       
+247   temp-index                              26.4 KB     2026-02-11 20:07:14 [OK]        95      %
+248   the-real-index                          1.0 MB      2026-02-11 20:07:14 [MFT_REUSED]-       
+249   .claude.json.tmp.30328.1770840431893    786432.00 GB2026-02-11 20:07:11 [OK]        60      %
+250   .claude.json                            26.4 KB     2026-02-11 20:07:11 [OK]        95      %
+251   .claude.json.backup.1770828269122       786432.00 GB2026-02-11 20:07:11 [OK]        60      %
+252   1p_failed_events.7acaf91f-b3d4-45c0...  117.1 KB    2026-02-11 20:07:11 [MFT_REUSED]-       
+253   f_0038f6                                19.6 KB     2026-02-11 20:07:08 [OK]        60      %
+254   f_0038f4                                19.6 KB     2026-02-11 20:07:08 [OK]        60      %
+255   SRUtmp.log                              7.7 KB      2026-02-11 20:07:00 [MFT_REUSED]-       
+256   SRU.log                                 219 B       2026-02-11 20:07:00 [OK]        -       
+257   SRUtmp.log                              219 B       2026-02-11 20:07:00 [OK]        -       
+258   SRU.log                                 -           2026-02-11 20:07:00 [NO_DATA]   -       
+259   SRUtmp.log                              -           2026-02-11 20:07:00 [NO_DATA]   -       
+260   SRU.log                                 -           2026-02-11 20:07:00 [NO_DATA]   -       
+261   SRU08404.log                            -           2026-02-11 20:07:00 [NO_DATA]   -       
+262   SRUtmp.log                              -           2026-02-11 20:07:00 [NO_DATA]   -       
+263   SRU.log                                 305 B       2026-02-11 20:07:00 [OK]        -       
+264   SRUtmp.log                              305 B       2026-02-11 20:07:00 [OK]        -       
+265   SRU.log                                 229 B       2026-02-11 20:07:00 [OK]        -       
+266   SRU08403.log                            -           2026-02-11 20:07:00 [NO_DATA]   -       
+267   SRU08402.log                            305 B       2026-02-11 20:07:00 [OK]        -       
+268   SRUtmp.log                              229 B       2026-02-11 20:07:00 [OK]        -       
+269   SRU.log                                 -           2026-02-11 20:07:00 [MFT_REUSED]-       
+270   005837.log                              219 B       2026-02-11 20:06:59 [OK]        -       
+271   scene_rc-journal                        -           2026-02-11 20:06:57 [MFT_REUSED]-       
+272   scene_rc-journal                        -           2026-02-11 20:06:57 [MFT_REUSED]-       
+273   scene_rc-journal                        -           2026-02-11 20:06:57 [MFT_REUSED]-       
+274   scene_rc-journal                        -           2026-02-11 20:06:57 [MFT_REUSED]-       
+275   Preferences~RF3314408.TMP               -           2026-02-11 20:06:56 [MFT_REUSED]-       
+276   2d186c7a-e39f-4920-ad17-08760f70c45...  1.0 MB      2026-02-11 20:06:56 [MFT_REUSED]-       
+277   Preferences                             -           2026-02-11 20:06:56 [MFT_REUSED]-       
+278   Preferences~RF3314408.TMP               212 B       2026-02-11 20:06:56 [OK]        -       
+279   Local State~RF3314252.TMP               1.0 MB      2026-02-11 20:06:56 [MFT_REUSED]-       
+280   Edge-Local-State-Tmp-e532969c-38af-...  405.6 KB    2026-02-11 20:06:56 [MFT_REUSED]-       
+281   Local State                             1.0 MB      2026-02-11 20:06:56 [MFT_REUSED]-       
+282   Local State~RF3314252.TMP               212 B       2026-02-11 20:06:56 [OK]        -       
+283   f_0038f3                                1.0 MB      2026-02-11 20:06:55 [MFT_REUSED]-       
+284   f_0038f2                                1.0 MB      2026-02-11 20:06:55 [MFT_REUSED]-       
+285   f_0038f1                                1.0 MB      2026-02-11 20:06:54 [MFT_REUSED]-       
+286   f_003ef9                                1.0 MB      2026-02-11 20:06:54 [MFT_REUSED]-       
+287   f_003ef8                                35.0 KB     2026-02-11 20:06:54 [MFT_REUSED]-       
+288   f_003ef7                                18.9 KB     2026-02-11 20:06:54 [MFT_REUSED]-       
+289   f_003ef6                                41.0 KB     2026-02-11 20:06:54 [MFT_REUSED]-       
+290   f_003ef5                                1.0 MB      2026-02-11 20:06:54 [MFT_REUSED]-       
+291   f_003ef4                                8.8 KB      2026-02-11 20:06:54 [MFT_REUSED]-       
+292   f_003ef3                                7.7 KB      2026-02-11 20:06:54 [MFT_REUSED]-       
+293   f_003ef2                                405.6 KB    2026-02-11 20:06:54 [MFT_REUSED]-       
+294   f_0038ef                                212 B       2026-02-11 20:06:54 [OK]        -       
+295   f_0038dd                                -           2026-02-11 20:06:54 [MFT_REUSED]-       
+296   f_0038da                                1.0 MB      2026-02-11 20:06:54 [MFT_REUSED]-       
+297   f_0038d9                                1.0 MB      2026-02-11 20:06:54 [MFT_REUSED]-       
+298   005834.log                              1.0 MB      2026-02-11 20:06:51 [MFT_REUSED]-       
+299   f_0038d4                                219 B       2026-02-11 20:06:48 [OK]        -       
+300   f_0038d2                                520 B       2026-02-11 20:06:48 [OK]        -       
+301   f_0038d0                                1.0 MB      2026-02-11 20:06:48 [MFT_REUSED]-       
+302   f_0038c9                                224 B       2026-02-11 20:06:48 [OK]        -       
+303   f_003ef1                                -           2026-02-11 20:06:48 [MFT_REUSED]-       
+304   f_003ef0                                1.0 MB      2026-02-11 20:06:48 [MFT_REUSED]-       
+305   f_003eef                                1.0 MB      2026-02-11 20:06:48 [MFT_REUSED]-       
+306   f_003eee                                81.8 KB     2026-02-11 20:06:48 [MFT_REUSED]-       
+307   f_0038cc                                1.0 MB      2026-02-11 20:06:47 [OK]        90      %
+308   f_003eed                                1.0 MB      2026-02-11 20:06:47 [MFT_REUSED]-       
+309   f_003edd                                1.0 MB      2026-02-11 20:06:47 [MFT_REUSED]-       
+310   Preferences~RF3311c1d.TMP               -           2026-02-11 20:06:46 [MFT_REUSED]-       
+311   b7909572-8a0b-4f7b-84ae-324fa7dfde7...  -           2026-02-11 20:06:46 [MFT_REUSED]-       
+312   Preferences~RF3311c1d.TMP               32.2 KB     2026-02-11 20:06:46 [OK]        90      %
+313   Preferences                             -           2026-02-11 20:06:46 [MFT_REUSED]-       
+314   001492.log                              -           2026-02-11 20:06:46 [MFT_REUSED]-       
+315   1p_failed_events.7acaf91f-b3d4-45c0...  117.1 KB    2026-02-11 20:06:40 [MFT_REUSED]-       
+316   Network Persistent State~RF33100d5.TMP  123.9 KB    2026-02-11 20:06:39 [OK]        90      %
+317   f7b8c8ca-e88e-48e4-bbd2-36c1a3c1733...  515 B       2026-02-11 20:06:39 [OK]        -       
+318   Network Persistent State                123.9 KB    2026-02-11 20:06:39 [OK]        90      %
+319   Network Persistent State~RF33100d5.TMP  990 B       2026-02-11 20:06:39 [MFT_REUSED]-       
+320   f_0038ca                                515 B       2026-02-11 20:06:38 [OK]        -       
+321   Preferences~RF330e8b9.TMP               990 B       2026-02-11 20:06:33 [MFT_REUSED]-       
+322   4860c9e1-aada-44a9-acee-a8836ce05f9...  -           2026-02-11 20:06:33 [MFT_REUSED]-       
+323   Preferences                             990 B       2026-02-11 20:06:33 [MFT_REUSED]-       
+324   Preferences~RF330e8b9.TMP               341.4 KB    2026-02-11 20:06:33 [MFT_REUSED]-       
+325   f_0038c2                                -           2026-02-11 20:06:32 [MFT_REUSED]-       
+326   f_0036e9                                341.4 KB    2026-02-11 20:06:32 [MFT_REUSED]-       
+327   f_0038c5                                -           2026-02-11 20:06:32 [MFT_REUSED]-       
+328   __sentry-event                          1.0 MB      2026-02-11 20:06:32 [OK]        90      %
+329   __sentry-breadcrumb2                    2.0 KB      2026-02-11 20:06:32 [OK]        60      %
+330   f618f0ba-eded-487d-728f-5a136b7499a...  1.0 MB      2026-02-11 20:06:32 [MFT_REUSED]-       
+331   __sentry-breadcrumb1                    -           2026-02-11 20:06:32 [NO_DATA]   -       
+332   session.json                            222 B       2026-02-11 20:06:32 [OK]        -       
+333   scene_rc-journal                        1.0 MB      2026-02-11 20:06:31 [OK]        90      %
+334   scene_rc-journal                        1.0 MB      2026-02-11 20:06:31 [OK]        90      %
+335   scene_rc-journal                        1.0 MB      2026-02-11 20:06:31 [OK]        90      %
+336   scene_rc-journal                        1.0 MB      2026-02-11 20:06:31 [OK]        90      %
+337   Local State~RF330e0ba.TMP               1.0 MB      2026-02-11 20:06:31 [OK]        90      %
+338   Edge-Local-State-Tmp-dc8132a7-21ef-...  1.0 MB      2026-02-11 20:06:31 [MFT_REUSED]-       
+339   Local State                             1.0 MB      2026-02-11 20:06:31 [OK]        90      %
+340   Local State~RF330e0ba.TMP               1.0 MB      2026-02-11 20:06:31 [MFT_REUSED]-       
+341   f_003eca                                1.0 MB      2026-02-11 20:06:27 [MFT_REUSED]-       
+342   f_003ec7                                44 B        2026-02-11 20:06:27 [OK]        60      %
+343   ccba5a5986c77e43.customDestinations...  1.0 MB      2026-02-11 20:06:23 [MFT_REUSED]-       
+344   IVIB1O36181LLZS0XINN.temp               1.0 MB      2026-02-11 20:06:23 [MFT_REUSED]-       
+345   ccba5a5986c77e43.customDestinations-ms  1.0 MB      2026-02-11 20:06:23 [MFT_REUSED]-       
+346   ccba5a5986c77e43.customDestinations...  1.0 MB      2026-02-11 20:06:23 [MFT_REUSED]-       
+347   849c3ea9-0493-4c92-91f3-4c2826fbba5...  1.0 MB      2026-02-11 20:06:14 [MFT_REUSED]-       
+348   state.vscdb-journal                     1.0 MB      2026-02-11 20:06:10 [MFT_REUSED]-       
+349   1p_failed_events.7acaf91f-b3d4-45c0...  117.1 KB    2026-02-11 20:06:09 [MFT_REUSED]-       
+350   ae55706.output                          9.2 KB      2026-02-11 20:06:09 [OK]        60      %
+351   005835.ldb                              1.0 MB      2026-02-11 20:06:04 [MFT_REUSED]-       
+352   005833.ldb                              1.0 MB      2026-02-11 20:06:04 [MFT_REUSED]-       
+353   005831.ldb                              1.0 MB      2026-02-11 20:06:04 [MFT_REUSED]-       
+354   005829.ldb                              169.8 KB    2026-02-11 20:06:04 [OK]        60      %
+355   005827.ldb                              9.2 KB      2026-02-11 20:06:04 [OK]        60      %
+356   005832.log                              216 B       2026-02-11 20:06:04 [OK]        -       
+357   SRU08401.log                            229 B       2026-02-11 20:06:03 [OK]        -       
+358   SRUtmp.log                              -           2026-02-11 20:06:03 [MFT_REUSED]-       
+359   SRU.log                                 -           2026-02-11 20:06:03 [NO_DATA]   -       
+360   scene_rc-journal                        1.0 MB      2026-02-11 20:05:55 [MFT_REUSED]-       
+361   scene_rc-journal                        1.0 MB      2026-02-11 20:05:55 [MFT_REUSED]-       
+362   scene_rc-journal                        1.0 MB      2026-02-11 20:05:55 [MFT_REUSED]-       
+363   scene_rc-journal                        1.0 MB      2026-02-11 20:05:55 [MFT_REUSED]-       
+364   state.vscdb-journal                     1.0 MB      2026-02-11 20:05:45 [MFT_REUSED]-       
+365   {967EC7E5-AE14-47F6-944F-D0A2646C67...  1.0 MB      2026-02-11 20:05:43 [MFT_REUSED]-       
+366   1p_failed_events.7acaf91f-b3d4-45c0...  117.1 KB    2026-02-11 20:05:38 [MFT_REUSED]-       
+367   Edge-Local-State-Tmp-b6cceef9-d50f-...  1.0 MB      2026-02-11 20:05:38 [OK]        90      %
+368   Local State~RF33013d5.TMP               1.0 MB      2026-02-11 20:05:38 [MFT_REUSED]-       
+369   Local State                             1.0 MB      2026-02-11 20:05:38 [MFT_REUSED]-       
+370   Local State~RF33013d5.TMP               1.0 MB      2026-02-11 20:05:38 [MFT_REUSED]-       
+371   Network Persistent State~RF3301358.TMP  1.0 MB      2026-02-11 20:05:38 [OK]        90      %
+372   c38f9b73-4254-4d21-9b9f-8bc15cafe64...  6.9 MB      2026-02-11 20:05:38 [MFT_REUSED]-       
+373   Network Persistent State                1.0 MB      2026-02-11 20:05:38 [OK]        90      %
+374   Network Persistent State~RF3301358.TMP  1.0 MB      2026-02-11 20:05:38 [MFT_REUSED]-       
+375   Preferences                             891.0 KB    2026-02-11 20:05:37 [MFT_REUSED]-       
+376   f141d68f-8ddc-4053-87b1-4b6680368d2...  990 B       2026-02-11 20:05:37 [MFT_REUSED]-       
+377   Preferences~RF3301089.TMP               891.0 KB    2026-02-11 20:05:37 [MFT_REUSED]-       
+378   Preferences~RF3301089.TMP               6.9 MB      2026-02-11 20:05:37 [MFT_REUSED]-       
+379   Local State~RF330106a.TMP               6.9 MB      2026-02-11 20:05:37 [MFT_REUSED]-       
+380   Edge-Local-State-Tmp-51ab5e28-20d4-...  238 B       2026-02-11 20:05:37 [OK]        -       
+381   Local State                             6.9 MB      2026-02-11 20:05:37 [MFT_REUSED]-       
+382   Local State~RF330106a.TMP               990 B       2026-02-11 20:05:37 [MFT_REUSED]-       
+383   ZGI7QWN07542_476054D1053789CF612733...  238 B       2026-02-11 20:05:31 [OK]        -       
+384   ZGI7QWN07542_476054D1053789CF612733...  990 B       2026-02-11 20:05:31 [MFT_REUSED]-       
+385   Local State~RF32fecc5.TMP               -           2026-02-11 20:05:28 [NO_DATA]   -       
+386   Edge-Local-State-Tmp-e1deef74-347e-...  1.0 MB      2026-02-11 20:05:28 [MFT_REUSED]-       
+387   Local State                             -           2026-02-11 20:05:28 [NO_DATA]   -       
+388   Local State~RF32fecc5.TMP               1.0 MB      2026-02-11 20:05:28 [MFT_REUSED]-       
+389   db8                                     1.0 MB      2026-02-11 20:05:28 [MFT_REUSED]-       
+390   db7                                     -           2026-02-11 20:05:28 [NO_DATA]   -       
+391   db6                                     1.0 MB      2026-02-11 20:05:28 [MFT_REUSED]-       
+392   ZGI7QWN07542_575287DFB755E93790FC78...  1.0 MB      2026-02-11 20:05:27 [MFT_REUSED]-       
+393   ZGI7QWN07542_575287DFB755E93790FC78...  7.8 KB      2026-02-11 20:05:27 [MFT_REUSED]-       
+394   state.vscdb-journal                     -           2026-02-11 20:05:26 [NO_DATA]   -       
+395   9229153479643334637_trigger.dat         -           2026-02-11 20:05:25 [NO_DATA]   -       
+396   9229153479643334637_data.dat            47.0 KB     2026-02-11 20:05:25 [MFT_REUSED]-       
+397   13894422788741241675_data.dat           -           2026-02-11 20:05:25 [MFT_REUSED]-       
+398   13894422788741241675_trigger.dat        1.0 MB      2026-02-11 20:05:25 [MFT_REUSED]-       
+399   17647717143869751280_trigger.dat        238 B       2026-02-11 20:05:25 [OK]        -       
+400   17647717143869751280_data.dat           990 B       2026-02-11 20:05:25 [MFT_REUSED]-       
+401   scene_rc-journal                        1.0 MB      2026-02-11 20:05:25 [MFT_REUSED]-       
+402   scene_rc-journal                        1.0 MB      2026-02-11 20:05:25 [MFT_REUSED]-       
+403   scene_rc-journal                        1.0 MB      2026-02-11 20:05:25 [MFT_REUSED]-       
+404   scene_rc-journal                        1.0 MB      2026-02-11 20:05:25 [MFT_REUSED]-       
+405   LZUpdate.ini                            103 B       2026-02-11 20:05:25 [OK]        60      %
+406   monitordata_2806567850_20495            27.0 KB     2026-02-11 20:05:25 [MFT_REUSED]-       
+407   Local State~RF32fcf59.TMP               1.0 MB      2026-02-11 20:05:21 [MFT_REUSED]-       
+408   Edge-Local-State-Tmp-2b3449c4-3e08-...  -           2026-02-11 20:05:21 [NO_DATA]   -       
+409   Local State                             1.0 MB      2026-02-11 20:05:21 [MFT_REUSED]-       
+410   Local State~RF32fcf59.TMP               7.8 KB      2026-02-11 20:05:21 [MFT_REUSED]-       
+411   Preferences~RF32fca97.TMP               -           2026-02-11 20:05:19 [NO_DATA]   -       
+412   e5eb6a61-aa32-4429-8d15-210c3cff23f...  891.0 KB    2026-02-11 20:05:19 [MFT_REUSED]-       
+413   Preferences                             -           2026-02-11 20:05:19 [NO_DATA]   -       
+414   Preferences~RF32fca97.TMP               7.8 KB      2026-02-11 20:05:19 [MFT_REUSED]-       
+415   1p_failed_events.7acaf91f-b3d4-45c0...  117.1 KB    2026-02-11 20:05:07 [MFT_REUSED]-       
+416   ed1d5789-0cfa-4b17-ada8-15760177482...  1.0 MB      2026-02-11 20:05:00 [MFT_REUSED]-       
+417   f_0038c3                                891.0 KB    2026-02-11 20:04:44 [MFT_REUSED]-       
+418   f_0038c1                                779.1 KB    2026-02-11 20:04:44 [MFT_REUSED]-       
+419   f_003ec0                                1.0 MB      2026-02-11 20:04:44 [MFT_REUSED]-       
+420   Preferences                             7.8 KB      2026-02-11 20:04:40 [MFT_REUSED]-       
+421   Preferences~RF32f305a.TMP               1.0 MB      2026-02-11 20:04:40 [MFT_REUSED]-       
+422   Preferences~RF32f305a.TMP               7.8 KB      2026-02-11 20:04:40 [MFT_REUSED]-       
+423   635e063e-7dd2-4d79-81db-ee832ec59cc...  -           2026-02-11 20:04:40 [NO_DATA]   -       
+424   scene_rc-journal                        1.0 MB      2026-02-11 20:04:38 [MFT_REUSED]-       
+425   scene_rc-journal                        1.0 MB      2026-02-11 20:04:38 [MFT_REUSED]-       
+426   scene_rc-journal                        1.0 MB      2026-02-11 20:04:38 [MFT_REUSED]-       
+427   scene_rc-journal                        1.0 MB      2026-02-11 20:04:38 [MFT_REUSED]-       
+428   Local State~RF32f2936.TMP               1.0 MB      2026-02-11 20:04:38 [MFT_REUSED]-       
+429   Local State~RF32f2936.TMP               -           2026-02-11 20:04:38 [NO_DATA]   -       
+430   Edge-Local-State-Tmp-2e76d3dc-60f7-...  1.0 MB      2026-02-11 20:04:38 [MFT_REUSED]-       
+431   Local State                             -           2026-02-11 20:04:38 [NO_DATA]   -       
+432   Network Persistent State~RF32f24d1.TMP  117.1 KB    2026-02-11 20:04:37 [MFT_REUSED]-       
+433   1cc5e1f4-3bc3-4f32-8923-be71af08869...  123.9 KB    2026-02-11 20:04:37 [OK]        90      %
+434   Network Persistent State                117.1 KB    2026-02-11 20:04:37 [MFT_REUSED]-       
+435   Network Persistent State~RF32f24d1.TMP  1.0 MB      2026-02-11 20:04:37 [MFT_REUSED]-       
+436   1p_failed_events.7acaf91f-b3d4-45c0...  123.9 KB    2026-02-11 20:04:36 [OK]        90      %
+437   f_003eb0                                1.0 MB      2026-02-11 20:04:32 [MFT_REUSED]-       
+438   f_003eaf                                1.0 MB      2026-02-11 20:04:32 [MFT_REUSED]-       
+439   f_003eae                                1.0 MB      2026-02-11 20:04:32 [MFT_REUSED]-       
+440   ccba5a5986c77e43.customDestinations...  1.0 MB      2026-02-11 20:04:30 [MFT_REUSED]-       
+441   SDBYGS067HUJBXKSYHUF.temp               1.0 MB      2026-02-11 20:04:30 [MFT_REUSED]-       
+442   ccba5a5986c77e43.customDestinations-ms  1.0 MB      2026-02-11 20:04:30 [MFT_REUSED]-       
+443   ccba5a5986c77e43.customDestinations...  1.0 MB      2026-02-11 20:04:30 [MFT_REUSED]-       
+444   state.vscdb-journal                     1.0 MB      2026-02-11 20:04:24 [MFT_REUSED]-       
+445   1p_failed_events.7acaf91f-b3d4-45c0...  123.9 KB    2026-02-11 20:04:06 [OK]        90      %
+446   nvlog.nvlgstg                           1.2 KB      2026-02-11 20:04:05 [MFT_REUSED]-       
+447   74695317-89d4-443a-8205-a4a9500be7a...  1.0 MB      2026-02-11 20:03:57 [MFT_REUSED]-       
+448   scene_rc-journal                        1.0 MB      2026-02-11 20:03:45 [MFT_REUSED]-       
+449   scene_rc-journal                        1.0 MB      2026-02-11 20:03:45 [MFT_REUSED]-       
+450   scene_rc-journal                        1.0 MB      2026-02-11 20:03:45 [MFT_REUSED]-       
+451   scene_rc-journal                        1.0 MB      2026-02-11 20:03:45 [MFT_REUSED]-       
+452   state.vscdb-journal                     1.0 MB      2026-02-11 20:03:44 [MFT_REUSED]-       
+453   Preferences                             1.0 MB      2026-02-11 20:03:37 [MFT_REUSED]-       
+454   Preferences~RF32e39b6.TMP               1.0 MB      2026-02-11 20:03:37 [MFT_REUSED]-       
+455   Preferences~RF32e39b6.TMP               1.0 MB      2026-02-11 20:03:37 [MFT_REUSED]-       
+456   30122e3e-9356-42de-aba1-1c6ceb135b4...  7.8 KB      2026-02-11 20:03:37 [MFT_REUSED]-       
+457   1p_failed_events.7acaf91f-b3d4-45c0...  123.9 KB    2026-02-11 20:03:35 [OK]        90      %
+458   LeCloudSearch.db-journal                7.8 KB      2026-02-11 20:03:35 [MFT_REUSED]-       
+459   LeCloudSearch.db-journal                1.0 MB      2026-02-11 20:03:25 [MFT_REUSED]-       
+460   etilqs_5s9fqPtYvonBXVT                  1.0 MB      2026-02-11 20:03:25 [MFT_REUSED]-       
+461   727_1770840204_thumb.jpg                1.0 MB      2026-02-11 20:03:24 [MFT_REUSED]-       
+462   727_1770840204.jpg                      1.0 MB      2026-02-11 20:03:24 [MFT_REUSED]-       
+463   727_1770840204_hd.jpg                   7.8 KB      2026-02-11 20:03:24 [MFT_REUSED]-       
+464   04c02c145784ad8f5c73dd7d923b2c60.da...  89.4 KB     2026-02-11 20:03:24 [OK]        -       
+465   04c02c145784ad8f5c73dd7d923b2c60.dat    1.0 MB      2026-02-11 20:03:24 [MFT_REUSED]-       
+466   04c02c145784ad8f5c73dd7d923b2c60_b_...  -           2026-02-11 20:03:24 [MFT_REUSED]-       
+467   vGQpGzE1wP                              34.1 KB     2026-02-11 20:03:24 [MFT_REUSED]-       
+468   pvOHqfAY2e                              34.1 KB     2026-02-11 20:03:24 [MFT_REUSED]-       
+469   040c29b6-b282-417c-8c47-17c12785ceb5    1.0 MB      2026-02-11 20:03:24 [MFT_REUSED]-       
+470   2f890759-6d22-47b5-899f-ed3f9616a580    2.5 KB      2026-02-11 20:03:24 [MFT_REUSED]-       
+471   040c29b6-b282-417c-8c47-17c12785ceb...  1.0 MB      2026-02-11 20:03:24 [MFT_REUSED]-       
+472   LeCloudSearch.db-journal                2.5 KB      2026-02-11 20:03:24 [MFT_REUSED]-       
+473   1p_failed_events.7acaf91f-b3d4-45c0...  123.9 KB    2026-02-11 20:03:04 [OK]        90      %
+474   scene_rc-journal                        15.0 KB     2026-02-11 20:02:56 [OK]        60      %
+475   scene_rc-journal                        15.0 KB     2026-02-11 20:02:56 [OK]        60      %
+476   scene_rc-journal                        15.0 KB     2026-02-11 20:02:56 [OK]        60      %
+477   scene_rc-journal                        15.0 KB     2026-02-11 20:02:56 [OK]        60      %
+478   state.vscdb-journal                     15.0 KB     2026-02-11 20:02:46 [OK]        60      %
+479   state.vscdb-journal                     15.0 KB     2026-02-11 20:02:44 [OK]        60      %
+480   05a1f449-3b13-4b0f-b9f4-e3e4258310e...  15.0 KB     2026-02-11 20:02:40 [OK]        60      %
+481   1p_failed_events.7acaf91f-b3d4-45c0...  123.9 KB    2026-02-11 20:02:33 [OK]        90      %
+482   scene_rc-journal                        15.0 KB     2026-02-11 20:02:06 [OK]        60      %
+483   scene_rc-journal                        15.0 KB     2026-02-11 20:02:06 [OK]        60      %
+484   scene_rc-journal                        15.0 KB     2026-02-11 20:02:06 [OK]        60      %
+485   scene_rc-journal                        15.0 KB     2026-02-11 20:02:06 [OK]        60      %
+486   1p_failed_events.7acaf91f-b3d4-45c0...  123.9 KB    2026-02-11 20:02:02 [OK]        90      %
+487   state.vscdb-journal                     15.0 KB     2026-02-11 20:01:56 [OK]        60      %
+488   storage.json                            15.0 KB     2026-02-11 20:01:55 [OK]        60      %
+489   storage.json.vsctmp                     51 B        2026-02-11 20:01:55 [OK]        60      %
+490   state.vscdb-journal                     51 B        2026-02-11 20:01:45 [OK]        60      %
+491   state.vscdb-journal                     51 B        2026-02-11 20:01:44 [OK]        60      %
+492   X2H3RPZB4013_C5409ED38DD347A34F8AA9...  51 B        2026-02-11 20:01:34 [OK]        60      %
+493   X2H3RPZB4013_C5409ED38DD347A34F8AA9...  93.0 KB     2026-02-11 20:01:34 [OK]        60      %
+494   1p_failed_events.7acaf91f-b3d4-45c0...  123.9 KB    2026-02-11 20:01:31 [OK]        90      %
+495   scene_rc-journal                        -           2026-02-11 20:01:25 [NO_DATA]   -       
+496   scene_rc-journal                        -           2026-02-11 20:01:25 [NO_DATA]   -       
+497   scene_rc-journal                        -           2026-02-11 20:01:25 [NO_DATA]   -       
+498   scene_rc-journal                        -           2026-02-11 20:01:25 [NO_DATA]   -       
+499   the-real-index~RF32be333.TMP            -           2026-02-11 20:01:04 [NO_DATA]   -       
+500   the-real-index~RF32be333.TMP            398 B       2026-02-11 20:01:04 [OK]        -       
+501   temp-index                              224 B       2026-02-11 20:01:04 [OK]        -       
+502   the-real-index                          -           2026-02-11 20:01:04 [NO_DATA]   -       
+503   1p_failed_events.7acaf91f-b3d4-45c0...  123.9 KB    2026-02-11 20:01:00 [OK]        90      %
+504   scene_rc-journal                        224 B       2026-02-11 20:00:54 [OK]        -       
+505   scene_rc-journal                        224 B       2026-02-11 20:00:54 [OK]        -       
+506   scene_rc-journal                        224 B       2026-02-11 20:00:54 [OK]        -       
+507   scene_rc-journal                        224 B       2026-02-11 20:00:54 [OK]        -       
+508   state.vscdb-journal                     224 B       2026-02-11 20:00:44 [OK]        -       
+509   state.vscdb-journal                     10.2 KB     2026-02-11 20:00:44 [MFT_REUSED]-       
+510   state.vscdb-journal                     6.6 KB      2026-02-11 20:00:43 [MFT_REUSED]-       
+511   Preferences~RF32b9477.TMP               6.6 KB      2026-02-11 20:00:43 [MFT_REUSED]-       
+512   460138a4-bfa3-4e52-9039-323219c148b...  24.0 KB     2026-02-11 20:00:43 [OK]        95      %
+513   Preferences                             6.6 KB      2026-02-11 20:00:43 [MFT_REUSED]-       
+514   Preferences~RF32b9477.TMP               326.7 KB    2026-02-11 20:00:43 [MFT_REUSED]-       
+515   1ced32d74a95c7bc.customDestinations...  326.7 KB    2026-02-11 20:00:43 [MFT_REUSED]-       
+516   1ced32d74a95c7bc.customDestinations...  24.0 KB     2026-02-11 20:00:43 [OK]        95      %
+517   RS66S33U2YR6MPXWFGCM.temp               224 B       2026-02-11 20:00:43 [OK]        -       
+518   1ced32d74a95c7bc.customDestinations-ms  24.0 KB     2026-02-11 20:00:43 [OK]        95      %
+519   swapfs-737                              224 B       2026-02-11 20:00:43 [OK]        -       
+520   document (2).lnk                        921 B       2026-02-11 20:00:43 [MFT_REUSED]-       
+521   recovered.lnk                           -           2026-02-11 20:00:43 [NO_DATA]   -       
+522   W2R8219CVYF4_DDF3B4B561517040EAAF4A...  7.5 KB      2026-02-11 20:00:40 [OK]        60      %
+523   W2R8219CVYF4_DDF3B4B561517040EAAF4A...  224 B       2026-02-11 20:00:40 [OK]        -       
+524   W2R8219CVYF4_DDF3B4B561517040EAAF4A...  -           2026-02-11 20:00:34 [MFT_REUSED]-       
+525   W2R8219CVYF4_DDF3B4B561517040EAAF4A...  955 B       2026-02-11 20:00:34 [MFT_REUSED]-       
+526   swapfs-736                              7.5 KB      2026-02-11 20:00:34 [OK]        60      %
+527   1p_failed_events.7acaf91f-b3d4-45c0...  123.9 KB    2026-02-11 20:00:28 [OK]        90      %
+528   {4C5014B7-F47F-461C-BF9D-99ABCA26AE...  -           2026-02-11 20:00:03 [NO_DATA]   -       
+529   officec2rclient.exe.db-wal              -           2026-02-11 20:00:03 [NO_DATA]   -       
+530   officec2rclient.exe.db-shm              -           2026-02-11 20:00:03 [NO_DATA]   -       
+531   d53ad0a4-fb98-4035-88d6-0d41de3cb3e...  -           2026-02-11 20:00:00 [NO_DATA]   -       
+532   nvlog.nvlgstg                           1.2 KB      2026-02-11 19:59:59 [MFT_REUSED]-       
+533   1p_failed_events.7acaf91f-b3d4-45c0...  123.9 KB    2026-02-11 19:59:57 [OK]        90      %
+534   scene_rc-journal                        -           2026-02-11 19:59:55 [NO_DATA]   -       
+535   scene_rc-journal                        -           2026-02-11 19:59:55 [NO_DATA]   -       
+536   scene_rc-journal                        -           2026-02-11 19:59:55 [NO_DATA]   -       
+537   scene_rc-journal                        -           2026-02-11 19:59:55 [NO_DATA]   -       
+538   Local State~RF32a9527.TMP               -           2026-02-11 19:59:38 [NO_DATA]   -       
+539   Edge-Local-State-Tmp-225675b3-ad74-...  -           2026-02-11 19:59:38 [NO_DATA]   -       
+540   Local State                             -           2026-02-11 19:59:38 [NO_DATA]   -       
+541   Local State~RF32a9527.TMP               -           2026-02-11 19:59:38 [NO_DATA]   -       
+542   Preferences~RF32a8efd.TMP               -           2026-02-11 19:59:37 [NO_DATA]   -       
+543   86197609-f8bb-4c38-8c05-c725e9f1f7a...  1.0 MB      2026-02-11 19:59:37 [MFT_REUSED]-       
+544   Preferences                             -           2026-02-11 19:59:37 [NO_DATA]   -       
+545   Preferences~RF32a8efd.TMP               -           2026-02-11 19:59:37 [NO_DATA]   -       
+546   1p_failed_events.7acaf91f-b3d4-45c0...  123.9 KB    2026-02-11 19:59:27 [OK]        90      %
+547   f_0038c0                                1.0 MB      2026-02-11 19:59:22 [MFT_REUSED]-       
+548   f_0038bf                                1.0 MB      2026-02-11 19:59:22 [MFT_REUSED]-       
+549   2b06af1c-5ad8-4c65-ae17-30fbf8c2a2f...  1.0 MB      2026-02-11 19:59:06 [MFT_REUSED]-       
+550   f_0038be                                -           2026-02-11 19:59:02 [NO_DATA]   -       
+551   f_0038bd                                1.0 MB      2026-02-11 19:59:02 [MFT_REUSED]-       
+552   1p_failed_events.7acaf91f-b3d4-45c0...  123.9 KB    2026-02-11 19:58:56 [OK]        90      %
+553   f_0038bc                                1.0 MB      2026-02-11 19:58:47 [MFT_REUSED]-       
+554   f_0038bb                                -           2026-02-11 19:58:47 [NO_DATA]   -       
+555   f_003eac                                1.0 MB      2026-02-11 19:58:37 [MFT_REUSED]-       
+556   f_003eab                                1.0 MB      2026-02-11 19:58:37 [MFT_REUSED]-       
+557   f_003ea9                                1.0 MB      2026-02-11 19:58:37 [MFT_REUSED]-       
+558   f_003ea8                                1.0 MB      2026-02-11 19:58:37 [MFT_REUSED]-       
+559   Local State~RF329a123.TMP               152.4 KB    2026-02-11 19:58:36 [MFT_REUSED]-       
+560   Local State~RF329a123.TMP               1.0 MB      2026-02-11 19:58:36 [MFT_REUSED]-       
+561   Edge-Local-State-Tmp-d0eaafea-015f-...  -           2026-02-11 19:58:36 [NO_DATA]   -       
+562   Local State                             1.0 MB      2026-02-11 19:58:36 [MFT_REUSED]-       
+563   Preferences~RF3299c7f.TMP               -           2026-02-11 19:58:34 [NO_DATA]   -       
+564   0d7059e8-f92e-4d20-b5a5-6891ce39e18...  -           2026-02-11 19:58:34 [NO_DATA]   -       
+565   Preferences                             -           2026-02-11 19:58:34 [NO_DATA]   -       
+566   Preferences~RF3299c7f.TMP               152.4 KB    2026-02-11 19:58:34 [MFT_REUSED]-       
+567   ccba5a5986c77e43.customDestinations...  8.0 KB      2026-02-11 19:58:32 [MFT_REUSED]-       
+568   5DSTXA9HDI8UGNV81OZJ.temp               1.0 MB      2026-02-11 19:58:32 [MFT_REUSED]-       
+569   ccba5a5986c77e43.customDestinations-ms  8.0 KB      2026-02-11 19:58:32 [MFT_REUSED]-       
+570   ccba5a5986c77e43.customDestinations...  -           2026-02-11 19:58:32 [NO_DATA]   -       
+571   1p_failed_events.7acaf91f-b3d4-45c0...  123.9 KB    2026-02-11 19:58:25 [OK]        90      %
+572   scene_rc-journal                        1.0 MB      2026-02-11 19:58:25 [MFT_REUSED]-       
+573   scene_rc-journal                        1.0 MB      2026-02-11 19:58:25 [MFT_REUSED]-       
+574   scene_rc-journal                        1.0 MB      2026-02-11 19:58:25 [MFT_REUSED]-       
+575   scene_rc-journal                        1.0 MB      2026-02-11 19:58:25 [MFT_REUSED]-       
+576   key_reportnow_2806567850_4065597214...  -           2026-02-11 19:58:22 [NO_DATA]   -       
+577   key_reportnow_2806567850_4065597214...  -           2026-02-11 19:58:22 [NO_DATA]   -       
+578   f_0038b8                                1.0 MB      2026-02-11 19:58:20 [MFT_REUSED]-       
+579   f_0038b5                                1.0 MB      2026-02-11 19:58:20 [MFT_REUSED]-       
+580   f_0038b3                                1.0 MB      2026-02-11 19:58:15 [MFT_REUSED]-       
+581   f_0038b1                                1.0 MB      2026-02-11 19:58:15 [MFT_REUSED]-       
+582   f_0038af                                -           2026-02-11 19:58:15 [MFT_REUSED]-       
+583   f_0038ae                                123.9 KB    2026-02-11 19:58:00 [OK]        90      %
+584   f_0038ac                                1.0 MB      2026-02-11 19:58:00 [MFT_REUSED]-       
+585   1p_failed_events.7acaf91f-b3d4-45c0...  1.0 MB      2026-02-11 19:57:59 [MFT_REUSED]-       
+586   d385492e-7c09-4ab1-b24f-de3fffa5db9...  1.0 MB      2026-02-11 19:57:48 [MFT_REUSED]-       
+587   1p_failed_events.7acaf91f-b3d4-45c0...  1.0 MB      2026-02-11 19:57:41 [MFT_REUSED]-       
+588   Preferences~RF328ac62.TMP               152.4 KB    2026-02-11 19:57:33 [MFT_REUSED]-       
+589   9f2ee47e-3a39-44f3-9b20-f849497d358...  -           2026-02-11 19:57:33 [NO_DATA]   -       
+590   Preferences                             152.4 KB    2026-02-11 19:57:33 [MFT_REUSED]-       
+591   Preferences~RF328ac62.TMP               1.0 MB      2026-02-11 19:57:33 [MFT_REUSED]-       
+592   Network Persistent State~RF3289fef.TMP  1.0 MB      2026-02-11 19:57:30 [MFT_REUSED]-       
+593   e2bf1db9-a9c0-4c81-96c6-b20bce5d300...  117.1 KB    2026-02-11 19:57:30 [MFT_REUSED]-       
+594   Network Persistent State                1.0 MB      2026-02-11 19:57:30 [MFT_REUSED]-       
+595   Network Persistent State~RF3289fef.TMP  -           2026-02-11 19:57:30 [NO_DATA]   -       
+596   f_0038aa                                -           2026-02-11 19:57:30 [NO_DATA]   -       
+597   f_0038a8                                117.1 KB    2026-02-11 19:57:30 [MFT_REUSED]-       
+598   1p_failed_events.7acaf91f-b3d4-45c0...  1.0 MB      2026-02-11 19:57:28 [MFT_REUSED]-       
+599   scene_rc-journal                        1.0 MB      2026-02-11 19:57:27 [MFT_REUSED]-       
+600   scene_rc-journal                        1.0 MB      2026-02-11 19:57:27 [MFT_REUSED]-       
+601   scene_rc-journal                        1.0 MB      2026-02-11 19:57:27 [MFT_REUSED]-       
+602   scene_rc-journal                        1.0 MB      2026-02-11 19:57:27 [MFT_REUSED]-       
+603   Local State~RF3289204.TMP               1.0 MB      2026-02-11 19:57:26 [MFT_REUSED]-       
+604   Edge-Local-State-Tmp-67736c18-2ba1-...  1.0 MB      2026-02-11 19:57:26 [MFT_REUSED]-       
+605   Local State                             1.0 MB      2026-02-11 19:57:26 [MFT_REUSED]-       
+606   Local State~RF3289204.TMP               1.0 MB      2026-02-11 19:57:26 [MFT_REUSED]-       
+607   f_0038a7                                1.0 MB      2026-02-11 19:57:20 [MFT_REUSED]-       
+608   f_003ea7                                1.0 MB      2026-02-11 19:57:20 [MFT_REUSED]-       
+609   1p_failed_events.7acaf91f-b3d4-45c0...  1.0 MB      2026-02-11 19:57:20 [MFT_REUSED]-       
+610   Preferences~RF32875f1.TMP               1.0 MB      2026-02-11 19:57:19 [MFT_REUSED]-       
+611   294428b0-0437-4bd7-9065-091d10d412d...  24.0 KB     2026-02-11 19:57:19 [MFT_REUSED]-       
+612   Preferences~RF32875f1.TMP               8.0 KB      2026-02-11 19:57:19 [MFT_REUSED]-       
+613   Preferences                             1.0 MB      2026-02-11 19:57:19 [MFT_REUSED]-       
+614   9BB27T6VY4N8VMV3C3UD.temp               8.0 KB      2026-02-11 19:57:18 [MFT_REUSED]-       
+615   ccba5a5986c77e43.customDestinations...  24.0 KB     2026-02-11 19:57:18 [MFT_REUSED]-       
+616   ccba5a5986c77e43.customDestinations-ms  24.0 KB     2026-02-11 19:57:18 [MFT_REUSED]-       
+617   ccba5a5986c77e43.customDestinations...  8.0 KB      2026-02-11 19:57:18 [MFT_REUSED]-       
+618   scene_rc-journal                        1.0 MB      2026-02-11 19:57:15 [MFT_REUSED]-       
+619   scene_rc-journal                        1.0 MB      2026-02-11 19:57:15 [MFT_REUSED]-       
+620   scene_rc-journal                        1.0 MB      2026-02-11 19:57:15 [MFT_REUSED]-       
+621   scene_rc-journal                        1.0 MB      2026-02-11 19:57:15 [MFT_REUSED]-       
+622   1p_failed_events.7acaf91f-b3d4-45c0...  1.0 MB      2026-02-11 19:57:15 [MFT_REUSED]-       
+623   Local State                             1.0 MB      2026-02-11 19:57:14 [MFT_REUSED]-       
+624   Local State~RF32863ff.TMP               1.0 MB      2026-02-11 19:57:14 [MFT_REUSED]-       
+625   Local State~RF32863ff.TMP               -           2026-02-11 19:57:14 [OK]        60      %
+626   Edge-Local-State-Tmp-77863cf2-17e4-...  938 B       2026-02-11 19:57:14 [OK]        90      %
+627   1p_failed_events.7acaf91f-b3d4-45c0...  1.0 MB      2026-02-11 19:57:13 [MFT_REUSED]-       
+628   910ea99f-b18d-4951-b12e-45c084b738a...  1.0 MB      2026-02-11 19:57:11 [MFT_REUSED]-       
+629   scene_rc-journal                        450 B       2026-02-11 19:56:55 [OK]        -       
+630   scene_rc-journal                        450 B       2026-02-11 19:56:55 [OK]        -       
+631   scene_rc-journal                        450 B       2026-02-11 19:56:55 [OK]        -       
+632   scene_rc-journal                        450 B       2026-02-11 19:56:55 [OK]        -       
+633   Local State~RF32804b8.TMP               450 B       2026-02-11 19:56:50 [OK]        -       
+634   Edge-Local-State-Tmp-3735c94e-c997-...  1.0 MB      2026-02-11 19:56:50 [MFT_REUSED]-       
+635   Local State                             450 B       2026-02-11 19:56:50 [OK]        -       
+636   Local State~RF32804b8.TMP               938 B       2026-02-11 19:56:50 [OK]        90      %
+637   5021e732-f7e2-4995-9a48-9634b047fc1...  152.4 KB    2026-02-11 19:56:49 [MFT_REUSED]-       
+638   Preferences~RF3280015.TMP               1.0 MB      2026-02-11 19:56:49 [MFT_REUSED]-       
+639   Preferences                             1.0 MB      2026-02-11 19:56:49 [MFT_REUSED]-       
+640   Preferences~RF3280015.TMP               938 B       2026-02-11 19:56:49 [OK]        90      %
+641   314819fe-087e-4110-1c77-b7df126dbd1...  1.0 MB      2026-02-11 19:56:32 [MFT_REUSED]-       
+642   __sentry-breadcrumb2                    8.0 KB      2026-02-11 19:56:32 [MFT_REUSED]-       
+643   __sentry-event                          938 B       2026-02-11 19:56:32 [OK]        90      %
+644   __sentry-breadcrumb1                    -           2026-02-11 19:56:32 [OK]        60      %
+645   session.json                            222 B       2026-02-11 19:56:32 [OK]        -       
+646   Network Persistent State~RF327ad03.TMP  1.0 MB      2026-02-11 19:56:28 [OK]        90      %
+647   97476123-c818-478a-933f-25bd59eb1a9...  -           2026-02-11 19:56:28 [NO_DATA]   -       
+648   Network Persistent State                1.0 MB      2026-02-11 19:56:28 [OK]        90      %
+649   Network Persistent State~RF327ad03.TMP  1.0 MB      2026-02-11 19:56:28 [MFT_REUSED]-       
+650   f_0038a5                                1.0 MB      2026-02-11 19:56:26 [MFT_REUSED]-       
+651   f_0038a3                                -           2026-02-11 19:56:26 [NO_DATA]   -       
+652   Preferences~RF32786de.TMP               1.0 MB      2026-02-11 19:56:18 [OK]        90      %
+653   e89088ee-7efc-4672-83a8-70c924a21a0...  1.0 MB      2026-02-11 19:56:18 [MFT_REUSED]-       
+654   Preferences                             1.0 MB      2026-02-11 19:56:18 [OK]        90      %
+655   Preferences~RF32786de.TMP               1.0 MB      2026-02-11 19:56:18 [MFT_REUSED]-       
+656   f_0038a1                                1.0 MB      2026-02-11 19:56:11 [MFT_REUSED]-       
+657   f_00389e                                1.0 MB      2026-02-11 19:56:11 [MFT_REUSED]-       
+658   nvlog.nvlgstg                           1.2 KB      2026-02-11 19:55:50 [MFT_REUSED]-       
+659   f_00389c                                1.0 MB      2026-02-11 19:55:46 [MFT_REUSED]-       
+660   f_00389a                                1.0 MB      2026-02-11 19:55:46 [MFT_REUSED]-       
+661   a63be71e-1df1-44fb-ad86-298d2961ee1...  1.0 MB      2026-02-11 19:55:39 [MFT_REUSED]-       
+662   f_003899                                1.0 MB      2026-02-11 19:55:31 [MFT_REUSED]-       
+663   f_003898                                1.0 MB      2026-02-11 19:55:31 [MFT_REUSED]-       
+664   20260211195525_97e2cb65f01644ae9163...  1.0 MB      2026-02-11 19:55:30 [MFT_REUSED]-       
+665   20260211195525_d0761616cd08478f94d5...  1.0 MB      2026-02-11 19:55:25 [MFT_REUSED]-       
+666   20260211195525_d0761616cd08478f94d5...  1.0 MB      2026-02-11 19:55:25 [MFT_REUSED]-       
+667   scene_rc-journal                        1.0 MB      2026-02-11 19:55:22 [MFT_REUSED]-       
+668   scene_rc-journal                        1.0 MB      2026-02-11 19:55:22 [MFT_REUSED]-       
+669   scene_rc-journal                        1.0 MB      2026-02-11 19:55:22 [MFT_REUSED]-       
+670   scene_rc-journal                        1.0 MB      2026-02-11 19:55:22 [MFT_REUSED]-       
+671   f_00388b                                1.0 MB      2026-02-11 19:55:22 [MFT_REUSED]-       
+672   f_003895                                1.0 MB      2026-02-11 19:55:22 [MFT_REUSED]-       
+673   Edge-Local-State-Tmp-35740268-a1bb-...  450 B       2026-02-11 19:55:17 [OK]        -       
+674   Local State~RF3269ab9.TMP               32.2 KB     2026-02-11 19:55:17 [OK]        90      %
+675   Local State                             32.2 KB     2026-02-11 19:55:17 [OK]        90      %
+676   Local State~RF3269ab9.TMP               -           2026-02-11 19:55:17 [NO_DATA]   -       
+677   Preferences~RF3269aa9.TMP               450 B       2026-02-11 19:55:17 [OK]        -       
+678   50058b6e-ef4f-4ed5-8555-97a1564b092...  1.0 MB      2026-02-11 19:55:17 [OK]        90      %
+679   Preferences                             450 B       2026-02-11 19:55:17 [OK]        -       
+680   Preferences~RF3269aa9.TMP               -           2026-02-11 19:55:17 [NO_DATA]   -       
+681   ccba5a5986c77e43.customDestinations...  1.0 MB      2026-02-11 19:55:09 [MFT_REUSED]-       
+682   0CG5N1Q1V6UX0XG0ELJ2.temp               24.0 KB     2026-02-11 19:55:09 [MFT_REUSED]-       
+683   ccba5a5986c77e43.customDestinations-ms  1.0 MB      2026-02-11 19:55:09 [MFT_REUSED]-       
+684   ccba5a5986c77e43.customDestinations...  1.0 MB      2026-02-11 19:55:09 [OK]        90      %
+685   7b341627-c181-4249-98bb-651244deb9d...  16.0 KB     2026-02-11 19:55:06 [MFT_REUSED]-       
+686   98cdb949-af75-4fd3-922b-74ab23fb99d...  1.0 MB      2026-02-11 19:55:06 [MFT_REUSED]-       
+687   b494ce5c-65c4-48b5-ac40-47c6ffa89bd...  24.0 KB     2026-02-11 19:54:46 [MFT_REUSED]-       
+688   scene_rc-journal                        -           2026-02-11 19:54:26 [MFT_REUSED]-       
+689   scene_rc-journal                        -           2026-02-11 19:54:26 [MFT_REUSED]-       
+690   scene_rc-journal                        -           2026-02-11 19:54:26 [MFT_REUSED]-       
+691   scene_rc-journal                        -           2026-02-11 19:54:26 [MFT_REUSED]-       
+692   Local State                             -           2026-02-11 19:54:25 [MFT_REUSED]-       
+693   Local State~RF325cde3.TMP               1.0 MB      2026-02-11 19:54:25 [OK]        90      %
+694   Local State~RF325cde3.TMP               -           2026-02-11 19:54:25 [MFT_REUSED]-       
+695   Edge-Local-State-Tmp-b6cfa982-781d-...  32.2 KB     2026-02-11 19:54:25 [OK]        90      %
+696   Preferences                             1.0 MB      2026-02-11 19:54:21 [OK]        90      %
+697   Preferences~RF325be72.TMP               32.2 KB     2026-02-11 19:54:21 [OK]        90      %
+698   Preferences~RF325be72.TMP               1.0 MB      2026-02-11 19:54:21 [OK]        90      %
+699   60ce2a16-555f-463c-b026-d7bdaf0c912...  450 B       2026-02-11 19:54:21 [OK]        -       
+700   Network Persistent State~RF325b356.TMP  450 B       2026-02-11 19:54:18 [OK]        -       
+701   81786ec6-6186-4fb6-a9a4-e75b043ce05...  1.0 MB      2026-02-11 19:54:18 [OK]        90      %
+702   Network Persistent State                450 B       2026-02-11 19:54:18 [OK]        -       
+703   Network Persistent State~RF325b356.TMP  32.2 KB     2026-02-11 19:54:18 [OK]        90      %
+704   f_003892                                1.0 MB      2026-02-11 19:54:12 [OK]        90      %
+705   ccba5a5986c77e43.customDestinations...  32.2 KB     2026-02-11 19:54:11 [OK]        90      %
+706   A5U9OOVJZ9HUTT12Q9C2.temp               1.0 MB      2026-02-11 19:54:11 [MFT_REUSED]-       
+707   ccba5a5986c77e43.customDestinations-ms  32.2 KB     2026-02-11 19:54:11 [OK]        90      %
+708   ccba5a5986c77e43.customDestinations...  -           2026-02-11 19:54:11 [NO_DATA]   -       
+709   Local State~RF3259733.TMP               1.0 MB      2026-02-11 19:54:11 [MFT_REUSED]-       
+710   Edge-Local-State-Tmp-7837dae9-c58b-...  -           2026-02-11 19:54:11 [MFT_REUSED]-       
+711   Local State                             1.0 MB      2026-02-11 19:54:11 [MFT_REUSED]-       
+712   Local State~RF3259733.TMP               -           2026-02-11 19:54:11 [NO_DATA]   -       
+713   Preferences~RF3259186.TMP               -           2026-02-11 19:54:09 [MFT_REUSED]-       
+714   d64431a6-7e4c-4095-805b-3e9d312a834...  1.0 MB      2026-02-11 19:54:09 [OK]        90      %
+715   Preferences                             -           2026-02-11 19:54:09 [MFT_REUSED]-       
+716   Preferences~RF3259186.TMP               -           2026-02-11 19:54:09 [NO_DATA]   -       
+717   scene_rc-journal                        24.0 KB     2026-02-11 19:53:55 [MFT_REUSED]-       
+718   scene_rc-journal                        24.0 KB     2026-02-11 19:53:55 [MFT_REUSED]-       
+719   scene_rc-journal                        24.0 KB     2026-02-11 19:53:55 [MFT_REUSED]-       
+720   scene_rc-journal                        24.0 KB     2026-02-11 19:53:55 [MFT_REUSED]-       
+721   f_003890                                1.0 MB      2026-02-11 19:53:41 [MFT_REUSED]-       
+722   f_00388d                                1.0 MB      2026-02-11 19:53:41 [MFT_REUSED]-       
+723   f_00388a                                1.0 MB      2026-02-11 19:53:26 [MFT_REUSED]-       
+724   f_003888                                1.0 MB      2026-02-11 19:53:26 [MFT_REUSED]-       
+725   Network Persistent State~RF324d3d3.TMP  1.0 MB      2026-02-11 19:53:21 [OK]        90      %
+726   31375572-ddf9-4a60-ae5e-039f183457e...  1.0 MB      2026-02-11 19:53:21 [MFT_REUSED]-       
+727   Network Persistent State                1.0 MB      2026-02-11 19:53:21 [OK]        90      %
+728   Network Persistent State~RF324d3d3.TMP  24.0 KB     2026-02-11 19:53:21 [MFT_REUSED]-       
+729   1be561f2-4fd2-4c15-afa2-709590dad3f...  24.0 KB     2026-02-11 19:53:13 [MFT_REUSED]-       
+730   f_003885                                1.0 MB      2026-02-11 19:53:01 [MFT_REUSED]-       
+731   f_003884                                1.0 MB      2026-02-11 19:53:01 [MFT_REUSED]-       
+732   Preferences                             1.0 MB      2026-02-11 19:52:54 [MFT_REUSED]-       
+733   Preferences~RF3246b75.TMP               1.0 MB      2026-02-11 19:52:54 [MFT_REUSED]-       
+734   Preferences~RF3246b75.TMP               1.0 MB      2026-02-11 19:52:54 [MFT_REUSED]-       
+735   75014dda-70f4-45d0-bdab-79433e7fed3...  -           2026-02-11 19:52:54 [MFT_REUSED]-       
+736   Local State~RF32461d0.TMP               -           2026-02-11 19:52:52 [MFT_REUSED]-       
+737   Edge-Local-State-Tmp-1551fa65-27ee-...  1.0 MB      2026-02-11 19:52:52 [MFT_REUSED]-       
+738   Local State                             -           2026-02-11 19:52:52 [MFT_REUSED]-       
+739   Local State~RF32461d0.TMP               1.0 MB      2026-02-11 19:52:52 [MFT_REUSED]-       
+740   f_003882                                1.0 MB      2026-02-11 19:52:51 [MFT_REUSED]-       
+741   f_003881                                1.0 MB      2026-02-11 19:52:51 [MFT_REUSED]-       
+742   ccba5a5986c77e43.customDestinations...  1.0 MB      2026-02-11 19:52:44 [MFT_REUSED]-       
+743   1YLP19ITKNNMH6PMJB2U.temp               32.2 KB     2026-02-11 19:52:44 [OK]        90      %
+744   ccba5a5986c77e43.customDestinations-ms  1.0 MB      2026-02-11 19:52:44 [MFT_REUSED]-       
+745   ccba5a5986c77e43.customDestinations...  1.0 MB      2026-02-11 19:52:44 [MFT_REUSED]-       
+746   Geofence.dat                            48 B        2026-02-11 19:52:41 [OK]        -       
+747   Geofence.dat                            48 B        2026-02-11 19:52:41 [OK]        -       
+748   Local State~RF324308f.TMP               32.2 KB     2026-02-11 19:52:39 [OK]        90      %
+749   Local State                             32.2 KB     2026-02-11 19:52:39 [OK]        90      %
+750   Edge-Local-State-Tmp-3203bb53-ec40-...  -           2026-02-11 19:52:39 [MFT_REUSED]-       
+751   Local State~RF324308f.TMP               1.0 MB      2026-02-11 19:52:39 [MFT_REUSED]-       
+752   Preferences~RF3242c1a.TMP               -           2026-02-11 19:52:38 [MFT_REUSED]-       
+753   0e4666b6-843b-48f5-aebd-4d42bc76192...  1.0 MB      2026-02-11 19:52:38 [MFT_REUSED]-       
+754   Preferences                             -           2026-02-11 19:52:38 [MFT_REUSED]-       
+755   Preferences~RF3242c1a.TMP               1.0 MB      2026-02-11 19:52:38 [MFT_REUSED]-       
+756   scene_rc-journal                        24.0 KB     2026-02-11 19:52:25 [MFT_REUSED]-       
+757   scene_rc-journal                        24.0 KB     2026-02-11 19:52:25 [MFT_REUSED]-       
+758   scene_rc-journal                        24.0 KB     2026-02-11 19:52:25 [MFT_REUSED]-       
+759   scene_rc-journal                        24.0 KB     2026-02-11 19:52:25 [MFT_REUSED]-       
+760   8fb6b131-9a86-4387-81f8-0aef462ce3b...  1.0 MB      2026-02-11 19:52:25 [MFT_REUSED]-       
+761   Preferences~RF323c503.TMP               24.0 KB     2026-02-11 19:52:12 [MFT_REUSED]-       
+762   Preferences~RF323c503.TMP               1.0 MB      2026-02-11 19:52:12 [MFT_REUSED]-       
+763   fed8f70b-d3aa-497e-87d8-b9cf47dccdb...  -           2026-02-11 19:52:12 [MFT_REUSED]-       
+764   Preferences                             24.0 KB     2026-02-11 19:52:12 [MFT_REUSED]-       
+765   20260211195159_4d9099a148754e1fa230...  1.0 MB      2026-02-11 19:52:07 [MFT_REUSED]-       
+766   20260211195159_cf76e342fd894bd3852d...  1.0 MB      2026-02-11 19:52:05 [MFT_REUSED]-       
+767   f_003880                                -           2026-02-11 19:52:04 [MFT_REUSED]-       
+768   f_00387e                                1.0 MB      2026-02-11 19:52:04 [MFT_REUSED]-       
+769   Local State~RF323a5b4.TMP               1.0 MB      2026-02-11 19:52:04 [MFT_REUSED]-       
+770   Local State                             1.0 MB      2026-02-11 19:52:04 [MFT_REUSED]-       
+771   Local State~RF323a5b4.TMP               -           2026-02-11 19:52:04 [NO_DATA]   -       
+772   Edge-Local-State-Tmp-2f5143ed-cc6b-...  32.2 KB     2026-02-11 19:52:04 [OK]        90      %
+773   Preferences~RF3239fa9.TMP               -           2026-02-11 19:52:02 [NO_DATA]   -       
+774   affc94b2-c19d-40c8-bf5e-03c82f44255...  1.0 MB      2026-02-11 19:52:02 [MFT_REUSED]-       
+775   Preferences                             -           2026-02-11 19:52:02 [NO_DATA]   -       
+776   Preferences~RF3239fa9.TMP               32.2 KB     2026-02-11 19:52:02 [OK]        90      %
+777   20260211195159_cf76e342fd894bd3852d...  1.0 MB      2026-02-11 19:51:59 [MFT_REUSED]-       
+778   0019000000067D79621822DC                1.0 MB      2026-02-11 19:51:56 [MFT_REUSED]-       
+779   f_003d92                                1.0 MB      2026-02-11 19:51:56 [MFT_REUSED]-       
+780   f_00387b                                32.2 KB     2026-02-11 19:51:56 [OK]        90      %
+781   f_00386f                                1.0 MB      2026-02-11 19:51:56 [MFT_REUSED]-       
+782   f_003ea6                                1.0 MB      2026-02-11 19:51:56 [MFT_REUSED]-       
+783   ccba5a5986c77e43.customDestinations...  1.0 MB      2026-02-11 19:51:56 [MFT_REUSED]-       
+784   LUF0IYSXZ7FUT836HT4O.temp               1.0 MB      2026-02-11 19:51:56 [MFT_REUSED]-       
+785   ccba5a5986c77e43.customDestinations-ms  1.0 MB      2026-02-11 19:51:56 [MFT_REUSED]-       
+786   ccba5a5986c77e43.customDestinations...  2.0 KB      2026-02-11 19:51:56 [OK]        60      %
+787   scene_rc-journal                        1.0 MB      2026-02-11 19:51:54 [MFT_REUSED]-       
+788   scene_rc-journal                        1.0 MB      2026-02-11 19:51:54 [MFT_REUSED]-       
+789   scene_rc-journal                        1.0 MB      2026-02-11 19:51:54 [MFT_REUSED]-       
+790   scene_rc-journal                        1.0 MB      2026-02-11 19:51:54 [MFT_REUSED]-       
+791   Local State~RF3237e07.TMP               1.0 MB      2026-02-11 19:51:53 [MFT_REUSED]-       
+792   Edge-Local-State-Tmp-29beb49e-d3be-...  1.0 MB      2026-02-11 19:51:53 [MFT_REUSED]-       
+793   Local State                             1.0 MB      2026-02-11 19:51:53 [MFT_REUSED]-       
+794   Local State~RF3237e07.TMP               2.0 KB      2026-02-11 19:51:53 [OK]        60      %
+795   5ca721a5-d55b-4185-a3dd-76b25792c6d...  96 B        2026-02-11 19:51:52 [OK]        -       
+796   Secure Preferences                      1.0 MB      2026-02-11 19:51:52 [MFT_REUSED]-       
+797   Secure Preferences~RF323781c.TMP        1.0 MB      2026-02-11 19:51:52 [MFT_REUSED]-       
+798   Secure Preferences~RF323781c.TMP        2.0 KB      2026-02-11 19:51:52 [OK]        60      %
+799   Preferences~RF323780c.TMP               96 B        2026-02-11 19:51:52 [OK]        -       
+800   cc1f1613-998b-4ea9-8e8c-1b093909a1b...  24.0 KB     2026-02-11 19:51:52 [MFT_REUSED]-       
+801   Preferences                             96 B        2026-02-11 19:51:52 [OK]        -       
+802   Preferences~RF323780c.TMP               2.0 KB      2026-02-11 19:51:52 [OK]        60      %
+803   Local State~RF3236f90.TMP               24.0 KB     2026-02-11 19:51:50 [MFT_REUSED]-       
+804   Edge-Local-State-Tmp-487072f6-9458-...  1.0 MB      2026-02-11 19:51:50 [MFT_REUSED]-       
+805   Local State                             24.0 KB     2026-02-11 19:51:50 [MFT_REUSED]-       
+806   Local State~RF3236f90.TMP               2.0 KB      2026-02-11 19:51:50 [OK]        60      %
+807   Preferences~RF32349b9.TMP               1.0 MB      2026-02-11 19:51:40 [MFT_REUSED]-       
+808   be77e9b3-77c5-499a-9c94-fb3b482aa40...  96 B        2026-02-11 19:51:40 [OK]        -       
+809   Preferences                             1.0 MB      2026-02-11 19:51:40 [MFT_REUSED]-       
+810   Preferences~RF32349b9.TMP               2.0 KB      2026-02-11 19:51:40 [OK]        60      %
+811   Network Persistent State~RF3234861.TMP  96 B        2026-02-11 19:51:40 [OK]        -       
+812   5f6f5ee6-36aa-43aa-8fd7-25d41f02f43...  1.0 MB      2026-02-11 19:51:40 [OK]        90      %
+813   Network Persistent State                96 B        2026-02-11 19:51:40 [OK]        -       
+814   Network Persistent State~RF3234861.TMP  2.0 KB      2026-02-11 19:51:40 [OK]        60      %
+815   nvlog.nvlgstg                           1.2 KB      2026-02-11 19:51:39 [MFT_REUSED]-       
+816   Edge-Local-State-Tmp-52220093-b37e-...  24.0 KB     2026-02-11 19:51:33 [MFT_REUSED]-       
+817   Local State~RF3232ccb.TMP               1.0 MB      2026-02-11 19:51:33 [MFT_REUSED]-       
+818   Local State                             1.0 MB      2026-02-11 19:51:33 [MFT_REUSED]-       
+819   Local State~RF3232ccb.TMP               1.0 MB      2026-02-11 19:51:33 [MFT_REUSED]-       
+820   Network Persistent State~RF3232902.TMP  1.0 MB      2026-02-11 19:51:32 [MFT_REUSED]-       
+821   8d894183-8c37-491c-aac5-513b197eb56...  450 B       2026-02-11 19:51:32 [OK]        -       
+822   Network Persistent State~RF3232902.TMP  24.0 KB     2026-02-11 19:51:32 [MFT_REUSED]-       
+823   Network Persistent State                1.0 MB      2026-02-11 19:51:32 [MFT_REUSED]-       
+824   f_003879                                24.0 KB     2026-02-11 19:51:30 [MFT_REUSED]-       
+825   f_003877                                450 B       2026-02-11 19:51:30 [OK]        -       
+826   Preferences~RF32301d3.TMP               1.0 MB      2026-02-11 19:51:22 [MFT_REUSED]-       
+827   63605bd4-17ad-41ec-be10-566c4387b18...  1.0 MB      2026-02-11 19:51:22 [MFT_REUSED]-       
+828   Preferences                             1.0 MB      2026-02-11 19:51:22 [MFT_REUSED]-       
+829   Preferences~RF32301d3.TMP               1.0 MB      2026-02-11 19:51:22 [MFT_REUSED]-       
+830   Local State~RF32301d3.TMP               1.0 MB      2026-02-11 19:51:22 [MFT_REUSED]-       
+831   Local State~RF32301d3.TMP               1.0 MB      2026-02-11 19:51:22 [MFT_REUSED]-       
+832   Edge-Local-State-Tmp-bccfc760-1771-...  1.0 MB      2026-02-11 19:51:22 [MFT_REUSED]-       
+833   Local State                             1.0 MB      2026-02-11 19:51:22 [MFT_REUSED]-       
+834   f_003876                                1.0 MB      2026-02-11 19:51:20 [MFT_REUSED]-       
+835   f_003874                                1.0 MB      2026-02-11 19:51:20 [MFT_REUSED]-       
+836   ccba5a5986c77e43.customDestinations...  1.0 MB      2026-02-11 19:51:18 [MFT_REUSED]-       
+837   G5LBK1VGBBGQL9FM4V82.temp               1.0 MB      2026-02-11 19:51:18 [MFT_REUSED]-       
+838   ccba5a5986c77e43.customDestinations-ms  1.0 MB      2026-02-11 19:51:18 [MFT_REUSED]-       
+839   ccba5a5986c77e43.customDestinations...  1.0 MB      2026-02-11 19:51:18 [MFT_REUSED]-       
+840   f_003873                                1.0 MB      2026-02-11 19:51:10 [MFT_REUSED]-       
+841   f_003871                                1.0 MB      2026-02-11 19:51:10 [MFT_REUSED]-       
+842   6a4514ad-a849-4954-9db7-3fadc678cb2...  1.0 MB      2026-02-11 19:51:03 [MFT_REUSED]-       
+843   scene_rc-journal                        1.0 MB      2026-02-11 19:50:55 [MFT_REUSED]-       
+844   scene_rc-journal                        1.0 MB      2026-02-11 19:50:55 [MFT_REUSED]-       
+845   scene_rc-journal                        1.0 MB      2026-02-11 19:50:55 [MFT_REUSED]-       
+846   scene_rc-journal                        1.0 MB      2026-02-11 19:50:55 [MFT_REUSED]-       
+847   f_00386e                                1.0 MB      2026-02-11 19:50:49 [MFT_REUSED]-       
+848   f_00386c                                1.0 MB      2026-02-11 19:50:49 [MFT_REUSED]-       
+849   scene_rc-journal                        1.0 MB      2026-02-11 19:50:40 [MFT_REUSED]-       
+850   scene_rc-journal                        1.0 MB      2026-02-11 19:50:40 [MFT_REUSED]-       
+851   scene_rc-journal                        1.0 MB      2026-02-11 19:50:40 [MFT_REUSED]-       
+852   scene_rc-journal                        1.0 MB      2026-02-11 19:50:40 [MFT_REUSED]-       
+853   Local State~RF3225ca9.TMP               2.0 KB      2026-02-11 19:50:39 [OK]        60      %
+854   Edge-Local-State-Tmp-7c659dfa-0a45-...  1.0 MB      2026-02-11 19:50:39 [MFT_REUSED]-       
+855   Local State                             2.0 KB      2026-02-11 19:50:39 [OK]        60      %
+856   Local State~RF3225ca9.TMP               1.0 MB      2026-02-11 19:50:39 [MFT_REUSED]-       
+857   Preferences~RF3225c9a.TMP               1.0 MB      2026-02-11 19:50:39 [MFT_REUSED]-       
+858   Preferences                             1.0 MB      2026-02-11 19:50:39 [MFT_REUSED]-       
+859   Preferences~RF3225c9a.TMP               1.0 MB      2026-02-11 19:50:39 [MFT_REUSED]-       
+860   acbc4294-b537-4235-b738-0fcaa035150...  1.0 MB      2026-02-11 19:50:39 [MFT_REUSED]-       
+861   RevisitationBloomfilter~RF3224e32.TMP   1.0 MB      2026-02-11 19:50:36 [MFT_REUSED]-       
+862   895cc54a-0df3-4297-9174-d807549c195...  1.0 MB      2026-02-11 19:50:36 [MFT_REUSED]-       
+863   RevisitationBloomfilter                 1.0 MB      2026-02-11 19:50:36 [MFT_REUSED]-       
+864   RevisitationBloomfilter~RF3224e32.TMP   1.0 MB      2026-02-11 19:50:36 [MFT_REUSED]-       
+865   SRU08400.log                            -           2026-02-11 19:50:35 [MFT_REUSED]-       
+866   SRUtmp.log                              -           2026-02-11 19:50:35 [NO_DATA]   -       
+867   SRU.log                                 -           2026-02-11 19:50:35 [NO_DATA]   -       
+868   ccba5a5986c77e43.customDestinations...  1.0 MB      2026-02-11 19:50:31 [MFT_REUSED]-       
+869   SA7AW7KL2AT23KGAKUZ0.temp               1.0 MB      2026-02-11 19:50:31 [MFT_REUSED]-       
+870   ccba5a5986c77e43.customDestinations-ms  1.0 MB      2026-02-11 19:50:31 [MFT_REUSED]-       
+871   ccba5a5986c77e43.customDestinations...  1.0 MB      2026-02-11 19:50:31 [MFT_REUSED]-       
+872   55f792d0-ec69-4f43-9b79-94fe5548dd1...  1.0 MB      2026-02-11 19:50:04 [MFT_REUSED]-       
+873   ca733f24-7128-47b9-b1ef-4d0c79f88fa...  1.0 MB      2026-02-11 19:50:04 [MFT_REUSED]-       
+874   f_003ea5                                1.0 MB      2026-02-11 19:49:34 [MFT_REUSED]-       
+875   f_003ea1                                1.0 MB      2026-02-11 19:49:34 [MFT_REUSED]-       
+876   f_003ea0                                16.0 KB     2026-02-11 19:49:34 [MFT_REUSED]-       
+877   f_003e9d                                1.0 MB      2026-02-11 19:49:34 [MFT_REUSED]-       
+878   scene_rc-journal                        1.0 MB      2026-02-11 19:49:25 [OK]        90      %
+879   scene_rc-journal                        1.0 MB      2026-02-11 19:49:25 [OK]        90      %
+880   scene_rc-journal                        1.0 MB      2026-02-11 19:49:25 [OK]        90      %
+881   scene_rc-journal                        1.0 MB      2026-02-11 19:49:25 [OK]        90      %
+882   07261ab5-5eae-4237-918e-9a7f8c5acb7...  1.0 MB      2026-02-11 19:49:02 [MFT_REUSED]-       
+883   a9d2e98f-35fe-44c8-8af5-0b0fbb6d144...  1.0 MB      2026-02-11 19:49:02 [MFT_REUSED]-       
+884   OLDCACHE.000                            698.4 KB    2026-02-11 19:48:28 [MFT_REUSED]-       
+885   dmrc.idx.2                              698.4 KB    2026-02-11 19:48:28 [MFT_REUSED]-       
+886   dmrc.idx.0                              -           2026-02-11 19:48:28 [MFT_REUSED]-       
+887   dmrc.idx                                698.4 KB    2026-02-11 19:48:28 [MFT_REUSED]-       
+888   1e73e15d-1706-4554-bc53-7c565dc4fbf...  -           2026-02-11 19:48:21 [MFT_REUSED]-       
+889   e565d525                                2.0 KB      2026-02-11 19:48:01 [OK]        60      %
+890   4270bf1cd1aae004ed6fee83989ac428601...  1.0 MB      2026-02-11 19:48:01 [OK]        90      %
+891   2026-02-11T19_44_18_941Z-debug-0.log    1.0 MB      2026-02-11 19:48:01 [MFT_REUSED]-       
+892   2026-02-11T19_44_15_510Z-debug-0.log    2.0 KB      2026-02-11 19:48:01 [OK]        60      %
+893   54d4fe3c-a754-42b3-8710-6a0b0da9a77...  -           2026-02-11 19:48:00 [MFT_REUSED]-       
+894   Local State~RF31fec36.TMP               164 B       2026-02-11 19:47:59 [OK]        -       
+895   Edge-Local-State-Tmp-a1686277-0680-...  2.0 KB      2026-02-11 19:47:59 [OK]        60      %
+896   Local State                             164 B       2026-02-11 19:47:59 [OK]        -       
+897   Local State~RF31fec36.TMP               1.0 MB      2026-02-11 19:47:59 [MFT_REUSED]-       
+898   scene_rc-journal                        2.0 KB      2026-02-11 19:47:55 [OK]        60      %
+899   scene_rc-journal                        2.0 KB      2026-02-11 19:47:55 [OK]        60      %
+900   scene_rc-journal                        2.0 KB      2026-02-11 19:47:55 [OK]        60      %
+901   scene_rc-journal                        2.0 KB      2026-02-11 19:47:55 [OK]        60      %
+902   Preferences~RF31fb613.TMP               -           2026-02-11 19:47:46 [MFT_REUSED]-       
+903   35178d32-d070-4718-a629-b8185044560...  -           2026-02-11 19:47:46 [NO_DATA]   -       
+904   Preferences                             -           2026-02-11 19:47:46 [MFT_REUSED]-       
+905   Preferences~RF31fb613.TMP               2.0 KB      2026-02-11 19:47:46 [OK]        60      %
+906   scene_rc-journal                        9.3 KB      2026-02-11 19:47:42 [MFT_REUSED]-       
+907   scene_rc-journal                        9.3 KB      2026-02-11 19:47:42 [MFT_REUSED]-       
+908   scene_rc-journal                        9.3 KB      2026-02-11 19:47:42 [MFT_REUSED]-       
+909   scene_rc-journal                        9.3 KB      2026-02-11 19:47:42 [MFT_REUSED]-       
+910   Local State~RF31fa440.TMP               9.3 KB      2026-02-11 19:47:41 [MFT_REUSED]-       
+911   Edge-Local-State-Tmp-957f939f-6054-...  1.0 MB      2026-02-11 19:47:41 [MFT_REUSED]-       
+912   Local State                             9.3 KB      2026-02-11 19:47:41 [MFT_REUSED]-       
+913   Local State~RF31fa440.TMP               4.6 KB      2026-02-11 19:47:41 [MFT_REUSED]-       
+914   1p_failed_events.7acaf91f-b3d4-45c0...  1.0 MB      2026-02-11 19:47:41 [MFT_REUSED]-       
+915   nvlog.nvlgstg                           1.2 KB      2026-02-11 19:47:28 [MFT_REUSED]-       
+916   4ed9e5e9                                1.0 MB      2026-02-11 19:47:27 [OK]        90      %
+917   4270bf1cd1aae004ed6fee83989ac428601...  450 B       2026-02-11 19:47:27 [OK]        -       
+918   2026-02-11T19_44_15_202Z-debug-0.log    4.6 KB      2026-02-11 19:47:27 [MFT_REUSED]-       
+919   2026-02-11T19_44_11_686Z-debug-0.log    -           2026-02-11 19:47:27 [NO_DATA]   -       
+920   GlobalConfig.dat.dl                     81.3 KB     2026-02-11 19:47:25 [MFT_REUSED]-       
+921   f474e0bd-95ce-4bbe-bca0-f6a39dd1e81...  2.0 KB      2026-02-11 19:47:12 [OK]        60      %
+922   a69f2fe.output                          1.1 MB      2026-02-11 19:47:09 [MFT_REUSED]-       
+923   1p_failed_events.7acaf91f-b3d4-45c0...  111.4 KB    2026-02-11 19:47:04 [OK]        60      %
+924   d9ba322d-d0e2-435b-b1e4-cb53411c8ed...  -           2026-02-11 19:46:58 [MFT_REUSED]-       
+925   Local State~RF31ee65f.TMP               1.1 MB      2026-02-11 19:46:52 [MFT_REUSED]-       
+926   Edge-Local-State-Tmp-dfdf252f-5f49-...  164 B       2026-02-11 19:46:52 [OK]        -       
+927   Local State                             1.1 MB      2026-02-11 19:46:52 [MFT_REUSED]-       
+928   Local State~RF31ee65f.TMP               1.0 MB      2026-02-11 19:46:52 [MFT_REUSED]-       
+929   Local State~RF31eb0e7.TMP               1.0 MB      2026-02-11 19:46:39 [MFT_REUSED]-       
+930   Edge-Local-State-Tmp-d1db5000-0be1-...  1.1 MB      2026-02-11 19:46:39 [MFT_REUSED]-       
+931   Local State                             1.0 MB      2026-02-11 19:46:39 [MFT_REUSED]-       
+932   Local State~RF31eb0e7.TMP               164 B       2026-02-11 19:46:39 [OK]        -       
+933   X2H3RPZB4013_C5409ED38DD347A34F8AA9...  1.1 MB      2026-02-11 19:46:34 [MFT_REUSED]-       
+934   X2H3RPZB4013_C5409ED38DD347A34F8AA9...  1.0 MB      2026-02-11 19:46:34 [OK]        90      %
+935   6da9c186-e11b-4666-364e-7684e5e5554...  111.4 KB    2026-02-11 19:46:32 [OK]        60      %
+936   __sentry-event                          1.0 MB      2026-02-11 19:46:32 [MFT_REUSED]-       
+937   __sentry-breadcrumb2                    -           2026-02-11 19:46:32 [NO_DATA]   -       
+938   __sentry-breadcrumb1                    81.3 KB     2026-02-11 19:46:32 [MFT_REUSED]-       
+939   session.json                            222 B       2026-02-11 19:46:32 [OK]        -       
+940   scene_rc-journal                        1.1 MB      2026-02-11 19:46:25 [MFT_REUSED]-       
+941   scene_rc-journal                        1.1 MB      2026-02-11 19:46:25 [MFT_REUSED]-       
+942   scene_rc-journal                        1.1 MB      2026-02-11 19:46:25 [MFT_REUSED]-       
+943   scene_rc-journal                        1.1 MB      2026-02-11 19:46:25 [MFT_REUSED]-       
+944   1p_failed_events.7acaf91f-b3d4-45c0...  1.1 MB      2026-02-11 19:46:22 [MFT_REUSED]-       
+945   Local State~RF31e5ad8.TMP               1.0 MB      2026-02-11 19:46:17 [OK]        90      %
+946   Edge-Local-State-Tmp-649146ee-ed3b-...  1.0 MB      2026-02-11 19:46:17 [MFT_REUSED]-       
+947   Local State                             1.0 MB      2026-02-11 19:46:17 [OK]        90      %
+948   Local State~RF31e5ad8.TMP               1.0 MB      2026-02-11 19:46:17 [MFT_REUSED]-       
+949   be6397cf-5035-4efd-be42-b1132039d3f...  2.0 KB      2026-02-11 19:46:06 [OK]        60      %
+950   bdcbd9f6-b1ab-477b-af0a-0605b1ba41d...  -           2026-02-11 19:45:56 [MFT_REUSED]-       
+951   pool_tags_summary_2026-02-11_13_16_...  1.1 MB      2026-02-11 19:45:48 [MFT_REUSED]-       
+952   pool_tags_summary.json.dup              7.2 KB      2026-02-11 19:45:48 [OK]        60      %
+953   pool_tags_summary_2026-02-11_19_14_...  7.2 KB      2026-02-11 19:45:48 [OK]        60      %
+954   Local State~RF31de2ca.TMP               786432.00 GB2026-02-11 19:45:46 [OK]        60      %
+955   Edge-Local-State-Tmp-9b94f7b0-b5d7-...  1.0 MB      2026-02-11 19:45:46 [OK]        90      %
+956   Local State                             786432.00 GB2026-02-11 19:45:46 [OK]        60      %
+957   Local State~RF31de2ca.TMP               1.0 MB      2026-02-11 19:45:46 [MFT_REUSED]-       
+958   1p_failed_events.7acaf91f-b3d4-45c0...  1.0 MB      2026-02-11 19:45:41 [OK]        90      %
+959   1p_failed_events.7acaf91f-b3d4-45c0...  1.0 MB      2026-02-11 19:44:58 [OK]        90      %
+960   scene_rc-journal                        -           2026-02-11 19:44:55 [NO_DATA]   -       
+961   scene_rc-journal                        -           2026-02-11 19:44:55 [NO_DATA]   -       
+962   scene_rc-journal                        -           2026-02-11 19:44:55 [NO_DATA]   -       
+963   scene_rc-journal                        -           2026-02-11 19:44:55 [NO_DATA]   -       
+964   c7513700-4da4-4ee9-b8fe-6918c1d64c8...  -           2026-02-11 19:44:54 [MFT_REUSED]-       
+965   f0c17f05-a50d-4c96-b2cb-36c1e9be829...  1.0 MB      2026-02-11 19:44:54 [MFT_REUSED]-       
+966   26d51e11                                450 B       2026-02-11 19:44:40 [OK]        -       
+967   4270bf1cd1aae004ed6fee83989ac428601...  3.9 KB      2026-02-11 19:44:40 [MFT_REUSED]-       
+968   2026-02-11T19_44_11_370Z-debug-0.log    44 B        2026-02-11 19:44:40 [OK]        60      %
+969   2026-02-11T19_44_09_470Z-debug-0.log    450 B       2026-02-11 19:44:40 [OK]        -       
+970   6172bff3                                3.9 KB      2026-02-11 19:44:37 [MFT_REUSED]-       
+971   4270bf1cd1aae004ed6fee83989ac428601...  272 B       2026-02-11 19:44:37 [OK]        -       
+972   2026-02-11T19_44_09_158Z-debug-0.log    3.9 KB      2026-02-11 19:44:37 [MFT_REUSED]-       
+973   2026-02-11T19_44_06_559Z-debug-0.log    224 B       2026-02-11 19:44:37 [OK]        -       
+974   aebda757                                272 B       2026-02-11 19:44:22 [OK]        -       
+975   4270bf1cd1aae004ed6fee83989ac428601...  44 B        2026-02-11 19:44:22 [OK]        60      %
+976   2026-02-11T19_44_06_253Z-debug-0.log    44 B        2026-02-11 19:44:22 [OK]        60      %
+977   2026-02-11T19_43_59_897Z-debug-0.log    272 B       2026-02-11 19:44:22 [OK]        -       
+978   17fbfc42                                44 B        2026-02-11 19:44:19 [OK]        60      %
+979   4270bf1cd1aae004ed6fee83989ac428601...  -           2026-02-11 19:44:19 [NO_DATA]   -       
+980   2026-02-11T19_43_59_571Z-debug-0.log    44 B        2026-02-11 19:44:19 [OK]        60      %
+981   2026-02-11T19_43_56_014Z-debug-0.log    44 B        2026-02-11 19:44:19 [OK]        60      %
+982   5e3cb6cf                                -           2026-02-11 19:44:15 [NO_DATA]   -       
+983   4270bf1cd1aae004ed6fee83989ac428601...  1.0 MB      2026-02-11 19:44:15 [MFT_REUSED]-       
+984   2026-02-11T19_43_55_708Z-debug-0.log    44 B        2026-02-11 19:44:15 [OK]        60      %
+985   2026-02-11T19_43_50_376Z-debug-0.log    -           2026-02-11 19:44:15 [NO_DATA]   -       
+--------------------------------------------------------------------------------------------------
+[usnlist.total]: 986 [usnlist.files], [usnlist.recoverable]: 304
+
+[usnlist.hint]:
+  usnrecover C <index> <output_dir>
+  usnrecover C <filename> <output_dir>

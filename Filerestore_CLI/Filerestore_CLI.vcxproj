@@ -205,7 +205,6 @@
     <ClCompile Include="src\fileRestore\UsnJournalReader.cpp" />
     <ClCompile Include="src\fileRestore\FileIntegrityValidator.cpp" />
     <ClCompile Include="src\fileRestore\CarvedResultsCache.cpp" />
-    <ClCompile Include="src\fileRestore\MemoryMappedResults.cpp" />
     <ClCompile Include="src\fileRestore\MLClassifier.cpp" />
     <ClCompile Include="src\fileRestore\DatasetGenerator.cpp" />
 
@@ -258,7 +257,6 @@
     <ClInclude Include="src\fileRestore\FileIntegrityValidator.h" />
     <ClInclude Include="src\fileRestore\CarvedFileTypes.h" />
     <ClInclude Include="src\fileRestore\CarvedResultsCache.h" />
-    <ClInclude Include="src\fileRestore\MemoryMappedResults.h" />
     <ClInclude Include="src\fileRestore\MLClassifier.h" />
     <ClInclude Include="src\fileRestore\DatasetGenerator.h" />
 

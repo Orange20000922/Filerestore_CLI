@@ -180,7 +180,6 @@ Filerestore_CLI 是一个面向 Windows NTFS 的高性能文件恢复工具，�
 - 扫描结果 1GB 硬限制，超限优雅终止
 - MFT 缓存系统减少重复磁盘访问
 - ZIP 扫描修复了 `estimatedSize=0` 导致的无限循环泄漏
-- 内存映射结果缓存（`MemoryMappedResults`）
 
 ### 4.3 与其他工具性能参考对比
 

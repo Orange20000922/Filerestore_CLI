@@ -1092,7 +1092,7 @@ void FileCarver::SubmitBufferToThreadPool(const BYTE* buffer, size_t bufferSize,
 }
 
 // ============================================================================
-// 线程池并行扫描（阶段1实现）
+// 线程池并行扫描
 // ============================================================================
 vector<CarvedFileInfo> FileCarver::ScanForFileTypesThreadPool(const vector<string>& fileTypes,
                                                                CarvingMode mode,

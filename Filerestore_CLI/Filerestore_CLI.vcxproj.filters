@@ -178,9 +178,6 @@
     <ClCompile Include="src\fileRestore\CarvedResultsCache.cpp">
       <Filter>源文件\FileRestore\Carving</Filter>
     </ClCompile>
-    <ClCompile Include="src\fileRestore\MemoryMappedResults.cpp">
-      <Filter>源文件\FileRestore\Carving</Filter>
-    </ClCompile>
     <!-- FileRestore\Detection - 覆盖检测 -->
     <ClCompile Include="src\fileRestore\OverwriteDetector.cpp">
       <Filter>源文件\FileRestore\Detection</Filter>
@@ -344,9 +341,6 @@
       <Filter>头文件\FileRestore\Carving</Filter>
     </ClInclude>
     <ClInclude Include="src\fileRestore\CarvedResultsCache.h">
-      <Filter>头文件\FileRestore\Carving</Filter>
-    </ClInclude>
-    <ClInclude Include="src\fileRestore\MemoryMappedResults.h">
       <Filter>头文件\FileRestore\Carving</Filter>
     </ClInclude>
     <!-- FileRestore\Detection - 覆盖检测 -->

@@ -41,12 +41,11 @@ void UsnListCommand::Execute(string command) {
 
     if (GET_ARG_COUNT() < 1) {
         cout << LOC_STR("usnlist.usage") << endl;
-        cout << "  usnlist <drive> [hours] [--validate] [--pattern=<name>] [--limit=<n>]" << endl;
+        cout << "  usnlist <drive> [hours] [--validate] [--pattern=<name>]" << endl;
         cout << LOC_STR("usnlist.examples") << endl;
         cout << "  usnlist C 24" << endl;
         cout << "  usnlist C 48 --validate" << endl;
         cout << "  usnlist C 24 --pattern=document" << endl;
-        cout << "  usnlist C 168 --validate --limit=5000" << endl;
         return;
     }
 
@@ -61,7 +60,6 @@ void UsnListCommand::Execute(string command) {
     int maxHours = 24;
     bool doValidate = false;
     wstring pattern = L"";
-    size_t maxResults = 1000;  // 默认限制
 
     for (int i = 1; i < GET_ARG_COUNT(); i++) {
         string& arg = GET_ARG_STRING(i);
@@ -74,13 +72,6 @@ void UsnListCommand::Execute(string command) {
                 string patternStr = arg.substr(pos + 1);
                 pattern = UsnTargetedRecovery::NarrowToWide(patternStr);
             }
-        }
-        else if (arg.substr(0, 8) == "--limit=") {
-            try {
-                maxResults = stoul(arg.substr(8));
-                if (maxResults == 0) maxResults = 1000;
-            }
-            catch (...) {}
         }
         else {
             try {
@@ -119,7 +110,7 @@ void UsnListCommand::Execute(string command) {
     cout << LOC_STR("usnlist.scanning") << "..." << endl;
 
     vector<UsnFileListItem> results = recovery.SearchAndValidate(
-        driveLetter, maxHours, pattern, maxResults);
+        driveLetter, maxHours, pattern, 1000);
 
     if (results.empty()) {
         cout << LOC_STR("usnlist.no_results") << endl;
@@ -165,15 +156,7 @@ void UsnListCommand::Execute(string command) {
         // 输出宽字符文件名
         string fileNameNarrow = UsnTargetedRecovery::WideToNarrow(fileName);
         cout << setw(40) << fileNameNarrow;
-
-        // 文件大小（从 MFT 获取，仅当 MFT 未复用时有效）
-        if (item.usnInfo.MftInfoValid && item.usnInfo.FileSize > 0) {
-            string sizeStr = UsnTargetedRecovery::WideToNarrow(
-                UsnTargetedRecovery::FormatFileSize(item.usnInfo.FileSize));
-            cout << setw(12) << sizeStr;
-        } else {
-            cout << setw(12) << "-";
-        }
+        cout << setw(12) << "-";  // USN 不包含文件大小
         string timeNarrow = UsnTargetedRecovery::WideToNarrow(timeStr);
         cout << setw(20) << timeNarrow;
 
@@ -233,71 +216,33 @@ void UsnRecoverCommand::Execute(string command) {
         return;
     }
 
-    if (GET_ARG_COUNT() < 1) {
+    if (GET_ARG_COUNT() < 3) {
         cout << LOC_STR("usnrecover.usage") << endl;
         cout << "  usnrecover <drive> <index|filename|record> <output_dir> [--force]" << endl;
-        cout << "  usnrecover <drive> <hours> --pattern=<name> --output=<dir> [--batch] [--force]" << endl;
         cout << LOC_STR("usnrecover.examples") << endl;
         cout << "  usnrecover C 0 D:\\recovered\\" << endl;
         cout << "  usnrecover C document.docx D:\\recovered\\" << endl;
-        cout << "  usnrecover C 1 --pattern=test_ --output=D:\\out --batch" << endl;
         cout << "  usnrecover C 0x12345 D:\\recovered\\ --force" << endl;
         return;
     }
 
-    // ========== 统一解析位置参数和命名参数 ==========
-    string driveStr;
-    string targetStr;
-    string outputStr;
-    string patternStr;
-    bool forceRecover = false;
-    bool batchMode = false;
-    int hoursArg = 1;  // 默认搜索最近1小时
-
-    // 收集位置参数
-    vector<string> positionalArgs;
-
-    for (size_t i = 0; i < GET_ARG_COUNT(); i++) {
-        string arg = GET_ARG_STRING(i);
-
-        if (arg.find("--output=") == 0) {
-            outputStr = arg.substr(9);
-        } else if (arg.find("--pattern=") == 0) {
-            patternStr = arg.substr(10);
-        } else if (arg == "--force" || arg == "-f") {
-            forceRecover = true;
-        } else if (arg == "--batch" || arg == "-b") {
-            batchMode = true;
-        } else if (arg.find("--hours=") == 0) {
-            hoursArg = stoi(arg.substr(8));
-        } else if (arg[0] != '-') {
-            // 位置参数
-            positionalArgs.push_back(arg);
-        }
-    }
-
-    // 从位置参数中提取值
-    if (positionalArgs.size() >= 1) {
-        driveStr = positionalArgs[0];
-    }
-    if (positionalArgs.size() >= 2) {
-        targetStr = positionalArgs[1];
-    }
-    if (positionalArgs.size() >= 3 && outputStr.empty()) {
-        outputStr = positionalArgs[2];
-    }
-
-    // 验证必要参数
-    if (driveStr.empty() || outputStr.empty()) {
-        cout << "Error: Missing required arguments (drive and output_dir)" << endl;
-        cout << "Usage: usnrecover <drive> <index|filename|hours> <output_dir>" << endl;
-        return;
-    }
+    // 解析参数
+    string& driveStr = GET_ARG_STRING(0);
+    string& targetStr = GET_ARG_STRING(1);
+    string& outputStr = GET_ARG_STRING(2);
 
     char driveLetter;
     if (!CommandUtils::ValidateDriveLetter(driveStr, driveLetter)) {
         cout << LOC_STR("error.invalid_drive") << endl;
         return;
+    }
+
+    bool forceRecover = false;
+    if (GET_ARG_COUNT() >= 4) {
+        string& forceStr = GET_ARG_STRING(3);
+        if (forceStr == "--force" || forceStr == "-f") {
+            forceRecover = true;
+        }
     }
 
     wstring outputDir = UsnTargetedRecovery::NarrowToWide(outputStr);
@@ -319,54 +264,6 @@ void UsnRecoverCommand::Execute(string command) {
     cout << "========================================" << endl;
 
     UsnTargetedRecoveryResult result;
-
-    // ========== 模式判断 ==========
-    // 如果指定了 --pattern，使用批量模式搜索
-    if (!patternStr.empty()) {
-        cout << LOC_STR("usnrecover.mode_batch") << ": pattern=" << patternStr << ", hours=" << hoursArg << endl;
-        cout << LOC_STR("usnrecover.searching") << "..." << endl;
-
-        // 搜索匹配的文件
-        wstring pattern = UsnTargetedRecovery::NarrowToWide(patternStr);
-        auto matchedFiles = recovery.SearchAndValidate(driveLetter, hoursArg * 3600, pattern, 1000);
-
-        if (matchedFiles.empty()) {
-            cout << LOC_STR("usnrecover.no_match") << endl;
-            return;
-        }
-
-        cout << "Found " << matchedFiles.size() << " matching files" << endl;
-
-        // 批量恢复
-        size_t successCount = 0;
-        size_t failCount = 0;
-
-        for (const auto& item : matchedFiles) {
-            if (item.canRecover || forceRecover) {
-                UsnTargetedRecoveryResult recResult = recovery.Recover(item.usnInfo, outputDir, forceRecover);
-
-                if (recResult.status == UsnRecoveryStatus::SUCCESS ||
-                    recResult.status == UsnRecoveryStatus::RESIDENT_DATA ||
-                    recResult.status == UsnRecoveryStatus::PARTIAL_RECOVERY ||
-                    recResult.status == UsnRecoveryStatus::MFT_REUSED_DATA_VALID) {
-                    successCount++;
-                    string fname = UsnTargetedRecovery::WideToNarrow(item.usnInfo.FileName);
-                    cout << "  [OK] " << fname << endl;
-                } else {
-                    failCount++;
-                }
-            } else {
-                failCount++;
-            }
-        }
-
-        cout << "\n========================================" << endl;
-        cout << "Batch recovery complete:" << endl;
-        cout << "  Success: " << successCount << endl;
-        cout << "  Failed:  " << failCount << endl;
-        cout << "========================================\n" << endl;
-        return;
-    }
 
     // 判断目标类型：索引、MFT记录号、或文件名
     bool isIndex = true;
@@ -536,11 +433,9 @@ void UsnRecoverCommand::Execute(string command) {
 // RecoverCommand - 智能文件恢复向导（USN + 签名扫描联合）
 // ============================================================================
 // 用法: recover <drive> [filename] [output_dir]
-//       recover <drive> [hours] --pattern=<name> --output=<dir>
 // 示例: recover C
 //       recover C document.docx
 //       recover C document.docx D:\recovered
-//       recover C 1 --pattern=test_ --output=D:\out
 // ============================================================================
 
 DEFINE_COMMAND_BASE(RecoverCommand, "recover |name |name |name", TRUE)
@@ -554,57 +449,15 @@ void RecoverCommand::Execute(string command) {
     if (GET_ARG_COUNT() < 1) {
         cout << "\n=== 智能文件恢复 ===" << endl;
         cout << "用法: recover <drive> [filename] [output_dir]" << endl;
-        cout << "      recover <drive> [hours] --pattern=<name> --output=<dir>" << endl;
         cout << "\n示例:" << endl;
         cout << "  recover C                          # 交互式搜索" << endl;
         cout << "  recover C document.docx            # 搜索指定文件" << endl;
         cout << "  recover C document.docx D:\\out     # 直接恢复到指定目录" << endl;
-        cout << "  recover C 1 --pattern=test_ --output=D:\\out  # 批量模式" << endl;
         return;
     }
 
-    // ========== 统一解析位置参数和命名参数 ==========
-    string driveStr;
-    string targetStr;
-    string outputDir;
-    string patternStr;
-    int hoursArg = 1;  // 默认搜索最近1小时
-
-    // 收集位置参数
-    vector<string> positionalArgs;
-
-    for (size_t i = 0; i < GET_ARG_COUNT(); i++) {
-        string arg = GET_ARG_STRING(i);
-
-        if (arg.find("--output=") == 0) {
-            outputDir = arg.substr(9);
-        } else if (arg.find("--pattern=") == 0) {
-            patternStr = arg.substr(10);
-        } else if (arg.find("--hours=") == 0) {
-            hoursArg = stoi(arg.substr(8));
-        } else if (arg[0] != '-') {
-            // 位置参数
-            positionalArgs.push_back(arg);
-        }
-    }
-
-    // 从位置参数中提取值
-    if (positionalArgs.size() >= 1) {
-        driveStr = positionalArgs[0];
-    }
-    if (positionalArgs.size() >= 2 && patternStr.empty()) {
-        targetStr = positionalArgs[1];
-    } else if (positionalArgs.size() >= 2) {
-        // 如果有 --pattern，第二个参数可能是 hours
-        try {
-            hoursArg = stoi(positionalArgs[1]);
-        } catch (...) {}
-    }
-    if (positionalArgs.size() >= 3 && outputDir.empty()) {
-        outputDir = positionalArgs[2];
-    }
-
     // 解析驱动器
+    string& driveStr = GET_ARG_STRING(0);
     char driveLetter;
     if (!CommandUtils::ValidateDriveLetter(driveStr, driveLetter)) {
         cout << "错误: 无效的驱动器字母" << endl;
@@ -613,10 +466,15 @@ void RecoverCommand::Execute(string command) {
 
     // 解析文件名（可选）
     wstring targetFileName = L"";
-    if (!targetStr.empty()) {
+    if (GET_ARG_COUNT() >= 2) {
+        string& targetStr = GET_ARG_STRING(1);
         targetFileName = UsnTargetedRecovery::NarrowToWide(targetStr);
-    } else if (!patternStr.empty()) {
-        targetFileName = UsnTargetedRecovery::NarrowToWide(patternStr);
+    }
+
+    // 解析输出目录（可选）
+    string outputDir = "";
+    if (GET_ARG_COUNT() >= 3) {
+        outputDir = GET_ARG_STRING(2);
     }
 
     // 初始化组件
@@ -765,22 +623,14 @@ void RecoverCommand::Execute(string command) {
                     if (recResult.signatureMatched) {
                         cout << "签名验证: 通过 (" << recResult.detectedType << ")" << endl;
                     }
-                    return;
                 } else {
                     cout << "\nMFT 直接恢复失败: " << recResult.statusMessage << endl;
-                    // 询问是否回退到签名扫描
-                    string fallbackChoice;
-                    TuiInputBridge::Instance().GetLine("是否尝试签名扫描恢复? (y/n): ", fallbackChoice);
-                    if (fallbackChoice != "y" && fallbackChoice != "Y") {
-                        return;
-                    }
-                    cout << "\n回退到签名扫描..." << endl;
-                    // 继续执行签名扫描（不 return）
+                    cout << "提示: 重新运行并输入 's' 可进行全盘签名扫描" << endl;
                 }
-            } else {
-                // input == "s" → 用户选择全盘扫描
-                cout << "\n用户选择全盘签名扫描..." << endl;
+                return;
             }
+            // input == "s" → 用户选择全盘扫描，继续执行签名扫描
+            cout << "\n用户选择全盘签名扫描..." << endl;
         } else {
             // 自动模式：直接恢复最佳匹配
             auto& bestItem = usnResults[recoverableIndices[0]];

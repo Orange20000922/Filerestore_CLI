@@ -1,0 +1,751 @@
+Crash handler installed. Dump files will be created on crash.
+Crash handler initialized.
+Logger initialized: D:\Users\21405\source\repos\Filerestore_CLI\x64\Release\debug.log
+Language loaded: en (257 translations)
+Language loaded: en (257 translations)
+Executing command: usnlist D 168 --validate
+卷打开成功。
+每扇区字节数: 512
+每簇扇区数: 8
+MFT 起始 LCN: 786432
+每文件记录字节数: 1024
+
+[usnlist.title]
+========================================
+[usnlist.drive]: D:/
+[usnlist.time_range]: 168 [usnlist.hours]
+[usnlist.validate]: Yes
+========================================
+
+[usnlist.scanning]...
+正在扫描 USN 日志...
+  扫描完成: 共扫描 883900 条记录, 发现 1000 条删除记录
+
+[usnlist.found]: 1000 [usnlist.files]
+
+[usnlist.col_idx][usnlist.col_name]                      [usnlist.col_size][usnlist.col_time]  [usnlist.col_status][usnlist.col_conf]
+--------------------------------------------------------------------------------------------------
+0     CrashHandler.obj                        -           2026-02-05 18:16:51 [NO_DATA]   -       
+1     RepairCommands.obj                      6.2 MB      2026-02-05 18:16:51 [MFT_REUSED]-       
+2     CpuFeatures.obj                         125 B       2026-02-05 18:16:51 [OK]        -       
+3     SimdSignatureScanner.obj                24.2 KB     2026-02-05 18:16:51 [OK]        95      %
+4     DeletedFileScanner.obj                  2.9 MB      2026-02-05 18:16:51 [MFT_REUSED]-       
+5     FileCarver.obj                          167 B       2026-02-05 18:16:51 [OK]        -       
+6     FileRestore.obj                         -           2026-02-05 18:16:51 [NO_DATA]   -       
+7     vc145.pdb                               44.1 KB     2026-02-05 18:16:51 [MFT_REUSED]-       
+8     Filerestore_CLI.lastbuildstate          215.8 MB    2026-02-05 18:16:51 [MFT_REUSED]-       
+9     Filerestore_CLI.vcxproj.tmp.10168.1...  3.2 MB      2026-02-05 18:15:07 [MFT_REUSED]-       
+10    Filerestore_CLI.vcxproj                 354.0 KB    2026-02-05 18:15:07 [OK]        90      %
+11    sharp-win32-x64.node                    303 B       2026-02-05 18:14:16 [OK]        -       
+12    libvips-cpp.dll                         2.4 KB      2026-02-05 18:14:16 [MFT_REUSED]-       
+13    ripgrep.node                            203.8 MB    2026-02-05 18:14:16 [MFT_REUSED]-       
+14    ripgrep.node                            4.4 KB      2026-02-05 18:14:16 [MFT_REUSED]-       
+15    libvips-42.dll                          4.3 KB      2026-02-05 18:14:16 [OK]        60      %
+16    rg                                      -           2026-02-05 18:14:16 [NO_DATA]   -       
+17    rg.exe                                  41.1 KB     2026-02-05 18:14:16 [MFT_REUSED]-       
+18    rg                                      433 B       2026-02-05 18:14:16 [OK]        -       
+19    rg                                      450 B       2026-02-05 18:14:16 [OK]        -       
+20    rg                                      204 B       2026-02-05 18:14:16 [OK]        -       
+21    ripgrep.node                            303 B       2026-02-05 18:14:16 [OK]        -       
+22    ripgrep.node                            450 B       2026-02-05 18:14:16 [OK]        -       
+23    ripgrep.node                            6.9 KB      2026-02-05 18:14:16 [MFT_REUSED]-       
+24    sdk-tools.d.ts                          -           2026-02-05 18:14:16 [NO_DATA]   -       
+25    .claude.ps1-4whw49fW                    1.6 KB      2026-02-05 18:14:16 [MFT_REUSED]-       
+26    .claude-ZSKLFpjG                        17.2 KB     2026-02-05 18:14:16 [OK]        60      %
+27    .claude.cmd-mZp62EaH                    232 B       2026-02-05 18:14:16 [OK]        -       
+28    versions.json                           19.6 KB     2026-02-05 18:14:16 [MFT_REUSED]-       
+29    package.json                            2.3 KB      2026-02-05 18:14:16 [MFT_REUSED]-       
+30    README.md                               39.4 KB     2026-02-05 18:14:16 [OK]        60      %
+31    LICENSE                                 -           2026-02-05 18:14:16 [NO_DATA]   -       
+32    COPYING                                 67.3 KB     2026-02-05 18:14:16 [OK]        60      %
+33    tree-sitter-bash.wasm                   -           2026-02-05 18:14:16 [NO_DATA]   -       
+34    tree-sitter.wasm                        1.2 KB      2026-02-05 18:14:16 [OK]        60      %
+35    README.md                               204 B       2026-02-05 18:14:16 [OK]        -       
+36    resvg.wasm                              -           2026-02-05 18:14:16 [NO_DATA]   -       
+37    package.json                            2.6 KB      2026-02-05 18:14:16 [MFT_REUSED]-       
+38    cli.js                                  -           2026-02-05 18:14:16 [NO_DATA]   -       
+39    LICENSE.md                              1.5 KB      2026-02-05 18:14:16 [MFT_REUSED]-       
+40    bun.lock                                8.1 KB      2026-02-05 18:14:16 [MFT_REUSED]-       
+41    claude.ps1                              1.6 KB      2026-02-05 18:14:16 [MFT_REUSED]-       
+42    claude.cmd                              232 B       2026-02-05 18:14:16 [OK]        -       
+43    claude                                  17.2 KB     2026-02-05 18:14:16 [OK]        60      %
+44    .claude.cmd-mZp62EaH                    -           2026-02-05 18:13:37 [NO_DATA]   -       
+45    .claude.ps1-4whw49fW                    -           2026-02-05 18:13:37 [NO_DATA]   -       
+46    .claude-ZSKLFpjG                        530.3 KB    2026-02-05 18:13:37 [OK]        60      %
+47    package.json                            500.1 KB    2026-02-05 18:13:37 [OK]        60      %
+48    ripgrep.node                            918 B       2026-02-05 18:13:37 [MFT_REUSED]-       
+49    sharp-win32-x64.node                    526.4 KB    2026-02-05 18:13:37 [OK]        60      %
+50    libvips-cpp.dll                         221.5 MB    2026-02-05 18:13:37 [MFT_REUSED]-       
+51    rg                                      533.5 KB    2026-02-05 18:13:37 [OK]        60      %
+52    rg                                      10.1 KB     2026-02-05 18:13:37 [MFT_REUSED]-       
+53    libvips-42.dll                          -           2026-02-05 18:13:37 [NO_DATA]   -       
+54    ripgrep.node                            193 B       2026-02-05 18:13:37 [OK]        -       
+55    ripgrep.node                            -           2026-02-05 18:13:37 [NO_DATA]   -       
+56    rg.exe                                  515.0 KB    2026-02-05 18:13:37 [OK]        60      %
+57    rg                                      527.9 KB    2026-02-05 18:13:37 [OK]        60      %
+58    ripgrep.node                            496.3 KB    2026-02-05 18:13:37 [OK]        60      %
+59    ripgrep.node                            4.7 MB      2026-02-05 18:13:37 [MFT_REUSED]-       
+60    rg                                      520.9 KB    2026-02-05 18:13:37 [OK]        60      %
+61    README.md                               -           2026-02-05 18:13:37 [NO_DATA]   -       
+62    versions.json                           -           2026-02-05 18:13:37 [MFT_REUSED]-       
+63    package.json                            1.8 MB      2026-02-05 18:13:37 [MFT_REUSED]-       
+64    LICENSE                                 6.1 KB      2026-02-05 18:13:37 [MFT_REUSED]-       
+65    COPYING                                 357.0 KB    2026-02-05 18:13:37 [OK]        90      %
+66    tree-sitter.wasm                        434 B       2026-02-05 18:13:37 [OK]        -       
+67    tree-sitter-bash.wasm                   3.4 KB      2026-02-05 18:13:37 [MFT_REUSED]-       
+68    sdk-tools.d.ts                          11.9 KB     2026-02-05 18:13:37 [MFT_REUSED]-       
+69    resvg.wasm                              1.8 KB      2026-02-05 18:13:37 [OK]        60      %
+70    README.md                               5.8 KB      2026-02-05 18:13:37 [MFT_REUSED]-       
+71    cli.js                                  852 B       2026-02-05 18:13:37 [MFT_REUSED]-       
+72    bun.lock                                531.6 KB    2026-02-05 18:13:37 [OK]        60      %
+73    LICENSE.md                              57.7 KB     2026-02-05 18:13:37 [OK]        95      %
+74    claude                                  530.3 KB    2026-02-05 18:13:37 [OK]        60      %
+75    claude.cmd                              -           2026-02-05 18:13:37 [NO_DATA]   -       
+76    claude.ps1                              -           2026-02-05 18:13:37 [NO_DATA]   -       
+77    sharp-win32-x64.node                    303 B       2026-02-05 18:11:25 [OK]        -       
+78    libvips-cpp.dll                         2.4 KB      2026-02-05 18:11:25 [MFT_REUSED]-       
+79    libvips-42.dll                          4.3 KB      2026-02-05 18:11:25 [OK]        60      %
+80    rg                                      -           2026-02-05 18:11:25 [NO_DATA]   -       
+81    ripgrep.node                            6.9 KB      2026-02-05 18:11:25 [MFT_REUSED]-       
+82    ripgrep.node                            450 B       2026-02-05 18:11:25 [OK]        -       
+83    ripgrep.node                            4.4 KB      2026-02-05 18:11:25 [MFT_REUSED]-       
+84    versions.json                           19.6 KB     2026-02-05 18:11:25 [MFT_REUSED]-       
+85    package.json                            2.3 KB      2026-02-05 18:11:25 [MFT_REUSED]-       
+86    README.md                               39.4 KB     2026-02-05 18:11:25 [OK]        60      %
+87    LICENSE                                 -           2026-02-05 18:11:25 [NO_DATA]   -       
+88    COPYING                                 67.3 KB     2026-02-05 18:11:25 [OK]        60      %
+89    rg.exe                                  41.1 KB     2026-02-05 18:11:25 [MFT_REUSED]-       
+90    rg                                      450 B       2026-02-05 18:11:25 [OK]        -       
+91    rg                                      433 B       2026-02-05 18:11:25 [OK]        -       
+92    ripgrep.node                            203.8 MB    2026-02-05 18:11:25 [MFT_REUSED]-       
+93    rg                                      204 B       2026-02-05 18:11:25 [OK]        -       
+94    ripgrep.node                            303 B       2026-02-05 18:11:25 [OK]        -       
+95    bun.lock                                8.1 KB      2026-02-05 18:11:25 [MFT_REUSED]-       
+96    LICENSE.md                              1.5 KB      2026-02-05 18:11:25 [MFT_REUSED]-       
+97    package.json                            2.6 KB      2026-02-05 18:11:25 [MFT_REUSED]-       
+98    resvg.wasm                              -           2026-02-05 18:11:25 [NO_DATA]   -       
+99    tree-sitter-bash.wasm                   -           2026-02-05 18:11:25 [NO_DATA]   -       
+100   sdk-tools.d.ts                          -           2026-02-05 18:11:25 [NO_DATA]   -       
+101   tree-sitter.wasm                        1.2 KB      2026-02-05 18:11:25 [OK]        60      %
+102   cli.js                                  -           2026-02-05 18:11:25 [NO_DATA]   -       
+103   README.md                               204 B       2026-02-05 18:11:25 [OK]        -       
+104   .claude.ps1-4whw49fW                    232 B       2026-02-05 18:11:25 [OK]        -       
+105   .claude.cmd-mZp62EaH                    1.6 KB      2026-02-05 18:11:25 [MFT_REUSED]-       
+106   .claude-ZSKLFpjG                        17.2 KB     2026-02-05 18:11:25 [OK]        60      %
+107   claude.ps1                              232 B       2026-02-05 18:11:24 [OK]        -       
+108   claude                                  17.2 KB     2026-02-05 18:11:24 [OK]        60      %
+109   claude.cmd                              1.6 KB      2026-02-05 18:11:24 [MFT_REUSED]-       
+110   sharp-win32-x64.node                    526.4 KB    2026-02-05 18:09:58 [OK]        60      %
+111   libvips-cpp.dll                         221.5 MB    2026-02-05 18:09:58 [MFT_REUSED]-       
+112   ripgrep.node                            918 B       2026-02-05 18:09:58 [MFT_REUSED]-       
+113   ripgrep.node                            193 B       2026-02-05 18:09:58 [OK]        -       
+114   libvips-42.dll                          -           2026-02-05 18:09:58 [NO_DATA]   -       
+115   ripgrep.node                            -           2026-02-05 18:09:58 [NO_DATA]   -       
+116   ripgrep.node                            4.7 MB      2026-02-05 18:09:58 [MFT_REUSED]-       
+117   rg                                      520.9 KB    2026-02-05 18:09:58 [OK]        60      %
+118   ripgrep.node                            496.3 KB    2026-02-05 18:09:58 [OK]        60      %
+119   rg                                      533.5 KB    2026-02-05 18:09:58 [OK]        60      %
+120   rg                                      10.1 KB     2026-02-05 18:09:58 [MFT_REUSED]-       
+121   COPYING                                 357.0 KB    2026-02-05 18:09:58 [OK]        90      %
+122   LICENSE                                 6.1 KB      2026-02-05 18:09:58 [MFT_REUSED]-       
+123   README.md                               -           2026-02-05 18:09:58 [NO_DATA]   -       
+124   versions.json                           -           2026-02-05 18:09:58 [MFT_REUSED]-       
+125   rg.exe                                  515.0 KB    2026-02-05 18:09:58 [OK]        60      %
+126   rg                                      527.9 KB    2026-02-05 18:09:58 [OK]        60      %
+127   package.json                            1.8 MB      2026-02-05 18:09:58 [MFT_REUSED]-       
+128   resvg.wasm                              1.8 KB      2026-02-05 18:09:58 [OK]        60      %
+129   package.json                            500.1 KB    2026-02-05 18:09:58 [OK]        60      %
+130   README.md                               5.8 KB      2026-02-05 18:09:58 [MFT_REUSED]-       
+131   cli.js                                  852 B       2026-02-05 18:09:58 [MFT_REUSED]-       
+132   bun.lock                                531.6 KB    2026-02-05 18:09:58 [OK]        60      %
+133   LICENSE.md                              57.7 KB     2026-02-05 18:09:58 [OK]        95      %
+134   tree-sitter-bash.wasm                   3.4 KB      2026-02-05 18:09:58 [MFT_REUSED]-       
+135   tree-sitter.wasm                        434 B       2026-02-05 18:09:58 [OK]        -       
+136   sdk-tools.d.ts                          11.9 KB     2026-02-05 18:09:58 [MFT_REUSED]-       
+137   .claude.ps1-4whw49fW                    530.3 KB    2026-02-05 18:09:58 [OK]        60      %
+138   .claude-ZSKLFpjG                        -           2026-02-05 18:09:58 [NO_DATA]   -       
+139   .claude.cmd-mZp62EaH                    -           2026-02-05 18:09:58 [NO_DATA]   -       
+140   claude.cmd                              -           2026-02-05 18:09:58 [NO_DATA]   -       
+141   claude.ps1                              530.3 KB    2026-02-05 18:09:58 [OK]        60      %
+142   claude                                  -           2026-02-05 18:09:58 [NO_DATA]   -       
+143   sharp-win32-x64.node                    39.4 KB     2026-02-05 18:08:15 [OK]        60      %
+144   libvips-cpp.dll                         450 B       2026-02-05 18:08:15 [OK]        -       
+145   rg.exe                                  8.5 KB      2026-02-05 18:08:15 [MFT_REUSED]-       
+146   libvips-42.dll                          1.1 KB      2026-02-05 18:08:15 [MFT_REUSED]-       
+147   ripgrep.node                            6.9 KB      2026-02-05 18:08:15 [MFT_REUSED]-       
+148   ripgrep.node                            303 B       2026-02-05 18:08:15 [OK]        -       
+149   ripgrep.node                            4.4 KB      2026-02-05 18:08:15 [MFT_REUSED]-       
+150   rg                                      1.5 KB      2026-02-05 18:08:15 [MFT_REUSED]-       
+151   ripgrep.node                            204 B       2026-02-05 18:08:15 [OK]        -       
+152   ripgrep.node                            450 B       2026-02-05 18:08:15 [OK]        -       
+153   rg                                      303 B       2026-02-05 18:08:15 [OK]        -       
+154   resvg.wasm                              -           2026-02-05 18:08:15 [NO_DATA]   -       
+155   tree-sitter-bash.wasm                   -           2026-02-05 18:08:15 [NO_DATA]   -       
+156   versions.json                           2.3 KB      2026-02-05 18:08:15 [MFT_REUSED]-       
+157   package.json                            -           2026-02-05 18:08:15 [NO_DATA]   -       
+158   sdk-tools.d.ts                          203.8 MB    2026-02-05 18:08:15 [MFT_REUSED]-       
+159   tree-sitter.wasm                        -           2026-02-05 18:08:15 [NO_DATA]   -       
+160   COPYING                                 71.6 KB     2026-02-05 18:08:15 [OK]        60      %
+161   LICENSE                                 1.3 KB      2026-02-05 18:08:15 [MFT_REUSED]-       
+162   README.md                               19.6 KB     2026-02-05 18:08:15 [MFT_REUSED]-       
+163   package.json                            2.4 KB      2026-02-05 18:08:15 [MFT_REUSED]-       
+164   rg                                      2.6 KB      2026-02-05 18:08:15 [MFT_REUSED]-       
+165   rg                                      258 B       2026-02-05 18:08:15 [OK]        -       
+166   LICENSE.md                              8.1 KB      2026-02-05 18:08:15 [MFT_REUSED]-       
+167   bun.lock                                2.6 KB      2026-02-05 18:08:15 [MFT_REUSED]-       
+168   README.md                               1.5 KB      2026-02-05 18:08:15 [MFT_REUSED]-       
+169   cli.js                                  41.1 KB     2026-02-05 18:08:15 [MFT_REUSED]-       
+170   .claude-ZSKLFpjG                        232 B       2026-02-05 18:08:15 [OK]        -       
+171   .claude.ps1-4whw49fW                    1.6 KB      2026-02-05 18:08:15 [MFT_REUSED]-       
+172   .claude.cmd-mZp62EaH                    1.2 KB      2026-02-05 18:08:15 [OK]        60      %
+173   claude.cmd                              1.2 KB      2026-02-05 18:08:15 [OK]        60      %
+174   claude                                  232 B       2026-02-05 18:08:15 [OK]        -       
+175   claude.ps1                              1.6 KB      2026-02-05 18:08:15 [MFT_REUSED]-       
+176   0e6d824e-285a-4830-8069-a13184444e7...  1.7 MB      2026-02-05 18:07:48 [MFT_REUSED]-       
+177   14dc7651-c511-496b-9b7a-92ea5646792...  191 B       2026-02-05 18:07:48 [OK]        -       
+178   809ee047-1d00-4dfa-9a48-6146275374a...  62.2 KB     2026-02-05 18:07:48 [OK]        -       
+179   f68dd11b-cd8d-4ce9-8b18-a5afe0431d1...  1.7 MB      2026-02-05 18:07:48 [MFT_REUSED]-       
+180   e7226c8e-d441-4e05-9e55-0669b510060...  520.9 KB    2026-02-05 18:07:48 [OK]        60      %
+181   251c4b14-92e0-4b54-b542-4fa66d17aa5...  1.8 MB      2026-02-05 18:07:48 [MFT_REUSED]-       
+182   7efb0415-64b1-4c1d-a28f-ad3281f0165...  -           2026-02-05 18:07:48 [NO_DATA]   -       
+183   99c83b3b-cfe5-4c39-8783-cd7c18395bf...  15.0 MB     2026-02-05 18:07:48 [MFT_REUSED]-       
+184   .claude.ps1-4whw49fW                    1.8 KB      2026-02-05 18:07:31 [OK]        60      %
+185   .claude.cmd-mZp62EaH                    434 B       2026-02-05 18:07:31 [OK]        -       
+186   .claude-ZSKLFpjG                        3.4 KB      2026-02-05 18:07:31 [MFT_REUSED]-       
+187   libvips-cpp.dll                         374 B       2026-02-05 18:07:31 [OK]        -       
+188   sharp-win32-x64.node                    24.3 KB     2026-02-05 18:07:31 [MFT_REUSED]-       
+189   libvips-42.dll                          -           2026-02-05 18:07:31 [NO_DATA]   -       
+190   ripgrep.node                            500.1 KB    2026-02-05 18:07:31 [OK]        60      %
+191   ripgrep.node                            57.7 KB     2026-02-05 18:07:31 [OK]        95      %
+192   rg                                      357.0 KB    2026-02-05 18:07:31 [OK]        90      %
+193   rg                                      158 B       2026-02-05 18:07:31 [OK]        -       
+194   rg.exe                                  533.5 KB    2026-02-05 18:07:31 [OK]        60      %
+195   ripgrep.node                            -           2026-02-05 18:07:31 [NO_DATA]   -       
+196   rg                                      6.1 KB      2026-02-05 18:07:31 [MFT_REUSED]-       
+197   ripgrep.node                            515.0 KB    2026-02-05 18:07:31 [OK]        60      %
+198   rg                                      -           2026-02-05 18:07:31 [NO_DATA]   -       
+199   ripgrep.node                            852 B       2026-02-05 18:07:31 [MFT_REUSED]-       
+200   package.json                            -           2026-02-05 18:07:31 [NO_DATA]   -       
+201   versions.json                           49.2 MB     2026-02-05 18:07:31 [OK]        90      %
+202   README.md                               527.9 KB    2026-02-05 18:07:31 [OK]        60      %
+203   LICENSE                                 -           2026-02-05 18:07:31 [NO_DATA]   -       
+204   COPYING                                 169 B       2026-02-05 18:07:31 [OK]        -       
+205   tree-sitter.wasm                        11.9 KB     2026-02-05 18:07:31 [MFT_REUSED]-       
+206   tree-sitter-bash.wasm                   -           2026-02-05 18:07:31 [NO_DATA]   -       
+207   sdk-tools.d.ts                          5.8 KB      2026-02-05 18:07:31 [MFT_REUSED]-       
+208   resvg.wasm                              496.3 KB    2026-02-05 18:07:31 [OK]        60      %
+209   bun.lock                                -           2026-02-05 18:07:31 [MFT_REUSED]-       
+210   package.json                            1.8 MB      2026-02-05 18:07:31 [MFT_REUSED]-       
+211   cli.js                                  221.5 MB    2026-02-05 18:07:31 [MFT_REUSED]-       
+212   README.md                               526.4 KB    2026-02-05 18:07:31 [OK]        60      %
+213   LICENSE.md                              -           2026-02-05 18:07:31 [NO_DATA]   -       
+214   claude.ps1                              1.8 KB      2026-02-05 18:07:31 [OK]        60      %
+215   claude.cmd                              434 B       2026-02-05 18:07:31 [OK]        -       
+216   claude                                  3.4 KB      2026-02-05 18:07:31 [MFT_REUSED]-       
+217   sharp-win32-x64.node                    450 B       2026-02-05 18:05:20 [OK]        -       
+218   libvips-cpp.dll                         204 B       2026-02-05 18:05:20 [OK]        -       
+219   ripgrep.node                            1.5 KB      2026-02-05 18:05:20 [MFT_REUSED]-       
+220   libvips-42.dll                          -           2026-02-05 18:05:20 [NO_DATA]   -       
+221   rg                                      1.5 KB      2026-02-05 18:05:20 [MFT_REUSED]-       
+222   ripgrep.node                            204 B       2026-02-05 18:05:20 [OK]        -       
+223   README.md                               258 B       2026-02-05 18:05:20 [OK]        -       
+224   ripgrep.node                            2.6 KB      2026-02-05 18:05:20 [MFT_REUSED]-       
+225   LICENSE                                 4.7 MB      2026-02-05 18:05:20 [MFT_REUSED]-       
+226   rg                                      2.6 KB      2026-02-05 18:05:20 [MFT_REUSED]-       
+227   rg                                      1.1 KB      2026-02-05 18:05:20 [MFT_REUSED]-       
+228   ripgrep.node                            -           2026-02-05 18:05:20 [NO_DATA]   -       
+229   ripgrep.node                            8.1 KB      2026-02-05 18:05:20 [MFT_REUSED]-       
+230   rg                                      71.6 KB     2026-02-05 18:05:20 [OK]        60      %
+231   COPYING                                 918 B       2026-02-05 18:05:20 [MFT_REUSED]-       
+232   tree-sitter.wasm                        6.9 KB      2026-02-05 18:05:20 [MFT_REUSED]-       
+233   README.md                               41.1 KB     2026-02-05 18:05:20 [MFT_REUSED]-       
+234   package.json                            39.4 KB     2026-02-05 18:05:20 [OK]        60      %
+235   sdk-tools.d.ts                          303 B       2026-02-05 18:05:20 [OK]        -       
+236   tree-sitter-bash.wasm                   4.4 KB      2026-02-05 18:05:20 [MFT_REUSED]-       
+237   resvg.wasm                              450 B       2026-02-05 18:05:20 [OK]        -       
+238   package.json                            303 B       2026-02-05 18:05:20 [OK]        -       
+239   rg.exe                                  2.3 KB      2026-02-05 18:05:20 [MFT_REUSED]-       
+240   versions.json                           -           2026-02-05 18:05:20 [NO_DATA]   -       
+241   LICENSE.md                              8.5 KB      2026-02-05 18:05:20 [MFT_REUSED]-       
+242   bun.lock                                303 B       2026-02-05 18:05:20 [OK]        -       
+243   cli.js                                  19.6 KB     2026-02-05 18:05:20 [MFT_REUSED]-       
+244   .claude.ps1-4whw49fW                    -           2026-02-05 18:05:20 [NO_DATA]   -       
+245   .claude-ZSKLFpjG                        203.8 MB    2026-02-05 18:05:20 [MFT_REUSED]-       
+246   .claude.cmd-mZp62EaH                    -           2026-02-05 18:05:20 [NO_DATA]   -       
+247   claude                                  203.8 MB    2026-02-05 18:05:19 [MFT_REUSED]-       
+248   claude.cmd                              -           2026-02-05 18:05:19 [NO_DATA]   -       
+249   claude.ps1                              -           2026-02-05 18:05:19 [NO_DATA]   -       
+250   unsuccessfulbuild                       -           2026-02-05 17:58:06 [NO_DATA]   -       
+251   link-rc.read.1.tlog                     -           2026-02-05 17:58:06 [NO_DATA]   -       
+252   link-cvtres.read.1.tlog                 209.2 MB    2026-02-05 17:58:06 [MFT_REUSED]-       
+253   link-rc.write.1.tlog                    -           2026-02-05 17:58:06 [NO_DATA]   -       
+254   link-cvtres.write.1.tlog                -           2026-02-05 17:58:06 [NO_DATA]   -       
+255   sharp-win32-x64.node                    96.9 MB     2026-02-05 17:58:03 [MFT_REUSED]-       
+256   libvips-cpp.dll                         1.7 MB      2026-02-05 17:58:03 [MFT_REUSED]-       
+257   ripgrep.node                            -           2026-02-05 17:58:03 [MFT_REUSED]-       
+258   libvips-42.dll                          230.5 MB    2026-02-05 17:58:03 [MFT_REUSED]-       
+259   ripgrep.node                            221.5 MB    2026-02-05 17:58:03 [MFT_REUSED]-       
+260   ripgrep.node                            526.4 KB    2026-02-05 17:58:03 [OK]        60      %
+261   rg                                      968.8 KB    2026-02-05 17:58:03 [MFT_REUSED]-       
+262   rg.exe                                  -           2026-02-05 17:58:03 [NO_DATA]   -       
+263   ripgrep.node                            -           2026-02-05 17:58:03 [NO_DATA]   -       
+264   rg                                      169 B       2026-02-05 17:58:03 [OK]        -       
+265   rg                                      32.0 KB     2026-02-05 17:58:03 [MFT_REUSED]-       
+266   README.md                               -           2026-02-05 17:58:03 [NO_DATA]   -       
+267   rg                                      -           2026-02-05 17:58:03 [NO_DATA]   -       
+268   ripgrep.node                            1.8 MB      2026-02-05 17:58:03 [MFT_REUSED]-       
+269   LICENSE                                 -           2026-02-05 17:58:03 [NO_DATA]   -       
+270   package.json                            4.2 KB      2026-02-05 17:58:03 [MFT_REUSED]-       
+271   versions.json                           158 B       2026-02-05 17:58:03 [OK]        -       
+272   tree-sitter.wasm                        500.1 KB    2026-02-05 17:58:03 [OK]        60      %
+273   COPYING                                 1.7 MB      2026-02-05 17:58:03 [MFT_REUSED]-       
+274   README.md                               533.5 KB    2026-02-05 17:58:03 [OK]        60      %
+275   bun.lock                                357.0 KB    2026-02-05 17:58:03 [OK]        90      %
+276   package.json                            159 B       2026-02-05 17:58:03 [OK]        -       
+277   tree-sitter-bash.wasm                   852 B       2026-02-05 17:58:03 [MFT_REUSED]-       
+278   sdk-tools.d.ts                          -           2026-02-05 17:58:03 [NO_DATA]   -       
+279   resvg.wasm                              515.0 KB    2026-02-05 17:58:03 [OK]        60      %
+280   LICENSE.md                              5.1 KB      2026-02-05 17:58:03 [OK]        60      %
+281   cli.js                                  6.1 KB      2026-02-05 17:58:03 [MFT_REUSED]-       
+282   .claude-ZSKLFpjG                        57.7 KB     2026-02-05 17:58:03 [OK]        95      %
+283   .claude.cmd-mZp62EaH                    5.8 KB      2026-02-05 17:58:03 [MFT_REUSED]-       
+284   .claude.ps1-4whw49fW                    496.3 KB    2026-02-05 17:58:03 [OK]        60      %
+285   claude                                  57.7 KB     2026-02-05 17:58:03 [OK]        95      %
+286   claude.ps1                              496.3 KB    2026-02-05 17:58:03 [OK]        60      %
+287   claude.cmd                              5.8 KB      2026-02-05 17:58:03 [MFT_REUSED]-       
+288   UsnRecoverCommands.obj                  8.5 KB      2026-02-05 17:58:02 [MFT_REUSED]-       
+289   O6M0003bzZkz3jTeOQ.mgg.cfg              -           2026-02-05 17:56:25 [NO_DATA]   -       
+290   UsnRecoverCommands.cpp                  -           2026-02-05 17:55:08 [NO_DATA]   -       
+291   UsnRecoverCommands.cpp.tmp.10168.17...  14.2 KB     2026-02-05 17:55:08 [OK]        60      %
+292   UsnRecoverCommands.cpp.tmp.10168.17...  -           2026-02-05 17:54:36 [NO_DATA]   -       
+293   UsnRecoverCommands.cpp                  374 B       2026-02-05 17:54:36 [OK]        -       
+294   ripgrep.node                            2.6 KB      2026-02-05 17:54:12 [MFT_REUSED]-       
+295   rg                                      450 B       2026-02-05 17:54:12 [OK]        -       
+296   sharp-win32-x64.node                    67.3 KB     2026-02-05 17:54:12 [OK]        60      %
+297   libvips-cpp.dll                         1.8 MB      2026-02-05 17:54:12 [MFT_REUSED]-       
+298   ripgrep.node                            -           2026-02-05 17:54:12 [NO_DATA]   -       
+299   rg.exe                                  2.3 KB      2026-02-05 17:54:12 [MFT_REUSED]-       
+300   ripgrep.node                            49.2 MB     2026-02-05 17:54:12 [OK]        90      %
+301   rg                                      204 B       2026-02-05 17:54:12 [OK]        -       
+302   libvips-42.dll                          918 B       2026-02-05 17:54:12 [MFT_REUSED]-       
+303   rg                                      1.5 KB      2026-02-05 17:54:12 [MFT_REUSED]-       
+304   rg                                      -           2026-02-05 17:54:12 [NO_DATA]   -       
+305   ripgrep.node                            14.2 KB     2026-02-05 17:54:12 [OK]        60      %
+306   ripgrep.node                            -           2026-02-05 17:54:12 [NO_DATA]   -       
+307   LICENSE                                 4.7 MB      2026-02-05 17:54:12 [MFT_REUSED]-       
+308   README.md                               71.6 KB     2026-02-05 17:54:12 [OK]        60      %
+309   tree-sitter.wasm                        303 B       2026-02-05 17:54:12 [OK]        -       
+310   package.json                            1.3 KB      2026-02-05 17:54:12 [MFT_REUSED]-       
+311   COPYING                                 2.6 KB      2026-02-05 17:54:12 [MFT_REUSED]-       
+312   versions.json                           -           2026-02-05 17:54:12 [NO_DATA]   -       
+313   package.json                            39.4 KB     2026-02-05 17:54:12 [OK]        60      %
+314   tree-sitter-bash.wasm                   204 B       2026-02-05 17:54:12 [OK]        -       
+315   sdk-tools.d.ts                          8.1 KB      2026-02-05 17:54:12 [MFT_REUSED]-       
+316   .claude-ZSKLFpjG                        6.9 KB      2026-02-05 17:54:12 [MFT_REUSED]-       
+317   .claude.ps1-4whw49fW                    450 B       2026-02-05 17:54:12 [OK]        -       
+318   README.md                               41.1 KB     2026-02-05 17:54:12 [MFT_REUSED]-       
+319   cli.js                                  19.6 KB     2026-02-05 17:54:12 [MFT_REUSED]-       
+320   resvg.wasm                              1.5 KB      2026-02-05 17:54:12 [MFT_REUSED]-       
+321   bun.lock                                303 B       2026-02-05 17:54:12 [OK]        -       
+322   LICENSE.md                              8.5 KB      2026-02-05 17:54:12 [MFT_REUSED]-       
+323   .claude.cmd-mZp62EaH                    4.4 KB      2026-02-05 17:54:12 [MFT_REUSED]-       
+324   claude                                  6.9 KB      2026-02-05 17:54:12 [MFT_REUSED]-       
+325   claude.ps1                              450 B       2026-02-05 17:54:12 [OK]        -       
+326   claude.cmd                              4.4 KB      2026-02-05 17:54:12 [MFT_REUSED]-       
+327   libvips-cpp.dll                         -           2026-02-05 17:52:24 [NO_DATA]   -       
+328   sharp-win32-x64.node                    62.2 KB     2026-02-05 17:52:24 [MFT_REUSED]-       
+329   libvips-42.dll                          -           2026-02-05 17:52:24 [NO_DATA]   -       
+330   rg                                      166.9 MB    2026-02-05 17:52:24 [MFT_REUSED]-       
+331   rg.exe                                  -           2026-02-05 17:52:24 [MFT_REUSED]-       
+332   rg                                      670.4 KB    2026-02-05 17:52:24 [MFT_REUSED]-       
+333   rg                                      1.6 MB      2026-02-05 17:52:24 [MFT_REUSED]-       
+334   ripgrep.node                            158 B       2026-02-05 17:52:24 [OK]        -       
+335   README.md                               1.7 MB      2026-02-05 17:52:24 [MFT_REUSED]-       
+336   versions.json                           1.8 MB      2026-02-05 17:52:24 [MFT_REUSED]-       
+337   package.json                            -           2026-02-05 17:52:24 [NO_DATA]   -       
+338   ripgrep.node                            4.2 KB      2026-02-05 17:52:24 [MFT_REUSED]-       
+339   ripgrep.node                            3.3 MB      2026-02-05 17:52:24 [MFT_REUSED]-       
+340   rg                                      -           2026-02-05 17:52:24 [NO_DATA]   -       
+341   ripgrep.node                            1.7 MB      2026-02-05 17:52:24 [MFT_REUSED]-       
+342   ripgrep.node                            169 B       2026-02-05 17:52:24 [OK]        -       
+343   COPYING                                 160 B       2026-02-05 17:52:24 [OK]        -       
+344   LICENSE                                 125 B       2026-02-05 17:52:24 [OK]        -       
+345   package.json                            3.6 MB      2026-02-05 17:52:24 [MFT_REUSED]-       
+346   sdk-tools.d.ts                          -           2026-02-05 17:52:24 [NO_DATA]   -       
+347   cli.js                                  968.8 KB    2026-02-05 17:52:24 [MFT_REUSED]-       
+348   tree-sitter.wasm                        -           2026-02-05 17:52:24 [NO_DATA]   -       
+349   tree-sitter-bash.wasm                   -           2026-02-05 17:52:24 [NO_DATA]   -       
+350   resvg.wasm                              96.9 MB     2026-02-05 17:52:24 [MFT_REUSED]-       
+351   bun.lock                                32.0 KB     2026-02-05 17:52:24 [MFT_REUSED]-       
+352   .claude.cmd-mZp62EaH                    6.1 KB      2026-02-05 17:52:24 [MFT_REUSED]-       
+353   .claude-ZSKLFpjG                        159 B       2026-02-05 17:52:24 [OK]        -       
+354   LICENSE.md                              3.4 MB      2026-02-05 17:52:24 [MFT_REUSED]-       
+355   README.md                               -           2026-02-05 17:52:24 [NO_DATA]   -       
+356   .claude.ps1-4whw49fW                    357.0 KB    2026-02-05 17:52:24 [OK]        90      %
+357   unsuccessfulbuild                       2.6 KB      2026-02-05 17:51:39 [MFT_REUSED]-       
+358   link-rc.read.1.tlog                     8.1 KB      2026-02-05 17:51:39 [MFT_REUSED]-       
+359   link-cvtres.read.1.tlog                 204 B       2026-02-05 17:51:39 [OK]        -       
+360   link-rc.write.1.tlog                    1.5 KB      2026-02-05 17:51:39 [MFT_REUSED]-       
+361   link-cvtres.write.1.tlog                303 B       2026-02-05 17:51:39 [OK]        -       
+362   SystemCommands.obj                      41 B        2026-02-05 17:51:35 [OK]        60      %
+363   O4M0003bzZkz3jTeOQ.mgg.cfg              -           2026-02-05 17:50:56 [NO_DATA]   -       
+364   the-real-index~RF179d9724.TMP           125 B       2026-02-05 17:50:40 [OK]        -       
+365   temp-index                              -           2026-02-05 17:50:40 [NO_DATA]   -       
+366   the-real-index                          125 B       2026-02-05 17:50:40 [OK]        -       
+367   the-real-index~RF179d9724.TMP           2.6 KB      2026-02-05 17:50:40 [MFT_REUSED]-       
+368   3961833594.tmp.qmdt                     14.2 KB     2026-02-05 17:50:21 [OK]        60      %
+369   3961833594.tmp                          14.2 KB     2026-02-05 17:50:21 [OK]        60      %
+370   3961833594.tmp.qmfpd2                   -           2026-02-05 17:50:21 [NO_DATA]   -       
+371   3961833593.tmp                          14.2 KB     2026-02-05 17:50:21 [OK]        60      %
+372   3961833593.tmp.qmfpd2                   -           2026-02-05 17:50:21 [NO_DATA]   -       
+373   3961833593.tmp.qmdt                     14.2 KB     2026-02-05 17:50:21 [OK]        60      %
+374   3961833592.tmp                          14.2 KB     2026-02-05 17:50:20 [OK]        60      %
+375   3961833592.tmp.qmfpd2                   -           2026-02-05 17:50:20 [NO_DATA]   -       
+376   3961833592.tmp.qmdt                     14.2 KB     2026-02-05 17:50:20 [OK]        60      %
+377   000D00000007FB3E7AE5CBA7                2.6 KB      2026-02-05 17:50:20 [MFT_REUSED]-       
+378   todelete_f541efe1067de717               -           2026-02-05 17:50:20 [NO_DATA]   -       
+379   4cb013792b196a35_1                      2.6 KB      2026-02-05 17:50:20 [MFT_REUSED]-       
+380   todelete_8a8d033713a210b2               2.6 KB      2026-02-05 17:50:20 [MFT_REUSED]-       
+381   000E00000007FB3D3B1BFD5F                -           2026-02-05 17:50:20 [NO_DATA]   -       
+382   4cb013792b196a35_0                      -           2026-02-05 17:50:20 [NO_DATA]   -       
+383   3961833591.tmp                          14.2 KB     2026-02-05 17:50:20 [OK]        60      %
+384   3961833591.tmp.qmfpd2                   -           2026-02-05 17:50:20 [NO_DATA]   -       
+385   3961833591.tmp.qmdt                     14.2 KB     2026-02-05 17:50:20 [OK]        60      %
+386   .property                               -           2026-02-05 17:50:19 [NO_DATA]   -       
+387   tp                                      2.6 MB      2026-02-05 17:50:19 [MFT_REUSED]-       
+388   O4M0001WmY1F3ZS0fP.mgg                  14.2 KB     2026-02-05 17:50:19 [OK]        60      %
+389   SystemCommands.cpp.tmp.10168.177031...  450 B       2026-02-05 17:49:40 [OK]        -       
+390   SystemCommands.cpp                      49.2 MB     2026-02-05 17:49:40 [OK]        90      %
+391   unsuccessfulbuild                       -           2026-02-05 17:47:51 [NO_DATA]   -       
+392   link-cvtres.write.1.tlog                258 B       2026-02-05 17:47:51 [OK]        -       
+393   link-rc.read.1.tlog                     204 B       2026-02-05 17:47:51 [OK]        -       
+394   link-cvtres.read.1.tlog                 -           2026-02-05 17:47:51 [NO_DATA]   -       
+395   link-rc.write.1.tlog                    303 B       2026-02-05 17:47:51 [OK]        -       
+396   claude.cmd                              6.1 KB      2026-02-05 17:47:49 [MFT_REUSED]-       
+397   claude                                  159 B       2026-02-05 17:47:49 [OK]        -       
+398   claude.ps1                              357.0 KB    2026-02-05 17:47:49 [OK]        90      %
+399   CarveCommands.cpp                       67.3 KB     2026-02-05 17:43:14 [OK]        60      %
+400   CarveCommands.cpp.tmp.10168.1770313...  69.1 KB     2026-02-05 17:43:14 [OK]        60      %
+401   MFTCache.cpp                            69.1 KB     2026-02-05 17:43:01 [OK]        60      %
+402   MFTCache.cpp.tmp.10168.1770313381639    22.4 KB     2026-02-05 17:43:01 [OK]        60      %
+403   RestoreCommands.cpp                     -           2026-02-05 17:41:27 [NO_DATA]   -       
+404   RestoreCommands.cpp.tmp.10168.17703...  3.7 KB      2026-02-05 17:41:27 [MFT_REUSED]-       
+405   RestoreCommands.cpp.tmp.10168.17703...  -           2026-02-05 17:40:55 [NO_DATA]   -       
+406   RestoreCommands.cpp                     3.7 KB      2026-02-05 17:40:55 [MFT_REUSED]-       
+407   Filerestore_CLI.vcxproj                 -           2026-02-05 17:40:41 [NO_DATA]   -       
+408   Filerestore_CLI.vcxproj.tmp.10168.1...  354.0 KB    2026-02-05 17:40:41 [OK]        90      %
+409   Filerestore_CLI.vcxproj                 354.0 KB    2026-02-05 17:40:37 [OK]        90      %
+410   Filerestore_CLI.vcxproj.tmp.10168.1...  -           2026-02-05 17:40:37 [NO_DATA]   -       
+411   CarveCommands.cpp.tmp.10168.1770313...  67.3 KB     2026-02-05 17:36:59 [OK]        60      %
+412   CarveCommands.cpp                       67.3 KB     2026-02-05 17:36:59 [OK]        60      %
+413   MFTCache.cpp.tmp.10168.1770312960202    69.1 KB     2026-02-05 17:36:00 [OK]        60      %
+414   MFTCache.h.tmp.10168.1770312716782      6.1 KB      2026-02-05 17:31:56 [OK]        60      %
+415   Browse.VC.db-wal                        6.1 KB      2026-02-05 17:31:18 [OK]        60      %
+416   Browse.VC.db-shm                        67.3 KB     2026-02-05 17:31:18 [OK]        60      %
+417   Solution.VC.db-wal                      69.1 KB     2026-02-05 17:31:18 [OK]        60      %
+418   Solution.VC.db-shm                      22.4 KB     2026-02-05 17:31:18 [OK]        60      %
+419   Browse.VC.opendb                        -           2026-02-05 17:31:18 [NO_DATA]   -       
+420   DocumentLayout.tmp.json                 849.2 KB    2026-02-05 17:31:17 [OK]        60      %
+421   DocumentLayout.json                     203.5 MB    2026-02-05 17:31:17 [MFT_REUSED]-       
+422   DocumentLayout.backup.json              69.1 KB     2026-02-05 17:31:17 [OK]        60      %
+423   unsuccessfulbuild                       849.2 KB    2026-02-05 17:25:30 [OK]        60      %
+424   link-rc.read.1.tlog                     22.4 KB     2026-02-05 17:25:30 [OK]        60      %
+425   link-cvtres.read.1.tlog                 527.9 KB    2026-02-05 17:25:30 [OK]        60      %
+426   link-rc.write.1.tlog                    128.1 KB    2026-02-05 17:25:30 [MFT_REUSED]-       
+427   link-cvtres.write.1.tlog                24.3 KB     2026-02-05 17:25:30 [MFT_REUSED]-       
+428   3baed1d5-eb4e-4cdd-8602-7ac00e4c136...  15.0 MB     2026-02-05 17:25:00 [MFT_REUSED]-       
+429   05a1d6f2-f183-4f93-bc00-8011ae995da...  22.4 KB     2026-02-05 17:25:00 [OK]        60      %
+430   SystemCommands.cpp.tmp.10168.177031...  49.2 MB     2026-02-05 17:24:59 [OK]        90      %
+431   SystemCommands.cpp                      849.2 KB    2026-02-05 17:24:59 [OK]        60      %
+432   62a5b107-b16f-4bfc-bcfa-f780af9da31...  22.4 KB     2026-02-05 17:23:20 [OK]        60      %
+433   dacc1b9e-7f85-40c4-a0f2-0dfffad5592...  15.0 MB     2026-02-05 17:23:20 [MFT_REUSED]-       
+434   CarveCommands.cpp                       49.2 MB     2026-02-05 17:23:19 [OK]        90      %
+435   CarveCommands.cpp.tmp.10168.1770312...  67.3 KB     2026-02-05 17:23:19 [OK]        60      %
+436   adf15170-36c4-4d54-beaf-81e03e76c39...  15.0 MB     2026-02-05 17:22:21 [MFT_REUSED]-       
+437   c8efd8bc-c06d-45a7-a756-fe45983a765...  22.4 KB     2026-02-05 17:22:21 [OK]        60      %
+438   CarveCommands.cpp.tmp.10168.1770312...  49.2 MB     2026-02-05 17:22:20 [OK]        90      %
+439   CarveCommands.cpp                       67.3 KB     2026-02-05 17:22:20 [OK]        60      %
+440   3943832504.tmp                          49.2 MB     2026-02-05 17:20:21 [OK]        90      %
+441   3943832504.tmp.qmfpd2                   15.0 MB     2026-02-05 17:20:21 [MFT_REUSED]-       
+442   3943832504.tmp.qmdt                     49.2 MB     2026-02-05 17:20:21 [OK]        90      %
+443   3943832503.tmp.qmfpd2                   15.0 MB     2026-02-05 17:20:21 [MFT_REUSED]-       
+444   3943832503.tmp.qmdt                     49.2 MB     2026-02-05 17:20:21 [OK]        90      %
+445   3943832503.tmp                          49.2 MB     2026-02-05 17:20:21 [OK]        90      %
+446   3943832502.tmp.qmdt                     49.2 MB     2026-02-05 17:20:20 [OK]        90      %
+447   3943832502.tmp.qmfpd2                   15.0 MB     2026-02-05 17:20:20 [MFT_REUSED]-       
+448   3943832502.tmp                          49.2 MB     2026-02-05 17:20:20 [OK]        90      %
+449   3943832501.tmp.qmdt                     49.2 MB     2026-02-05 17:20:20 [OK]        90      %
+450   3943832501.tmp.qmfpd2                   15.0 MB     2026-02-05 17:20:20 [MFT_REUSED]-       
+451   3943832501.tmp                          49.2 MB     2026-02-05 17:20:20 [OK]        90      %
+452   Browse.VC.db-wal                        67.3 KB     2026-02-05 17:12:17 [OK]        60      %
+453   Solution.VC.db-shm                      15.0 MB     2026-02-05 17:12:17 [MFT_REUSED]-       
+454   Solution.VC.db-wal                      6.1 KB      2026-02-05 17:12:17 [OK]        60      %
+455   Browse.VC.opendb                        49.2 MB     2026-02-05 17:12:17 [OK]        90      %
+456   Browse.VC.db-shm                        -           2026-02-05 17:12:17 [NO_DATA]   -       
+457   DocumentLayout.tmp.json                 203.5 MB    2026-02-05 17:12:16 [MFT_REUSED]-       
+458   DocumentLayout.json                     69.1 KB     2026-02-05 17:12:16 [OK]        60      %
+459   DocumentLayout.backup.json              6.1 KB      2026-02-05 17:12:16 [OK]        60      %
+460   CARVECOMMANDS.ipch                      4.9 KB      2026-02-05 17:11:15 [MFT_REUSED]-       
+461   55803304-20f2-4a03-993a-2fd0623fdef...  167 B       2026-02-05 17:10:59 [OK]        -       
+462   c178717b-e09d-402f-a6d2-21ada4135ab...  520.9 KB    2026-02-05 17:10:59 [OK]        60      %
+463   0dda9a85-e93a-4a4d-b5f9-e742faa7fc7...  -           2026-02-05 17:10:59 [NO_DATA]   -       
+464   92270027-1ca6-4f62-bd47-73c17d8ffa8...  167 B       2026-02-05 17:10:59 [OK]        -       
+465   47dca2e5-2740-43fb-9731-8457907ec08...  -           2026-02-05 17:10:59 [NO_DATA]   -       
+466   f9568e18-118e-46ed-b2b8-2ac85f9ad35...  167 B       2026-02-05 17:10:59 [OK]        -       
+467   12802193-c8a8-462c-95db-3212ae6dbfc...  -           2026-02-05 17:10:59 [NO_DATA]   -       
+468   4e762ef0-94c8-4933-b6c4-69b07494d0b...  22.4 KB     2026-02-05 17:10:59 [OK]        60      %
+469   unsuccessfulbuild                       67.3 KB     2026-02-05 17:07:23 [OK]        60      %
+470   test_recover.ps1.tmp.10168.17703111...  218 B       2026-02-05 17:05:18 [OK]        -       
+471   unsuccessfulbuild                       -           2026-02-05 16:58:04 [MFT_REUSED]-       
+472   link-rc.read.1.tlog                     71.7 KB     2026-02-05 16:58:04 [OK]        60      %
+473   link-cvtres.read.1.tlog                 67.3 KB     2026-02-05 16:58:04 [OK]        60      %
+474   link-rc.write.1.tlog                    218 B       2026-02-05 16:58:04 [OK]        -       
+475   link-cvtres.write.1.tlog                -           2026-02-05 16:58:04 [NO_DATA]   -       
+476   UsnRecoverCommands.obj                  8.5 KB      2026-02-05 16:58:00 [MFT_REUSED]-       
+477   UsnRecoverCommands.cpp.tmp.10168.17...  374 B       2026-02-05 16:57:43 [OK]        -       
+478   UsnRecoverCommands.cpp                  -           2026-02-05 16:57:43 [MFT_REUSED]-       
+479   UsnRecoverCommands.cpp.tmp.10168.17...  -           2026-02-05 16:57:13 [MFT_REUSED]-       
+480   UsnRecoverCommands.cpp                  374 B       2026-02-05 16:57:13 [OK]        -       
+481   UsnRecoverCommands.cpp.tmp.10168.17...  374 B       2026-02-05 16:56:53 [OK]        -       
+482   UsnRecoverCommands.cpp                  -           2026-02-05 16:56:53 [MFT_REUSED]-       
+483   UsnRecoverCommands.cpp                  374 B       2026-02-05 16:56:24 [OK]        -       
+484   UsnRecoverCommands.cpp.tmp.10168.17...  -           2026-02-05 16:56:24 [MFT_REUSED]-       
+485   UsnRecoverCommands.cpp                  -           2026-02-05 16:55:40 [MFT_REUSED]-       
+486   UsnRecoverCommands.cpp.tmp.10168.17...  374 B       2026-02-05 16:55:40 [OK]        -       
+487   unsuccessfulbuild                       374 B       2026-02-05 16:53:40 [OK]        -       
+488   link-rc.read.1.tlog                     71.7 KB     2026-02-05 16:53:40 [OK]        60      %
+489   link-cvtres.read.1.tlog                 67.3 KB     2026-02-05 16:53:40 [OK]        60      %
+490   link-rc.write.1.tlog                    218 B       2026-02-05 16:53:40 [OK]        -       
+491   link-cvtres.write.1.tlog                -           2026-02-05 16:53:40 [NO_DATA]   -       
+492   TripleValidator.cpp.tmp.10168.17703...  22.6 KB     2026-02-05 16:52:07 [OK]        60      %
+493   TripleValidator.cpp                     -           2026-02-05 16:52:07 [NO_DATA]   -       
+494   TripleValidator.cpp.tmp.10168.17703...  -           2026-02-05 16:51:57 [NO_DATA]   -       
+495   TripleValidator.cpp                     22.6 KB     2026-02-05 16:51:57 [OK]        60      %
+496   TripleValidator.cpp                     -           2026-02-05 16:51:44 [NO_DATA]   -       
+497   TripleValidator.cpp.tmp.10168.17703...  22.6 KB     2026-02-05 16:51:44 [OK]        60      %
+498   TripleValidator.cpp                     22.6 KB     2026-02-05 16:50:32 [OK]        60      %
+499   TripleValidator.cpp.tmp.10168.17703...  -           2026-02-05 16:50:32 [NO_DATA]   -       
+500   3925831094.tmp.qmdt                     -           2026-02-05 16:50:21 [NO_DATA]   -       
+501   3925831094.tmp.qmfpd2                   71.7 KB     2026-02-05 16:50:21 [OK]        60      %
+502   3925831094.tmp                          -           2026-02-05 16:50:21 [NO_DATA]   -       
+503   3925831093.tmp.qmdt                     -           2026-02-05 16:50:20 [NO_DATA]   -       
+504   3925831093.tmp.qmfpd2                   71.7 KB     2026-02-05 16:50:20 [OK]        60      %
+505   3925831093.tmp                          -           2026-02-05 16:50:20 [NO_DATA]   -       
+506   3925831092.tmp.qmfpd2                   71.7 KB     2026-02-05 16:50:20 [OK]        60      %
+507   3925831092.tmp.qmdt                     -           2026-02-05 16:50:20 [NO_DATA]   -       
+508   3925831092.tmp                          -           2026-02-05 16:50:20 [NO_DATA]   -       
+509   3925831091.tmp                          -           2026-02-05 16:50:20 [NO_DATA]   -       
+510   3925831091.tmp.qmdt                     -           2026-02-05 16:50:20 [NO_DATA]   -       
+511   3925831091.tmp.qmfpd2                   71.7 KB     2026-02-05 16:50:20 [OK]        60      %
+512   Filerestore_CLI.vcxproj.tmp.10168.1...  354.0 KB    2026-02-05 16:49:24 [OK]        90      %
+513   Filerestore_CLI.vcxproj                 374 B       2026-02-05 16:49:24 [OK]        -       
+514   Filerestore_CLI.vcxproj.tmp.10168.1...  374 B       2026-02-05 16:48:51 [OK]        -       
+515   Filerestore_CLI.vcxproj                 354.0 KB    2026-02-05 16:48:51 [OK]        90      %
+516   TripleValidator.cpp.tmp.10168.17703...  22.6 KB     2026-02-05 16:42:00 [OK]        60      %
+517   TripleValidator.cpp                     374 B       2026-02-05 16:42:00 [OK]        -       
+518   TripleValidator.cpp.tmp.10168.17703...  374 B       2026-02-05 16:41:34 [OK]        -       
+519   TripleValidator.cpp                     22.6 KB     2026-02-05 16:41:34 [OK]        60      %
+520   TripleValidator.cpp.tmp.10168.17703...  22.6 KB     2026-02-05 16:40:39 [OK]        60      %
+521   TripleValidator.cpp                     374 B       2026-02-05 16:40:39 [OK]        -       
+522   TripleValidator.cpp.tmp.10168.17703...  374 B       2026-02-05 16:39:52 [OK]        -       
+523   TripleValidator.h.tmp.10168.1770309...  8.5 KB      2026-02-05 16:38:27 [OK]        60      %
+524   unsuccessfulbuild                       8.5 KB      2026-02-05 16:22:52 [OK]        60      %
+525   link-cvtres.read.1.tlog                 374 B       2026-02-05 16:22:52 [OK]        -       
+526   link-rc.read.1.tlog                     802.4 KB    2026-02-05 16:22:52 [MFT_REUSED]-       
+527   link-rc.write.1.tlog                    1.7 MB      2026-02-05 16:22:52 [MFT_REUSED]-       
+528   link-cvtres.write.1.tlog                22.6 KB     2026-02-05 16:22:52 [OK]        60      %
+529   link.secondary.1.tlog                   15.5 KB     2026-02-05 16:21:58 [OK]        60      %
+530   link.write.1.tlog                       10.0 KB     2026-02-05 16:21:58 [OK]        60      %
+531   Filerestore_CLI.ipdb                    5.5 KB      2026-02-05 16:21:58 [OK]        60      %
+532   Filerestore_CLI.iobj                    20.4 KB     2026-02-05 16:21:58 [OK]        60      %
+533   CL.read.1.tlog                          6.8 KB      2026-02-05 16:21:58 [OK]        60      %
+534   Filerestore_CLI.vcxproj.FileListAbs...  24.2 KB     2026-02-05 16:21:58 [OK]        95      %
+535   CL.command.1.tlog                       10.9 KB     2026-02-05 16:21:58 [OK]        60      %
+536   Cl.items.tlog                           -           2026-02-05 16:21:58 [NO_DATA]   -       
+537   CL.write.1.tlog                         15.4 KB     2026-02-05 16:21:58 [OK]        60      %
+538   link.read.1.tlog                        14.7 KB     2026-02-05 16:21:58 [OK]        60      %
+539   link.command.1.tlog                     4.9 KB      2026-02-05 16:21:58 [OK]        60      %
+540   MFTLCNIndex.obj                         2.4 KB      2026-02-05 16:21:58 [OK]        60      %
+541   UsnJournalReader.obj                    459 B       2026-02-05 16:21:58 [OK]        -       
+542   FileIntegrityValidator.obj              -           2026-02-05 16:21:58 [NO_DATA]   -       
+543   CarvedResultsCache.obj                  -           2026-02-05 16:21:58 [NO_DATA]   -       
+544   MemoryMappedResults.obj                 448 B       2026-02-05 16:21:58 [OK]        -       
+545   MLClassifier.obj                        23.8 KB     2026-02-05 16:21:58 [OK]        60      %
+546   cli.obj                                 -           2026-02-05 16:21:58 [NO_DATA]   -       
+547   climodule.obj                           155.2 KB    2026-02-05 16:21:58 [OK]        90      %
+548   cmd.obj                                 9.0 KB      2026-02-05 16:21:58 [OK]        60      %
+549   CrashHandler.obj                        161.6 KB    2026-02-05 16:21:58 [OK]        90      %
+550   DeletedFileScanner.obj                  169.6 KB    2026-02-05 16:21:58 [OK]        90      %
+551   FileCarver.obj                          8.5 KB      2026-02-05 16:21:58 [OK]        60      %
+552   FileRestore.obj                         157.0 KB    2026-02-05 16:21:58 [OK]        90      %
+553   ImageTable.obj                          157.8 KB    2026-02-05 16:21:58 [OK]        90      %
+554   LocalizationManager.obj                 44.1 KB     2026-02-05 16:21:58 [MFT_REUSED]-       
+555   Filerestore_CLI.pdb                     13.8 KB     2026-02-05 16:21:58 [OK]        60      %
+556   Filerestore_CLI.exe                     7.3 KB      2026-02-05 16:21:58 [OK]        60      %
+557   CpuFeatures.obj                         -           2026-02-05 16:21:58 [NO_DATA]   -       
+558   SimdSignatureScanner.obj                8.7 MB      2026-02-05 16:21:58 [MFT_REUSED]-       
+559   ZipStructureParser.obj                  215.8 MB    2026-02-05 16:21:58 [MFT_REUSED]-       
+560   BlockContinuityDetector.obj             2.9 MB      2026-02-05 16:21:58 [MFT_REUSED]-       
+561   RepairCommands.obj                      6.2 MB      2026-02-05 16:21:58 [MFT_REUSED]-       
+562   MLFileRepair.obj                        7.6 MB      2026-02-05 16:21:58 [MFT_REUSED]-       
+563   ImageHeaderRepairer.obj                 8.5 KB      2026-02-05 16:21:58 [MFT_REUSED]-       
+564   UsnRecoverCommands.obj                  275.0 KB    2026-02-05 16:21:58 [OK]        90      %
+565   UsnTargetedRecovery.obj                 -           2026-02-05 16:21:58 [NO_DATA]   -       
+566   DatasetGenerator.obj                    -           2026-02-05 16:21:58 [NO_DATA]   -       
+567   MLCommands.obj                          125 B       2026-02-05 16:21:58 [OK]        -       
+568   FileRestoreAPI.obj                      39.1 KB     2026-02-05 16:21:58 [OK]        60      %
+569   ErrorCodes.obj                          12.0 KB     2026-02-05 16:21:58 [OK]        60      %
+570   RestoreCommands.obj                     4.3 KB      2026-02-05 16:21:58 [MFT_REUSED]-       
+571   SearchCommands.obj                      2.8 KB      2026-02-05 16:21:58 [OK]        60      %
+572   DiagnosticCommands.obj                  -           2026-02-05 16:21:58 [NO_DATA]   -       
+573   CarveCommands.obj                       167 B       2026-02-05 16:21:58 [OK]        -       
+574   SystemCommands.obj                      1.7 MB      2026-02-05 16:21:58 [MFT_REUSED]-       
+575   PEAnalysisCommands.obj                  41 B        2026-02-05 16:21:58 [OK]        60      %
+576   Main.obj                                69.8 KB     2026-02-05 16:21:58 [OK]        90      %
+577   SignatureScanThreadPool.obj             -           2026-02-05 16:21:58 [NO_DATA]   -       
+578   ProgressBar.obj                         -           2026-02-05 16:21:58 [NO_DATA]   -       
+579   PathResolver.obj                        15.3 KB     2026-02-05 16:21:58 [OK]        60      %
+580   OverwriteDetector.obj                   1.2 MB      2026-02-05 16:21:58 [MFT_REUSED]-       
+581   OverwriteDetectionThreadPool.obj        -           2026-02-05 16:21:58 [NO_DATA]   -       
+582   MFTReader.obj                           11.3 KB     2026-02-05 16:21:58 [OK]        60      %
+583   MFTParser.obj                           62.0 KB     2026-02-05 16:21:58 [OK]        90      %
+584   MFTBatchReader.obj                      63.7 KB     2026-02-05 16:21:58 [OK]        90      %
+585   Logger.obj                              66.5 KB     2026-02-05 16:21:58 [OK]        90      %
+586   TimestampExtractor.obj                  13.5 KB     2026-02-05 16:21:58 [OK]        60      %
+587   vc145.pdb                               8.4 KB      2026-02-05 16:21:58 [OK]        60      %
+588   Filerestore_CLI.lastbuildstate          10.4 KB     2026-02-05 16:21:58 [OK]        60      %
+589   3907829684.tmp                          24.2 KB     2026-02-05 16:20:21 [OK]        95      %
+590   3907829684.tmp.qmdt                     24.2 KB     2026-02-05 16:20:21 [OK]        95      %
+591   3907829684.tmp.qmfpd2                   -           2026-02-05 16:20:21 [NO_DATA]   -       
+592   3907829683.tmp.qmdt                     24.2 KB     2026-02-05 16:20:21 [OK]        95      %
+593   3907829683.tmp.qmfpd2                   -           2026-02-05 16:20:21 [NO_DATA]   -       
+594   3907829683.tmp                          24.2 KB     2026-02-05 16:20:21 [OK]        95      %
+595   3907829682.tmp.qmfpd2                   -           2026-02-05 16:20:20 [NO_DATA]   -       
+596   3907829682.tmp                          24.2 KB     2026-02-05 16:20:20 [OK]        95      %
+597   3907829682.tmp.qmdt                     24.2 KB     2026-02-05 16:20:20 [OK]        95      %
+598   3907829681.tmp                          24.2 KB     2026-02-05 16:20:20 [OK]        95      %
+599   3907829681.tmp.qmfpd2                   -           2026-02-05 16:20:20 [NO_DATA]   -       
+600   3907829681.tmp.qmdt                     24.2 KB     2026-02-05 16:20:20 [OK]        95      %
+601   unsuccessfulbuild                       24.2 KB     2026-02-05 16:19:50 [OK]        95      %
+602   link-rc.read.1.tlog                     -           2026-02-05 16:19:50 [NO_DATA]   -       
+603   link-cvtres.read.1.tlog                 71.3 KB     2026-02-05 16:19:50 [OK]        60      %
+604   link-rc.write.1.tlog                    194 B       2026-02-05 16:19:50 [OK]        -       
+605   link-cvtres.write.1.tlog                501.7 KB    2026-02-05 16:19:50 [OK]        60      %
+606   SearchCommands.obj                      8.0 KB      2026-02-05 16:19:46 [OK]        60      %
+607   SearchCommands.cpp.tmp.10168.177030...  19.8 KB     2026-02-05 16:19:30 [OK]        60      %
+608   SearchCommands.cpp                      24.2 KB     2026-02-05 16:19:30 [OK]        95      %
+609   SearchCommands.cpp.tmp.10168.177030...  24.2 KB     2026-02-05 16:19:03 [OK]        95      %
+610   SearchCommands.cpp                      19.8 KB     2026-02-05 16:19:03 [OK]        60      %
+611   SearchCommands.cpp.tmp.10168.177030...  19.8 KB     2026-02-05 16:17:45 [OK]        60      %
+612   SearchCommands.cpp                      24.2 KB     2026-02-05 16:17:45 [OK]        95      %
+613   SearchCommands.cpp.tmp.10168.177030...  24.2 KB     2026-02-05 16:17:15 [OK]        95      %
+614   SearchCommands.cpp                      19.8 KB     2026-02-05 16:17:15 [OK]        60      %
+615   unsuccessfulbuild                       24.2 KB     2026-02-05 16:16:01 [OK]        95      %
+616   link-cvtres.read.1.tlog                 194 B       2026-02-05 16:16:01 [OK]        -       
+617   link-rc.read.1.tlog                     2.8 KB      2026-02-05 16:16:01 [OK]        60      %
+618   link-cvtres.write.1.tlog                71.3 KB     2026-02-05 16:16:01 [OK]        60      %
+619   link-rc.write.1.tlog                    -           2026-02-05 16:16:01 [NO_DATA]   -       
+620   CarveCommands.obj                       167 B       2026-02-05 16:15:56 [OK]        -       
+621   CarveCommands.cpp                       24.2 KB     2026-02-05 16:15:25 [OK]        95      %
+622   CarveCommands.cpp.tmp.10168.1770308...  67.3 KB     2026-02-05 16:15:25 [OK]        60      %
+623   CarveCommands.cpp                       67.3 KB     2026-02-05 16:14:35 [OK]        60      %
+624   CarveCommands.cpp.tmp.10168.1770308...  24.2 KB     2026-02-05 16:14:35 [OK]        95      %
+625   CarveCommands.cpp                       24.2 KB     2026-02-05 16:14:01 [OK]        95      %
+626   CarveCommands.cpp.tmp.10168.1770308...  67.3 KB     2026-02-05 16:14:01 [OK]        60      %
+627   CarveCommands.cpp                       67.3 KB     2026-02-05 16:12:41 [OK]        60      %
+628   CarveCommands.cpp.tmp.10168.1770307...  24.2 KB     2026-02-05 16:12:41 [OK]        95      %
+629   CarveCommands.cpp                       24.2 KB     2026-02-05 16:12:20 [OK]        95      %
+630   CarveCommands.cpp.tmp.10168.1770307...  67.3 KB     2026-02-05 16:12:20 [OK]        60      %
+631   unsuccessfulbuild                       67.3 KB     2026-02-05 16:11:52 [OK]        60      %
+632   link-cvtres.read.1.tlog                 194 B       2026-02-05 16:11:52 [OK]        -       
+633   link-rc.read.1.tlog                     2.8 KB      2026-02-05 16:11:52 [OK]        60      %
+634   link-rc.write.1.tlog                    -           2026-02-05 16:11:52 [NO_DATA]   -       
+635   link-cvtres.write.1.tlog                71.3 KB     2026-02-05 16:11:52 [OK]        60      %
+636   CommandUtils.h.tmp.10168.1770307851019  12.0 KB     2026-02-05 16:10:51 [OK]        60      %
+637   CommandUtils.h                          67.3 KB     2026-02-05 16:10:51 [OK]        60      %
+638   CommandUtils.h                          12.0 KB     2026-02-05 16:10:25 [OK]        60      %
+639   CommandUtils.h.tmp.10168.1770307825564  67.3 KB     2026-02-05 16:10:25 [OK]        60      %
+640   Browse.VC.db-wal                        67.3 KB     2026-02-05 16:03:51 [OK]        60      %
+641   Browse.VC.db-shm                        2.8 KB      2026-02-05 16:03:51 [OK]        60      %
+642   Browse.VC.opendb                        -           2026-02-05 16:03:51 [NO_DATA]   -       
+643   Solution.VC.db-wal                      1.6 KB      2026-02-05 16:03:51 [OK]        60      %
+644   Solution.VC.db-shm                      194 B       2026-02-05 16:03:51 [OK]        -       
+645   DocumentLayout.tmp.json                 69.1 KB     2026-02-05 16:03:51 [OK]        60      %
+646   DocumentLayout.json                     6.1 KB      2026-02-05 16:03:51 [OK]        60      %
+647   DocumentLayout.backup.json              1.6 KB      2026-02-05 16:03:51 [OK]        60      %
+648   7bc33d03-6d48-401a-99fe-b51a1814a8d...  2.7 MB      2026-02-05 16:00:34 [MFT_REUSED]-       
+649   f3d91c6e-2c26-466e-92a1-359965ed48a...  -           2026-02-05 16:00:34 [NO_DATA]   -       
+650   ac58738c-9b5c-47bb-a5ed-3b1c06274d1...  -           2026-02-05 16:00:34 [NO_DATA]   -       
+651   d5a95ccc-9309-4a25-8906-bbadd5a11a7...  -           2026-02-05 16:00:34 [NO_DATA]   -       
+652   2985e4b3-817d-4b55-8b6c-1f387349dce...  167 B       2026-02-05 16:00:34 [OK]        -       
+653   2d63a501-a267-4f92-9cab-657d6444e04...  -           2026-02-05 16:00:34 [NO_DATA]   -       
+654   9d27a871-15d9-4aa9-8624-2481f71114b...  -           2026-02-05 16:00:34 [NO_DATA]   -       
+655   c06a1a57-dc53-419f-8aae-a1725808d12...  -           2026-02-05 16:00:34 [NO_DATA]   -       
+656   MFTBATCHREADER.ipch                     3.4 MB      2026-02-05 16:00:31 [MFT_REUSED]-       
+657   unsuccessfulbuild                       67.3 KB     2026-02-05 15:50:37 [OK]        60      %
+658   link-cvtres.read.1.tlog                 -           2026-02-05 15:50:37 [NO_DATA]   -       
+659   link-rc.read.1.tlog                     2.8 KB      2026-02-05 15:50:37 [OK]        60      %
+660   link-rc.write.1.tlog                    -           2026-02-05 15:50:37 [NO_DATA]   -       
+661   link-cvtres.write.1.tlog                69.1 KB     2026-02-05 15:50:37 [OK]        60      %
+662   PEAnalysisCommands.obj                  3.2 KB      2026-02-05 15:50:34 [OK]        60      %
+663   3889828284.tmp                          67.3 KB     2026-02-05 15:50:21 [OK]        60      %
+664   3889828284.tmp.qmfpd2                   41 B        2026-02-05 15:50:21 [OK]        60      %
+665   3889828284.tmp.qmdt                     67.3 KB     2026-02-05 15:50:21 [OK]        60      %
+666   3889828283.tmp.qmdt                     67.3 KB     2026-02-05 15:50:20 [OK]        60      %
+667   3889828283.tmp                          67.3 KB     2026-02-05 15:50:20 [OK]        60      %
+668   3889828283.tmp.qmfpd2                   41 B        2026-02-05 15:50:20 [OK]        60      %
+669   3889828282.tmp                          67.3 KB     2026-02-05 15:50:20 [OK]        60      %
+670   3889828282.tmp.qmfpd2                   41 B        2026-02-05 15:50:20 [OK]        60      %
+671   3889828282.tmp.qmdt                     67.3 KB     2026-02-05 15:50:20 [OK]        60      %
+672   3889828281.tmp                          67.3 KB     2026-02-05 15:50:19 [OK]        60      %
+673   3889828281.tmp.qmfpd2                   41 B        2026-02-05 15:50:19 [OK]        60      %
+674   3889828281.tmp.qmdt                     67.3 KB     2026-02-05 15:50:19 [OK]        60      %
+675   PEAnalysisCommands.cpp.tmp.10168.17...  1.9 KB      2026-02-05 15:48:46 [OK]        60      %
+676   PEAnalysisCommands.cpp                  67.3 KB     2026-02-05 15:48:46 [OK]        60      %
+677   PEAnalysisCommands.cpp.tmp.10168.17...  67.3 KB     2026-02-05 15:48:31 [OK]        60      %
+678   PEAnalysisCommands.cpp                  1.9 KB      2026-02-05 15:48:31 [OK]        60      %
+679   unsuccessfulbuild                       67.3 KB     2026-02-05 15:47:46 [OK]        60      %
+680   link-rc.read.1.tlog                     41 B        2026-02-05 15:47:46 [OK]        60      %
+681   link-cvtres.read.1.tlog                 -           2026-02-05 15:47:46 [NO_DATA]   -       
+682   link-rc.write.1.tlog                    2.8 KB      2026-02-05 15:47:46 [OK]        60      %
+683   link-cvtres.write.1.tlog                -           2026-02-05 15:47:46 [NO_DATA]   -       
+684   RestoreCommands.obj                     7.2 KB      2026-02-05 15:47:42 [OK]        60      %
+685   RestoreCommands.cpp.tmp.10168.17703...  3.7 KB      2026-02-05 15:45:58 [MFT_REUSED]-       
+686   RestoreCommands.cpp                     67.3 KB     2026-02-05 15:45:58 [OK]        60      %
+687   RestoreCommands.cpp.tmp.10168.17703...  67.3 KB     2026-02-05 15:45:47 [OK]        60      %
+688   RestoreCommands.cpp                     3.7 KB      2026-02-05 15:45:47 [MFT_REUSED]-       
+689   unsuccessfulbuild                       67.3 KB     2026-02-05 15:42:37 [OK]        60      %
+690   link-rc.read.1.tlog                     67.3 KB     2026-02-05 15:42:37 [OK]        60      %
+691   link-cvtres.read.1.tlog                 41 B        2026-02-05 15:42:37 [OK]        60      %
+692   link-rc.write.1.tlog                    4.3 KB      2026-02-05 15:42:37 [MFT_REUSED]-       
+693   link-cvtres.write.1.tlog                2.8 KB      2026-02-05 15:42:37 [OK]        60      %
+694   CarveCommands.cpp.tmp.10168.1770306...  24.2 KB     2026-02-05 15:40:49 [OK]        95      %
+695   CarveCommands.cpp                       67.3 KB     2026-02-05 15:40:49 [OK]        60      %
+696   CarveCommands.cpp.tmp.10168.1770306...  67.3 KB     2026-02-05 15:40:15 [OK]        60      %
+697   CarveCommands.cpp                       24.2 KB     2026-02-05 15:40:15 [OK]        95      %
+698   CarveCommands.cpp.tmp.10168.1770305...  24.2 KB     2026-02-05 15:39:14 [OK]        95      %
+699   CarveCommands.cpp                       67.3 KB     2026-02-05 15:39:14 [OK]        60      %
+700   SystemCommands.cpp.tmp.10168.177030...  849.2 KB    2026-02-05 15:38:37 [OK]        60      %
+701   SystemCommands.cpp                      24.2 KB     2026-02-05 15:38:37 [OK]        95      %
+702   cmd.h                                   849.2 KB    2026-02-05 15:38:08 [OK]        60      %
+703   cmd.h.tmp.10168.1770305888149           5.1 KB      2026-02-05 15:38:08 [OK]        60      %
+704   cmd.h                                   5.1 KB      2026-02-05 15:37:47 [OK]        60      %
+705   cmd.h.tmp.10168.1770305867555           849.2 KB    2026-02-05 15:37:47 [OK]        60      %
+706   DiagnosticCommands.cpp.tmp.10168.17...  16.5 KB     2026-02-05 15:36:50 [OK]        60      %
+707   DiagnosticCommands.cpp                  849.2 KB    2026-02-05 15:36:50 [OK]        60      %
+708   SearchCommands.cpp.tmp.10168.177030...  19.8 KB     2026-02-05 15:36:18 [OK]        60      %
+709   SearchCommands.cpp                      126.6 KB    2026-02-05 15:36:18 [OK]        60      %
+710   RestoreCommands.cpp.tmp.10168.17703...  3.7 KB      2026-02-05 15:35:46 [MFT_REUSED]-       
+711   RestoreCommands.cpp                     19.8 KB     2026-02-05 15:35:46 [OK]        60      %
+712   RestoreCommands.cpp.tmp.10168.17703...  19.8 KB     2026-02-05 15:35:31 [OK]        60      %
+713   RestoreCommands.cpp                     3.7 KB      2026-02-05 15:35:31 [MFT_REUSED]-       
+714   RestoreCommands.cpp.tmp.10168.17703...  3.7 KB      2026-02-05 15:35:16 [MFT_REUSED]-       
+715   RestoreCommands.cpp                     19.8 KB     2026-02-05 15:35:16 [OK]        60      %
+716   RestoreCommands.cpp.tmp.10168.17703...  19.8 KB     2026-02-05 15:34:58 [OK]        60      %
+717   RestoreCommands.cpp                     3.7 KB      2026-02-05 15:34:58 [MFT_REUSED]-       
+--------------------------------------------------------------------------------------------------
+[usnlist.total]: 718 [usnlist.files], [usnlist.recoverable]: 383
+
+[usnlist.hint]:
+  usnrecover D <index> <output_dir>
+  usnrecover D <filename> <output_dir>
