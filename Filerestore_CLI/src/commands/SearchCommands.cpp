@@ -420,6 +420,9 @@ void FindRecordCommand::Execute(string command) {
 			return;
 		}
 
+		// 加载 MFT data runs（支持碎片化 MFT 的正确记录定位）
+		reader.GetTotalMFTRecords();
+
 		MFTParser parser(&reader);
 		PathResolver resolver(&reader, &parser);
 

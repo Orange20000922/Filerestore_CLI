@@ -119,6 +119,9 @@ Result<void> FileRestoreAPI::OpenVolume(char driveLetter) {
         );
     }
 
+    // 加载 MFT data runs（支持碎片化 MFT 的正确记录定位）
+    pImpl->reader->GetTotalMFTRecords();
+
     // 初始化其他组件
     if (!pImpl->InitializeComponents()) {
         pImpl->CleanupComponents();

@@ -4,7 +4,10 @@
       "Bash(powershell.exe:*)",
       "Bash(xxd:*)",
       "Bash(move:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(powershell:*)",
+      "Bash(python -c:*)",
+      "WebSearch"
     ]
   }
 }

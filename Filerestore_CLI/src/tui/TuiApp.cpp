@@ -1,5 +1,6 @@
 #include "TuiApp.h"
 #include "components/OutputCapture.h"
+#include "components/TuiInputBridge.h"
 #include "CommandHelper.h"
 #include "TuiProgressTracker.h"
 #include "cli.h"
@@ -132,6 +133,9 @@ void TuiApp::Run() {
     // 启用 TUI 进度追踪
     TuiProgressTracker::Instance().Enable();
 
+    // 启用 TUI 输入桥接
+    TuiInputBridge::Instance().EnableTuiMode();
+
     AppendLog("[INFO] TUI started. Tab: switch focus | Esc: back | Q: quit");
 
     // ================================================================
@@ -142,6 +146,29 @@ void TuiApp::Run() {
     auto inputBox = Input(&inputContent, "Type command here...");
 
     auto commandInputComponent = CatchEvent(inputBox, [&](Event event) {
+        // 检查是否有命令线程的输入请求（TUI 输入桥接）
+        bool inputPending = TuiInputBridge::Instance().HasPendingRequest();
+
+        if (inputPending) {
+            // 输入请求模式: Enter 提交响应，Esc 取消
+            if (event == Event::Return) {
+                std::string response = inputContent;
+                inputContent.clear();
+                TuiInputBridge::Instance().SubmitResponse(response);
+                screen_.PostEvent(Event::Custom);
+                return true;
+            }
+            if (event == Event::Escape) {
+                inputContent.clear();
+                TuiInputBridge::Instance().CancelRequest();
+                screen_.PostEvent(Event::Custom);
+                return true;
+            }
+            // 其他按键正常传递给 Input 组件
+            return false;
+        }
+
+        // 正常命令输入模式
         // Enter: 检查是否需要参数填充
         if (event == Event::Return && !inputContent.empty()) {
             std::string cmd = inputContent;
@@ -486,8 +513,24 @@ void TuiApp::Run() {
 
         // 命令输入栏（参数模式时不显示）
         if (mode != ViewMode::ParamInput) {
-            auto cmdPrompt = text(" Command> ") | bold;
-            if (focusArea_ == 1) cmdPrompt = cmdPrompt | color(Color::Green);
+            bool inputPending = TuiInputBridge::Instance().HasPendingRequest();
+            Element cmdPrompt;
+            if (inputPending) {
+                // 输入请求模式：显示命令的提示文本
+                std::string prompt = TuiInputBridge::Instance().GetPrompt();
+                // 去掉末尾的冒号和空格，保持整洁
+                while (!prompt.empty() && (prompt.back() == ' ' || prompt.back() == ':')) {
+                    prompt.pop_back();
+                }
+                cmdPrompt = text(" " + prompt + "> ") | bold | color(Color::Yellow);
+                // 确保焦点在输入框
+                if (focusArea_ != 1) {
+                    focusArea_ = 1;
+                }
+            } else {
+                cmdPrompt = text(" Command> ") | bold;
+                if (focusArea_ == 1) cmdPrompt = cmdPrompt | color(Color::Green);
+            }
 
             bottomParts.push_back(
                 hbox({cmdPrompt, commandInputComponent->Render() | flex}) | border
@@ -625,4 +668,7 @@ void TuiApp::Run() {
 
     // 禁用 TUI 进度追踪
     TuiProgressTracker::Instance().Disable();
+
+    // 禁用 TUI 输入桥接
+    TuiInputBridge::Instance().DisableTuiMode();
 }

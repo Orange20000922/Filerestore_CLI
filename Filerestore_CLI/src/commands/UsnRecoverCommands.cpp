@@ -14,8 +14,10 @@
 #include "UsnTargetedRecovery.h"
 #include "LocalizationManager.h"
 #include "FileCarver.h"
+#include "FileCarverRecovery.h"
 #include "TripleValidator.h"
 #include "MFTCache.h"
+#include "components/TuiInputBridge.h"
 
 namespace fs = std::filesystem;
 
@@ -86,6 +88,9 @@ void UsnListCommand::Execute(string command) {
         cout << LOC_STR("error.open_volume_failed") << ": " << driveLetter << ":/" << endl;
         return;
     }
+
+    // 加载 MFT data runs（支持碎片化 MFT 的正确记录定位）
+    reader.GetTotalMFTRecords();
 
     MFTParser parser(&reader);
     UsnTargetedRecovery recovery(&reader, &parser);
@@ -248,6 +253,9 @@ void UsnRecoverCommand::Execute(string command) {
         cout << LOC_STR("error.open_volume_failed") << ": " << driveLetter << ":/" << endl;
         return;
     }
+
+    // 加载 MFT data runs（支持碎片化 MFT 的正确记录定位）
+    reader.GetTotalMFTRecords();
 
     MFTParser parser(&reader);
     UsnTargetedRecovery recovery(&reader, &parser);
@@ -476,6 +484,9 @@ void RecoverCommand::Execute(string command) {
         return;
     }
 
+    // 加载 MFT data runs（支持碎片化 MFT 的正确记录定位）
+    reader.GetTotalMFTRecords();
+
     MFTParser parser(&reader);
     UsnTargetedRecovery recovery(&reader, &parser);
 
@@ -484,10 +495,8 @@ void RecoverCommand::Execute(string command) {
 
     // ========== 第1步：如果没有指定文件名，进入交互式搜索 ==========
     if (targetFileName.empty()) {
-        cout << "\n请输入要恢复的文件名（支持部分匹配）: ";
         string input;
-        getline(cin, input);
-        if (input.empty()) {
+        if (!TuiInputBridge::Instance().GetLine("\n请输入要恢复的文件名（支持部分匹配）: ", input) || input.empty()) {
             cout << "已取消" << endl;
             return;
         }
@@ -497,17 +506,21 @@ void RecoverCommand::Execute(string command) {
     cout << "\n正在搜索: ";
     wcout << targetFileName << endl;
 
-    // ========== 第2步：搜索 USN 记录 ==========
-    cout << "\n[1/3] 搜索 USN 删除记录..." << endl;
+    // ========== 第1步：USN 搜索 + MFT 验证 ==========
+    cout << "\n[1/4] 搜索 USN 删除记录并验证 MFT..." << endl;
 
     vector<UsnFileListItem> usnResults = recovery.SearchAndValidate(
         driveLetter, 168, targetFileName, 100);  // 搜索最近7天
 
-    // 转换为 UsnDeletedFileInfo 并填充 MFT 信息
+    // 分类：可直接恢复 vs 需要签名扫描
+    vector<size_t> recoverableIndices;  // usnResults 中可直接恢复的索引
     vector<UsnDeletedFileInfo> matchedUsn;
-    for (auto& item : usnResults) {
-        if (!(item.usnInfo.FileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-            matchedUsn.push_back(item.usnInfo);
+    for (size_t i = 0; i < usnResults.size(); i++) {
+        auto& item = usnResults[i];
+        if (item.usnInfo.FileAttributes & FILE_ATTRIBUTE_DIRECTORY) continue;
+        matchedUsn.push_back(item.usnInfo);
+        if (item.canRecover) {
+            recoverableIndices.push_back(i);
         }
     }
 
@@ -515,15 +528,139 @@ void RecoverCommand::Execute(string command) {
         cout << "  未在 USN 日志中找到匹配的删除记录" << endl;
     } else {
         cout << "  找到 " << matchedUsn.size() << " 条 USN 删除记录" << endl;
+        cout << "  其中 " << recoverableIndices.size() << " 个文件的 MFT 数据可用" << endl;
 
-        // 填充 MFT 信息获取文件大小
-        cout << "\n[2/3] 从 MFT 获取文件大小..." << endl;
+        // 填充 MFT 信息获取文件大小（用于显示）
+        cout << "\n[2/4] 从 MFT 获取文件信息..." << endl;
         size_t enriched = recovery.EnrichWithMFTBatch(matchedUsn);
         cout << "  成功获取 " << enriched << " 个文件的大小信息" << endl;
     }
 
-    // ========== 第3步：签名扫描 ==========
-    cout << "\n[3/3] 签名扫描磁盘..." << endl;
+    // ========== MFT 直接恢复（快速路径）==========
+    if (!recoverableIndices.empty()) {
+        cout << "\n========================================" << endl;
+        cout << "MFT 直接恢复（无需全盘扫描）" << endl;
+        cout << "========================================" << endl;
+
+        // 显示可直接恢复的文件列表
+        cout << "\n以下文件可通过 MFT 数据直接恢复:" << endl;
+        cout << string(70, '-') << endl;
+        cout << left << setw(6) << "编号" << setw(40) << "文件名"
+             << setw(12) << "大小" << "状态" << endl;
+        cout << string(70, '-') << endl;
+
+        size_t displayLimit = min(recoverableIndices.size(), (size_t)20);
+        for (size_t i = 0; i < displayLimit; i++) {
+            auto& item = usnResults[recoverableIndices[i]];
+            string fname = UsnTargetedRecovery::WideToNarrow(item.usnInfo.FileName);
+            if (fname.length() > 38) fname = fname.substr(0, 35) + "...";
+
+            string sizeStr = "未知";
+            if (item.usnInfo.MftInfoValid && item.usnInfo.FileSize > 0) {
+                sizeStr = UsnTargetedRecovery::WideToNarrow(
+                    UsnTargetedRecovery::FormatFileSize(item.usnInfo.FileSize));
+            }
+
+            cout << left << setw(6) << i
+                 << setw(40) << fname
+                 << setw(12) << sizeStr
+                 << "[" << UsnTargetedRecovery::GetStatusString(item.status) << "]"
+                 << endl;
+        }
+        if (recoverableIndices.size() > 20) {
+            cout << "  ... 还有 " << (recoverableIndices.size() - 20) << " 个文件" << endl;
+        }
+        cout << endl;
+
+        if (outputDir.empty()) {
+            // 交互模式：让用户选择
+            string input;
+            if (!TuiInputBridge::Instance().GetLine("输入编号直接恢复，'s' 全盘签名扫描，'q' 退出: ", input)) {
+                cout << "已取消" << endl;
+                return;
+            }
+
+            if (input == "q" || input == "Q" || input.empty()) {
+                cout << "已取消" << endl;
+                return;
+            }
+
+            if (input != "s" && input != "S") {
+                // 用户选择了一个文件编号
+                size_t selectedIndex;
+                try {
+                    selectedIndex = stoul(input);
+                } catch (...) {
+                    cout << "无效的输入" << endl;
+                    return;
+                }
+
+                if (selectedIndex >= min(recoverableIndices.size(), (size_t)20)) {
+                    cout << "编号超出范围" << endl;
+                    return;
+                }
+
+                // 询问输出目录
+                string outDir;
+                TuiInputBridge::Instance().GetLine("输入输出目录 (直接回车使用当前目录): ", outDir);
+                if (outDir.empty()) outDir = ".";
+
+                auto& selectedItem = usnResults[recoverableIndices[selectedIndex]];
+                wstring wOutputDir = UsnTargetedRecovery::NarrowToWide(outDir);
+                string fname = UsnTargetedRecovery::WideToNarrow(selectedItem.usnInfo.FileName);
+
+                cout << "\n正在通过 MFT 数据直接恢复: " << fname << " ..." << endl;
+
+                UsnTargetedRecoveryResult recResult = recovery.Recover(selectedItem.usnInfo, wOutputDir);
+
+                if (recResult.status == UsnRecoveryStatus::SUCCESS ||
+                    recResult.status == UsnRecoveryStatus::RESIDENT_DATA ||
+                    recResult.status == UsnRecoveryStatus::PARTIAL_RECOVERY) {
+                    string path = UsnTargetedRecovery::WideToNarrow(recResult.recoveredPath);
+                    cout << "\n=== 恢复成功 ===" << endl;
+                    cout << "文件大小: " << recResult.recoveredSize << " bytes" << endl;
+                    cout << "已保存到: " << path << endl;
+                    if (recResult.signatureMatched) {
+                        cout << "签名验证: 通过 (" << recResult.detectedType << ")" << endl;
+                    }
+                } else {
+                    cout << "\nMFT 直接恢复失败: " << recResult.statusMessage << endl;
+                    cout << "提示: 重新运行并输入 's' 可进行全盘签名扫描" << endl;
+                }
+                return;
+            }
+            // input == "s" → 用户选择全盘扫描，继续执行签名扫描
+            cout << "\n用户选择全盘签名扫描..." << endl;
+        } else {
+            // 自动模式：直接恢复最佳匹配
+            auto& bestItem = usnResults[recoverableIndices[0]];
+            wstring wOutputDir = UsnTargetedRecovery::NarrowToWide(outputDir);
+
+            string fname = UsnTargetedRecovery::WideToNarrow(bestItem.usnInfo.FileName);
+            cout << "\n正在通过 MFT 数据直接恢复: " << fname << " ..." << endl;
+
+            UsnTargetedRecoveryResult recResult = recovery.Recover(bestItem.usnInfo, wOutputDir);
+
+            if (recResult.status == UsnRecoveryStatus::SUCCESS ||
+                recResult.status == UsnRecoveryStatus::RESIDENT_DATA ||
+                recResult.status == UsnRecoveryStatus::PARTIAL_RECOVERY) {
+                string path = UsnTargetedRecovery::WideToNarrow(recResult.recoveredPath);
+                cout << "\n=== 恢复成功 ===" << endl;
+                cout << "文件大小: " << recResult.recoveredSize << " bytes" << endl;
+                cout << "已保存到: " << path << endl;
+                return;
+            }
+
+            // MFT 恢复失败，回退到签名扫描
+            cout << "\nMFT 直接恢复失败: " << recResult.statusMessage << endl;
+            cout << "回退到签名扫描..." << endl;
+        }
+    } else if (!matchedUsn.empty()) {
+        cout << "\n  MFT 数据不可用，将使用签名扫描恢复" << endl;
+    }
+
+    // ========== 第3步：签名扫描（回退路径）==========
+    cout << "\n[3/4] 签名扫描磁盘..." << endl;
 
     // 根据文件扩展名确定要扫描的类型
     wstring ext = UsnTargetedRecovery::GetExtension(targetFileName);
@@ -544,6 +681,7 @@ void RecoverCommand::Execute(string command) {
     }
 
     FileCarver carver(&reader);
+    FileCarverRecovery carveRecovery(&reader, carver.GetSignatures());
     vector<CarvedFileInfo> carveResults = carver.ScanForFileTypes(scanTypes, CARVE_SMART, 200);
 
     cout << "  找到 " << carveResults.size() << " 个候选文件" << endl;
@@ -690,9 +828,8 @@ void RecoverCommand::Execute(string command) {
 
     // ========== 第5步：用户选择 ==========
     if (outputDir.empty()) {
-        cout << "输入编号恢复文件，或输入 'q' 退出: ";
         string input;
-        getline(cin, input);
+        TuiInputBridge::Instance().GetLine("输入编号恢复文件，或输入 'q' 退出: ", input);
 
         if (input.empty() || input == "q" || input == "Q") {
             cout << "已取消" << endl;
@@ -713,8 +850,7 @@ void RecoverCommand::Execute(string command) {
         }
 
         // 询问输出目录
-        cout << "输入输出目录 (直接回车使用当前目录): ";
-        getline(cin, outputDir);
+        TuiInputBridge::Instance().GetLine("输入输出目录 (直接回车使用当前目录): ", outputDir);
         if (outputDir.empty()) {
             outputDir = ".";
         }
@@ -727,12 +863,11 @@ void RecoverCommand::Execute(string command) {
 
         // 恢复前精细化：精确大小计算 + 完整性验证
         cout << "\n[精细化] 正在对候选文件进行恢复前分析..." << endl;
-        bool isHealthy = carver.RefineCarvedFileInfo(selected.carveInfo);
+        bool isHealthy = carveRecovery.RefineCarvedFileInfo(selected.carveInfo);
 
         if (!isHealthy) {
-            cout << "\n警告: 文件可能已损坏，是否仍然恢复? (y/n): ";
             string confirm;
-            getline(cin, confirm);
+            TuiInputBridge::Instance().GetLine("\n警告: 文件可能已损坏，是否仍然恢复? (y/n): ", confirm);
             if (confirm != "y" && confirm != "Y") {
                 cout << "已取消" << endl;
                 return;
@@ -755,14 +890,14 @@ void RecoverCommand::Execute(string command) {
 
         bool recovered = false;
         if (isZipType) {
-            FileCarver::ZipRecoveryConfig config;
+            FileCarverRecovery::ZipRecoveryConfig config;
             config.verifyCRC = true;
             config.stopOnFirstEOCD = true;
             if (selected.carveInfo.fileSize > 0) {
                 config.expectedSize = selected.carveInfo.fileSize;
                 config.expectedSizeTolerance = selected.carveInfo.fileSize / 5;
             }
-            auto result = carver.RecoverZipWithEOCDScan(selected.carveInfo.startLCN, outputPath, config);
+            auto result = carveRecovery.RecoverZipWithEOCDScan(selected.carveInfo.startLCN, outputPath, config);
             if (result.success) {
                 recovered = true;
                 cout << "恢复成功!" << endl;
@@ -770,13 +905,13 @@ void RecoverCommand::Execute(string command) {
                 cout << "CRC校验: " << (result.crcValid ? "通过" : "警告") << endl;
             } else {
                 // 回退到普通恢复
-                recovered = carver.RecoverCarvedFile(selected.carveInfo, outputPath);
+                recovered = carveRecovery.RecoverCarvedFile(selected.carveInfo, outputPath);
                 if (recovered) {
                     cout << "恢复成功 (无EOCD，使用估算大小)" << endl;
                 }
             }
         } else {
-            recovered = carver.RecoverCarvedFile(selected.carveInfo, outputPath);
+            recovered = carveRecovery.RecoverCarvedFile(selected.carveInfo, outputPath);
             if (recovered) {
                 cout << "恢复成功!" << endl;
                 cout << "文件大小: " << selected.carveInfo.fileSize << " bytes" << endl;
@@ -796,7 +931,7 @@ void RecoverCommand::Execute(string command) {
 
         // 恢复前精细化：精确大小计算 + 完整性验证
         cout << "\n[精细化] 正在对候选文件进行恢复前分析..." << endl;
-        bool isHealthy = carver.RefineCarvedFileInfo(best.carveInfo);
+        bool isHealthy = carveRecovery.RefineCarvedFileInfo(best.carveInfo);
 
         if (!isHealthy) {
             cout << "警告: 文件可能已损坏，仍尝试恢复..." << endl;
@@ -818,27 +953,27 @@ void RecoverCommand::Execute(string command) {
 
         bool recovered = false;
         if (isZipType) {
-            FileCarver::ZipRecoveryConfig config;
+            FileCarverRecovery::ZipRecoveryConfig config;
             config.verifyCRC = true;
             config.stopOnFirstEOCD = true;
             if (best.carveInfo.fileSize > 0) {
                 config.expectedSize = best.carveInfo.fileSize;
                 config.expectedSizeTolerance = best.carveInfo.fileSize / 5;
             }
-            auto result = carver.RecoverZipWithEOCDScan(best.carveInfo.startLCN, outputPath, config);
+            auto result = carveRecovery.RecoverZipWithEOCDScan(best.carveInfo.startLCN, outputPath, config);
             if (result.success) {
                 recovered = true;
                 cout << "恢复成功!" << endl;
                 cout << "文件大小: " << result.actualSize << " bytes" << endl;
                 cout << "CRC校验: " << (result.crcValid ? "通过" : "警告") << endl;
             } else {
-                recovered = carver.RecoverCarvedFile(best.carveInfo, outputPath);
+                recovered = carveRecovery.RecoverCarvedFile(best.carveInfo, outputPath);
                 if (recovered) {
                     cout << "恢复成功 (无EOCD，使用估算大小)" << endl;
                 }
             }
         } else {
-            recovered = carver.RecoverCarvedFile(best.carveInfo, outputPath);
+            recovered = carveRecovery.RecoverCarvedFile(best.carveInfo, outputPath);
             if (recovered) {
                 cout << "恢复成功!" << endl;
                 cout << "文件大小: " << best.carveInfo.fileSize << " bytes" << endl;

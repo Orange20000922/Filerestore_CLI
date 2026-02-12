@@ -4,6 +4,7 @@
 #include "MFTStructures.h"
 #include "Result.h"
 #include "ErrorCodes.h"
+#include "ResourceWrappers.h"
 
 using namespace std;
 using FR::Result;
@@ -43,7 +44,7 @@ typedef struct _NTFS_BOOT_SECTOR {
 class MFTReader
 {
 private:
-    HANDLE hVolume;
+    FR::ScopedHandle hVolume;
     DWORD bytesPerSector;
     DWORD sectorsPerCluster;
     ULONGLONG mftStartLCN;
@@ -67,7 +68,7 @@ public:
     // 卷操作
     bool OpenVolume(char driveLetter);
     void CloseVolume();
-    bool IsVolumeOpen() const { return hVolume != INVALID_HANDLE_VALUE; }
+    bool IsVolumeOpen() const { return hVolume.IsValid(); }
 
     // 基础读取操作
     bool ReadClusters(ULONGLONG startLCN, ULONGLONG clusterCount, vector<BYTE>& buffer);
@@ -101,5 +102,5 @@ public:
     ULONGLONG GetMftStartLCN() const { return mftStartLCN; }
     ULONGLONG GetTotalClusters() const { return totalClusters; }
     ULONGLONG GetBytesPerCluster() const { return (ULONGLONG)bytesPerSector * sectorsPerCluster; }
-    HANDLE GetVolumeHandle() const { return hVolume; }
+    HANDLE GetVolumeHandle() const { return hVolume.Get(); }
 };

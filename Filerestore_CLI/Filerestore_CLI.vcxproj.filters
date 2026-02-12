@@ -157,6 +157,15 @@
     <ClCompile Include="src\fileRestore\FileCarver.cpp">
       <Filter>源文件\FileRestore\Carving</Filter>
     </ClCompile>
+    <ClCompile Include="src\fileRestore\FileFormatUtils.cpp">
+      <Filter>源文件\FileRestore\Carving</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\FileCarverRecovery.cpp">
+      <Filter>源文件\FileRestore\Carving</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\CarvedResultEnricher.cpp">
+      <Filter>源文件\FileRestore\Carving</Filter>
+    </ClCompile>
     <ClCompile Include="src\fileRestore\SignatureScanThreadPool.cpp">
       <Filter>源文件\FileRestore\Carving</Filter>
     </ClCompile>
@@ -186,9 +195,7 @@
     <ClCompile Include="src\fileRestore\DatasetGenerator.cpp">
       <Filter>源文件\FileRestore\ML</Filter>
     </ClCompile>
-    <ClCompile Include="src\fileRestore\BlockContinuityDetector.cpp">
-      <Filter>源文件\FileRestore\ML</Filter>
-    </ClCompile>
+
     <!-- FileRestore - 主入口 -->
     <ClCompile Include="src\fileRestore\FileRestore.cpp">
       <Filter>源文件\FileRestore</Filter>
@@ -238,6 +245,9 @@
       <Filter>源文件\FileRestore\Carving</Filter>
     </ClCompile>
     <ClCompile Include="src\tui\components\OutputCapture.cpp">
+      <Filter>源文件\UI</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tui\components\TuiInputBridge.cpp">
       <Filter>源文件\UI</Filter>
     </ClCompile>
     <ClCompile Include="src\tui\CommandHelper.cpp">
@@ -312,6 +322,15 @@
     <ClInclude Include="src\fileRestore\FileCarver.h">
       <Filter>头文件\FileRestore\Carving</Filter>
     </ClInclude>
+    <ClInclude Include="src\fileRestore\FileFormatUtils.h">
+      <Filter>头文件\FileRestore\Carving</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\FileCarverRecovery.h">
+      <Filter>头文件\FileRestore\Carving</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\CarvedResultEnricher.h">
+      <Filter>头文件\FileRestore\Carving</Filter>
+    </ClInclude>
     <ClInclude Include="src\fileRestore\SignatureScanThreadPool.h">
       <Filter>头文件\FileRestore\Carving</Filter>
     </ClInclude>
@@ -344,9 +363,7 @@
     <ClInclude Include="src\fileRestore\DatasetGenerator.h">
       <Filter>头文件\FileRestore\ML</Filter>
     </ClInclude>
-    <ClInclude Include="src\fileRestore\BlockContinuityDetector.h">
-      <Filter>头文件\FileRestore\ML</Filter>
-    </ClInclude>
+
     <!-- FileRestore - 主入口 -->
     <ClInclude Include="src\fileRestore\FileRestore.h">
       <Filter>头文件\FileRestore</Filter>
@@ -400,6 +417,9 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\tui\components\OutputCapture.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tui\components\TuiInputBridge.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\tui\CommandHelper.h">

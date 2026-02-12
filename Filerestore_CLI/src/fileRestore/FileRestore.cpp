@@ -55,6 +55,10 @@ bool FileRestore::OpenDrive(char driveLetter) {
     if (reader->OpenVolume(driveLetter)) {
         currentDrive = driveLetter;
         volumeOpened = true;
+
+        // 加载 MFT data runs（支持碎片化 MFT 的正确记录定位）
+        reader->GetTotalMFTRecords();
+
         LOG_INFO_FMT("成功打开驱动器 %c:", driveLetter);
         return true;
     }

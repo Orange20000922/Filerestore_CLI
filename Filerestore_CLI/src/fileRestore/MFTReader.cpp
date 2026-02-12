@@ -5,14 +5,14 @@
 
 using namespace std;
 
-MFTReader::MFTReader() : hVolume(INVALID_HANDLE_VALUE),
+MFTReader::MFTReader() :
     bytesPerSector(0), sectorsPerCluster(0),
     mftStartLCN(0), bytesPerFileRecord(0), totalClusters(0),
     mftDataRunsLoaded(false) {
 }
 
 MFTReader::~MFTReader() {
-    CloseVolume();
+    // ScopedHandle 自动关闭 hVolume
 }
 
 bool MFTReader::OpenVolume(char driveLetter) {
@@ -23,11 +23,11 @@ bool MFTReader::OpenVolume(char driveLetter) {
     LOG_DEBUG_FMT("Volume path: %s", volumePath);
 
     LOG_DEBUG("Attempting to open volume handle...");
-    hVolume = CreateFileA(volumePath, GENERIC_READ,
+    hVolume.Reset(CreateFileA(volumePath, GENERIC_READ,
         FILE_SHARE_READ | FILE_SHARE_WRITE, NULL,
-        OPEN_EXISTING, 0, NULL);
+        OPEN_EXISTING, 0, NULL));
 
-    if (hVolume == INVALID_HANDLE_VALUE) {
+    if (!hVolume.IsValid()) {
         DWORD error = GetLastError();
         string msg = "打开卷失败。错误代码: " + to_string(error);
         cout << msg << endl;
@@ -126,14 +126,11 @@ bool MFTReader::OpenVolume(char driveLetter) {
 }
 
 void MFTReader::CloseVolume() {
-    if (hVolume != INVALID_HANDLE_VALUE) {
-        CloseHandle(hVolume);
-        hVolume = INVALID_HANDLE_VALUE;
-    }
+    hVolume.Close();
 }
 
 bool MFTReader::ReadClusters(ULONGLONG startLCN, ULONGLONG clusterCount, vector<BYTE>& buffer) {
-    if (hVolume == INVALID_HANDLE_VALUE) {
+    if (!hVolume.IsValid()) {
         return false;
     }
 
@@ -314,7 +311,7 @@ bool MFTReader::ReadMFTBatch(ULONGLONG startRecordNumber, ULONGLONG recordCount,
 ULONGLONG MFTReader::GetTotalMFTRecords() {
     LOG_DEBUG("GetTotalMFTRecords called");
 
-    if (hVolume == INVALID_HANDLE_VALUE) {
+    if (!hVolume.IsValid()) {
         LOG_ERROR("Volume not open");
         return 0;
     }
@@ -481,7 +478,7 @@ void MFTReader::DiagnoseMFTFragmentation() {
     cout << "    MFT 碎片化分析" << endl;
     cout << "========================================\n" << endl;
 
-    if (hVolume == INVALID_HANDLE_VALUE) {
+    if (!hVolume.IsValid()) {
         cout << "错误：卷未打开！" << endl;
         return;
     }
@@ -659,7 +656,7 @@ Result<void> MFTReader::OpenVolumeNew(char driveLetter) {
 
     // 打开卷句柄
     LOG_DEBUG("Attempting to open volume handle...");
-    hVolume = CreateFileA(
+    hVolume.Reset(CreateFileA(
         volumePath,
         GENERIC_READ,
         FILE_SHARE_READ | FILE_SHARE_WRITE,
@@ -667,9 +664,9 @@ Result<void> MFTReader::OpenVolumeNew(char driveLetter) {
         OPEN_EXISTING,
         0,
         NULL
-    );
+    ));
 
-    if (hVolume == INVALID_HANDLE_VALUE) {
+    if (!hVolume.IsValid()) {
         DWORD lastError = GetLastError();
 
         // 根据系统错误码返回相应的错误类型
@@ -756,7 +753,7 @@ Result<void> MFTReader::OpenVolumeNew(char driveLetter) {
 
 // 读取簇（新版本）- 返回数据或错误
 Result<vector<BYTE>> MFTReader::ReadClustersNew(ULONGLONG startLCN, ULONGLONG clusterCount) {
-    if (hVolume == INVALID_HANDLE_VALUE) {
+    if (!hVolume.IsValid()) {
         return Result<vector<BYTE>>::Failure(
             ErrorCode::IOHandleInvalid,
             "卷未打开"
@@ -812,7 +809,7 @@ Result<vector<BYTE>> MFTReader::ReadClustersNew(ULONGLONG startLCN, ULONGLONG cl
 
 // 读取 MFT 记录（新版本）
 Result<vector<BYTE>> MFTReader::ReadMFTNew(ULONGLONG fileRecordNumber) {
-    if (hVolume == INVALID_HANDLE_VALUE) {
+    if (!hVolume.IsValid()) {
         return Result<vector<BYTE>>::Failure(
             ErrorCode::IOHandleInvalid,
             "卷未打开"

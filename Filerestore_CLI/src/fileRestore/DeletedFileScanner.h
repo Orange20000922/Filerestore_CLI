@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include <vector>
 #include <string>
+#include <memory>
 #include "MFTStructures.h"
 #include "MFTReader.h"
 #include "MFTParser.h"
@@ -25,7 +26,7 @@ private:
     MFTReader* reader;
     MFTParser* parser;
     PathResolver* pathResolver;
-    MFTBatchReader* batchReader;    // 批量读取器（可选，用于高性能扫描）
+    std::unique_ptr<MFTBatchReader> batchReader;    // 批量读取器（可选，用于高性能扫描）
     bool useBatchReading;           // 是否使用批量读取
     FilterLevel filterLevel;        // 低价值文件过滤级别
 

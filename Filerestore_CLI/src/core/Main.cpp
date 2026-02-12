@@ -11,6 +11,74 @@
 #include "LocalizationManager.h"
 #include "TuiApp.h"
 using namespace std;
+
+// ============================================================================
+// LogStreambuf - 将 cout 输出重定向到日志系统
+// 用于 --test 模式，使测试脚本可以通过 debug.log 获取命令输出
+// ============================================================================
+class LogStreambuf : public std::streambuf {
+private:
+	std::string lineBuffer;
+
+protected:
+	int overflow(int c) override {
+		if (c == '\n' || c == EOF) {
+			if (!lineBuffer.empty()) {
+				Logger::GetInstance().Log(LOG_INFO, "[OUTPUT] " + lineBuffer);
+				lineBuffer.clear();
+			}
+		}
+		else {
+			lineBuffer += static_cast<char>(c);
+		}
+		return c;
+	}
+
+	int sync() override {
+		if (!lineBuffer.empty()) {
+			Logger::GetInstance().Log(LOG_INFO, "[OUTPUT] " + lineBuffer);
+			lineBuffer.clear();
+		}
+		return 0;
+	}
+};
+
+// WLogStreambuf - 将 wcout 输出重定向到日志系统
+class WLogStreambuf : public std::wstreambuf {
+private:
+	std::wstring lineBuffer;
+
+	// 简单的宽字符转窄字符（UTF-16 → UTF-8 近似）
+	static std::string WideToNarrow(const std::wstring& wide) {
+		if (wide.empty()) return "";
+		int size = WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), (int)wide.size(), NULL, 0, NULL, NULL);
+		std::string result(size, 0);
+		WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), (int)wide.size(), &result[0], size, NULL, NULL);
+		return result;
+	}
+
+protected:
+	int_type overflow(int_type c) override {
+		if (c == L'\n' || c == WEOF) {
+			if (!lineBuffer.empty()) {
+				Logger::GetInstance().Log(LOG_INFO, "[OUTPUT] " + WideToNarrow(lineBuffer));
+				lineBuffer.clear();
+			}
+		}
+		else {
+			lineBuffer += static_cast<wchar_t>(c);
+		}
+		return c;
+	}
+
+	int sync() override {
+		if (!lineBuffer.empty()) {
+			Logger::GetInstance().Log(LOG_INFO, "[OUTPUT] " + WideToNarrow(lineBuffer));
+			lineBuffer.clear();
+		}
+		return 0;
+	}
+};
 // 所有命令的静态成员现在通过 DEFINE_COMMAND_BASE 宏在 cmd.cpp 中定义
 // 并通过 REGISTER_COMMAND 宏自动注册到 CommandRegistry
 int main(int argc, char* argv[])
@@ -61,11 +129,15 @@ int main(int argc, char* argv[])
 	bool useTui = false;
 	std::string cmdArg;
 	bool hasCmd = false;
+	bool testMode = false;
 
 	for (int i = 1; i < argc; i++) {
 		std::string arg = argv[i];
 		if (arg == "--tui" || arg == "-t") {
 			useTui = true;
+		}
+		else if (arg == "--test") {
+			testMode = true;
 		}
 		else if (arg == "--cmd" || arg == "-c") {
 			// 下一个参数是命令字符串
@@ -87,22 +159,57 @@ int main(int argc, char* argv[])
 		cout << "Executing command: " << cmdArg << endl;
 		LOG_INFO_FMT("Direct command mode: %s", cmdArg.c_str());
 
+		// --test 模式：重定向 cout/wcout 到日志
+		LogStreambuf* logBuf = nullptr;
+		WLogStreambuf* wlogBuf = nullptr;
+		std::streambuf* origCout = nullptr;
+		std::wstreambuf* origWcout = nullptr;
+
+		if (testMode) {
+			LOG_INFO("Test mode enabled: redirecting console output to log");
+			logBuf = new LogStreambuf();
+			wlogBuf = new WLogStreambuf();
+			origCout = cout.rdbuf(logBuf);
+			origWcout = wcout.rdbuf(wlogBuf);
+		}
+
 		try {
 			cli.Run(cmdArg);
 		}
 		catch (const exception& e) {
+			if (testMode && origCout) {
+				cout.rdbuf(origCout);
+				wcout.rdbuf(origWcout);
+			}
 			cout << "Error executing command: " << e.what() << endl;
 			LOG_ERROR_FMT("Exception in command execution: %s", e.what());
+			delete logBuf;
+			delete wlogBuf;
 			logger.Close();
 			CrashHandler::Uninstall();
 			return 1;
 		}
 		catch (...) {
+			if (testMode && origCout) {
+				cout.rdbuf(origCout);
+				wcout.rdbuf(origWcout);
+			}
 			cout << "Unknown error occurred." << endl;
 			LOG_ERROR("Unknown exception in command execution");
+			delete logBuf;
+			delete wlogBuf;
 			logger.Close();
 			CrashHandler::Uninstall();
 			return 1;
+		}
+
+		// 恢复原始 streambuf
+		if (testMode && origCout) {
+			cout.rdbuf(origCout);
+			wcout.rdbuf(origWcout);
+			delete logBuf;
+			delete wlogBuf;
+			cout << "Test mode: output written to " << logPath << endl;
 		}
 
 		// 命令执行完成，退出

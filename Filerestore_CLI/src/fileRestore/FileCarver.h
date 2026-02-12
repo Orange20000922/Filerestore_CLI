@@ -12,25 +12,13 @@
 #include <memory>
 #include "MFTReader.h"
 #include "SignatureScanThreadPool.h"
-#include "TimestampExtractor.h"
-#include "MFTLCNIndex.h"
-#include "FileIntegrityValidator.h"
 #include "CarvedFileTypes.h"
 #include "MLClassifier.h"
+#include "FileFormatUtils.h"
 
 using namespace std;
 
-// 文件签名定义
-struct FileSignature {
-    string extension;           // 文件扩展名（如 "zip", "pdf"）
-    vector<BYTE> header;        // 文件头签名
-    vector<BYTE> footer;        // 文件尾签名（可选，如PDF的%%EOF）
-    ULONGLONG maxSize;          // 最大文件大小（字节）
-    ULONGLONG minSize;          // 最小文件大小
-    bool hasFooter;             // 是否有明确的文件尾
-    string description;         // 描述
-    BYTE firstByte;             // 签名第一个字节（用于快速查找）
-};
+// FileSignature 已移至 FileFormatUtils.h
 
 // TimestampSource 和 CarvedFileInfo 已移至 CarvedFileTypes.h
 
@@ -151,29 +139,6 @@ private:
     bool MatchSignature(const BYTE* data, size_t dataSize,
                        const vector<BYTE>& signature);
 
-    // 查找文件尾（从前向后搜索）
-    ULONGLONG FindFooter(const BYTE* data, size_t dataSize,
-                        const vector<BYTE>& footer, ULONGLONG maxSearch);
-
-    // 查找文件尾（从后向前搜索，适用于文件尾在末尾的格式如 ZIP/PDF）
-    ULONGLONG FindFooterReverse(const BYTE* data, size_t dataSize,
-                               const vector<BYTE>& footer, ULONGLONG maxSearch);
-
-    // 查找 ZIP 文件尾（EOCD，处理注释字段）
-    ULONGLONG FindZipEndOfCentralDirectory(const BYTE* data, size_t dataSize);
-
-    // 通过遍历 PNG chunk 结构查找文件末尾
-    ULONGLONG FindPngEndByChunks(const BYTE* data, size_t dataSize);
-
-    // 检测 ZIP 是否为 OOXML Office 文档 (DOCX/XLSX/PPTX)
-    // 返回: "docx", "xlsx", "pptx", "ooxml"(通用), 或 ""(非 Office)
-    string DetectOOXMLType(const BYTE* data, size_t dataSize);
-
-    // 估算文件大小（当没有明确文件尾时）
-    ULONGLONG EstimateFileSize(const BYTE* data, size_t dataSize,
-                              const FileSignature& sig,
-                              ULONGLONG* outFooterPos = nullptr);
-
     // 验证文件有效性（基于内容）- 优化版本，避免重复计算
     double ValidateFileOptimized(const BYTE* data, size_t dataSize,
                                 const FileSignature& sig,
@@ -203,14 +168,6 @@ private:
                                    ULONGLONG baseLCN, ULONGLONG bytesPerCluster,
                                    int& taskIdCounter);
 
-    // ==================== 时间戳提取相关 ====================
-    unique_ptr<MFTLCNIndex> lcnIndex;
-    bool timestampExtractionEnabled;
-    bool mftIndexBuilt;
-
-    // 为单个文件提取时间戳
-    void ExtractTimestampForFile(CarvedFileInfo& info, const BYTE* fileData, size_t dataSize);
-
 public:
     FileCarver(MFTReader* mftReader);
     ~FileCarver();
@@ -229,15 +186,6 @@ public:
     vector<CarvedFileInfo> ScanAllTypes(CarvingMode mode = CARVE_SMART,
                                        ULONGLONG maxResults = 1000);
 
-    // 恢复 carved 文件
-    bool RecoverCarvedFile(const CarvedFileInfo& info,
-                          const string& outputPath);
-
-    // 恢复前精细化：精确计算文件大小、完整性验证、置信度重估
-    // 用于 recover 阶段，对扫描阶段的粗略估计进行精确化
-    // 返回 false 表示文件可能已损坏（仍可尝试恢复）
-    bool RefineCarvedFileInfo(CarvedFileInfo& info, bool verbose = true);
-
     // 获取支持的文件类型列表
     vector<string> GetSupportedTypes();
 
@@ -255,6 +203,9 @@ public:
     // 异步I/O设置
     void SetAsyncMode(bool enabled) { useAsyncIO = enabled; }
     bool IsAsyncMode() const { return useAsyncIO; }
+
+    // 获取签名数据库（供 FileCarverRecovery 使用）
+    const map<string, FileSignature>& GetSignatures() const { return signatures; }
 
     // 异步扫描（双缓冲 + 生产者-消费者模式）
     vector<CarvedFileInfo> ScanForFileTypesAsync(const vector<string>& fileTypes,
@@ -293,11 +244,15 @@ public:
                                           CarvingMode mode = CARVE_SMART,
                                           ULONGLONG maxResults = 10000);
 
-    // 估算文本文件大小（用于 ML 检测的无签名文件）
-    static ULONGLONG EstimateFileSizeML(const BYTE* data, size_t maxSize, const string& type);
+    // 估算文本文件大小（转发到 FileFormatUtils）
+    static ULONGLONG EstimateFileSizeML(const BYTE* data, size_t maxSize, const string& type) {
+        return FileFormatUtils::EstimateFileSizeML(data, maxSize, type);
+    }
 
-    // 快速熵计算（用于预过滤）
-    static float QuickEntropy(const BYTE* data, size_t size);
+    // 快速熵计算（转发到 FileFormatUtils）
+    static float QuickEntropy(const BYTE* data, size_t size) {
+        return FileFormatUtils::QuickEntropy(data, size);
+    }
 
     // 获取签名索引（供线程池使用）
     const unordered_map<BYTE, vector<const FileSignature*>>& GetSignatureIndex() const {
@@ -306,100 +261,6 @@ public:
 
     // 获取活动签名集合（供线程池使用）
     const set<string>& GetActiveSignatures() const { return activeSignatures; }
-
-    // ==================== 静态辅助函数（供线程池使用，线程安全）====================
-
-    // 查找 ZIP 文件尾（EOCD）- 静态版本，线程安全
-    // 返回 EOCD 结束位置（即 ZIP 文件大小），未找到返回 0
-    static ULONGLONG FindZipEndOfCentralDirectoryStatic(const BYTE* data, size_t dataSize);
-
-    // 通过遍历 PNG chunk 结构查找文件末尾 - 静态版本，线程安全
-    static ULONGLONG FindPngEndByChunksStatic(const BYTE* data, size_t dataSize);
-
-    // 检测 ZIP 是否为 OOXML Office 文档 - 静态版本，线程安全
-    // 返回: "docx", "xlsx", "pptx", "ooxml"(通用), 或 ""(非 Office)
-    static string DetectOOXMLTypeStatic(const BYTE* data, size_t dataSize);
-
-    // 通过遍历 Local File Headers 估算 ZIP 大小 - 静态版本，线程安全
-    // 当找不到 EOCD 时使用此方法获得更准确的估计
-    // 返回值: 估算大小, outIsComplete 表示是否在数据范围内找到了完整结构
-    static ULONGLONG EstimateZipSizeByHeaders(const BYTE* data, size_t dataSize,
-                                               bool* outIsComplete = nullptr);
-
-    // 查找文件尾（正向搜索）- 静态版本，线程安全
-    // 适用于 JPEG, PNG, GIF 等文件尾在文件中间的格式
-    static ULONGLONG FindFooterStatic(const BYTE* data, size_t dataSize,
-                                      const vector<BYTE>& footer, ULONGLONG maxSearch);
-
-    // 查找文件尾（反向搜索）- 静态版本，线程安全
-    // 适用于 PDF 等文件尾在文件末尾的格式
-    static ULONGLONG FindFooterReverseStatic(const BYTE* data, size_t dataSize,
-                                             const vector<BYTE>& footer, ULONGLONG maxSearch);
-
-    // 估算文件大小 - 静态版本，线程安全
-    // 综合处理各种格式（ZIP EOCD, PDF EOF, BMP/AVI/WAV 头部大小等）
-    // outIsComplete: 输出参数，表示是否找到了完整的文件结构（对于大文件跨chunk处理有用）
-    static ULONGLONG EstimateFileSizeStatic(const BYTE* data, size_t dataSize,
-                                            const FileSignature& sig,
-                                            ULONGLONG* outFooterPos = nullptr,
-                                            bool* outIsComplete = nullptr);
-
-    // ==================== 时间戳提取（新增） ====================
-
-    // 启用/禁用时间戳提取
-    void SetTimestampExtraction(bool enabled) { timestampExtractionEnabled = enabled; }
-    bool IsTimestampExtractionEnabled() const { return timestampExtractionEnabled; }
-
-    // 构建 MFT LCN 索引（用于时间戳交叉匹配）
-    // 在扫描前调用一次，可显著提高时间戳匹配效率
-    bool BuildMFTIndex(bool includeActiveFiles = false);
-
-    // 为扫描结果批量提取时间戳
-    // 会自动尝试：1. 内嵌元数据提取  2. MFT 记录匹配
-    void ExtractTimestampsForResults(vector<CarvedFileInfo>& results, bool showProgress = true);
-
-    // 获取 MFT 索引状态
-    bool IsMFTIndexBuilt() const { return mftIndexBuilt; }
-    size_t GetMFTIndexSize() const { return lcnIndex ? lcnIndex->GetIndexSize() : 0; }
-
-    // ==================== 完整性验证（新增） ====================
-
-    // 启用/禁用完整性验证
-    void SetIntegrityValidation(bool enabled) { integrityValidationEnabled = enabled; }
-    bool IsIntegrityValidationEnabled() const { return integrityValidationEnabled; }
-
-    // 为单个文件验证完整性
-    FileIntegrityScore ValidateFileIntegrity(const CarvedFileInfo& info);
-
-    // 为扫描结果批量验证完整性
-    void ValidateIntegrityForResults(vector<CarvedFileInfo>& results, bool showProgress = true);
-
-    // 过滤出可能损坏的文件
-    vector<CarvedFileInfo> FilterCorruptedFiles(const vector<CarvedFileInfo>& results,
-                                                 double minIntegrityScore = 0.5);
-
-    // 获取完整性验证统计
-    size_t GetValidatedCount() const { return validatedCount; }
-    size_t GetCorruptedCount() const { return corruptedCount; }
-
-    // ==================== 删除状态检查（新增） ====================
-
-    // 检查单个文件的删除状态
-    // 通过 MFT LCN 索引交叉验证，判断文件是否为已删除状态
-    void CheckDeletionStatus(CarvedFileInfo& info);
-
-    // 批量检查删除状态
-    void CheckDeletionStatusForResults(vector<CarvedFileInfo>& results, bool showProgress = true);
-
-    // 过滤出已删除的文件
-    vector<CarvedFileInfo> FilterDeletedOnly(const vector<CarvedFileInfo>& results);
-
-    // 过滤出活动文件（未删除）
-    vector<CarvedFileInfo> FilterActiveOnly(const vector<CarvedFileInfo>& results);
-
-    // 获取已删除文件数量统计
-    size_t CountDeletedFiles(const vector<CarvedFileInfo>& results);
-    size_t CountActiveFiles(const vector<CarvedFileInfo>& results);
 
     // ==================== ML 分类（新增） ====================
 
@@ -437,70 +298,7 @@ public:
     // 获取默认ML修复模型搜索路径
     static vector<wstring> GetDefaultRepairModelPaths();
 
-    // ==================== 基于结构的大文件恢复（推荐）====================
-
-    // ZIP 文件恢复配置
-    struct ZipRecoveryConfig {
-        ULONGLONG maxSize = 50ULL * 1024 * 1024 * 1024;  // 最大搜索大小 (默认 50GB)
-        ULONGLONG expectedSize = 0;                      // 用户预期大小 (0 = 不限制)
-        ULONGLONG expectedSizeTolerance = 0;             // 大小容差 (0 = 自动 10%)
-        bool verifyCRC = true;                           // 恢复后验证 CRC
-        bool stopOnFirstEOCD = true;                     // 找到第一个 EOCD 就停止
-        bool allowFragmented = false;                    // 允许碎片化文件（跳过无效块）
-    };
-
-    // ZIP 恢复结果
-    struct ZipRecoveryResult {
-        bool success = false;           // 是否成功找到 EOCD
-        ULONGLONG actualSize = 0;       // 实际文件大小
-        ULONGLONG bytesWritten = 0;     // 写入的字节数
-        bool crcValid = false;          // CRC 是否有效
-        int totalFiles = 0;             // ZIP 内文件数量
-        int corruptedFiles = 0;         // 损坏的文件数量
-        bool isFragmented = false;      // 是否检测到碎片化
-        string diagnosis;               // 诊断信息
-    };
-
-    // 扫描到 EOCD 恢复 ZIP 文件（推荐方法）
-    // 从 startLCN 开始扫描，直到找到有效的 EOCD 或达到 maxSize
-    ZipRecoveryResult RecoverZipWithEOCDScan(
-        ULONGLONG startLCN,
-        const string& outputPath,
-        const ZipRecoveryConfig& config = ZipRecoveryConfig()
-    );
-
-    // 验证已恢复的 ZIP 文件完整性
-    // 检查: EOCD 结构, Central Directory, 各文件 CRC
-    static ZipRecoveryResult ValidateZipFile(const string& filePath);
-
-    // 验证 ZIP 数据完整性（从内存）
-    static ZipRecoveryResult ValidateZipData(const BYTE* data, size_t dataSize);
-
 private:
-    // ZIP 恢复的内部实现（根据大小自动选择策略）
-    static constexpr ULONGLONG MEMORY_BUFFER_THRESHOLD = 256ULL * 1024 * 1024;  // 256MB 阈值
-    static constexpr ULONGLONG MAX_STREAMING_LIMIT = 512ULL * 1024 * 1024;      // 512MB 流式硬限制
-
-    // 内存缓冲模式（小文件/已知大小 ≤256MB）
-    ZipRecoveryResult RecoverZipWithEOCDScan_MemoryBuffer(
-        ULONGLONG startLCN,
-        const string& outputPath,
-        const ZipRecoveryConfig& config,
-        ULONGLONG estimatedSize
-    );
-
-    // 流式写入模式（大文件/未知大小）
-    ZipRecoveryResult RecoverZipWithEOCDScan_Streaming(
-        ULONGLONG startLCN,
-        const string& outputPath,
-        const ZipRecoveryConfig& config,
-        ULONGLONG estimatedSize
-    );
-    // 完整性验证相关成员
-    bool integrityValidationEnabled;
-    size_t validatedCount;
-    size_t corruptedCount;
-
     // ML 分类相关成员
     bool mlClassificationEnabled;
     unique_ptr<ML::MLClassifier> mlClassifier;

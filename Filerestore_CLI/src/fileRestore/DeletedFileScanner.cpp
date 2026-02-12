@@ -61,16 +61,13 @@ bool DeletedFileScanner::ShouldSkipPathReconstruction(const wstring& fileName) {
 
 DeletedFileScanner::DeletedFileScanner(MFTReader* mftReader, MFTParser* mftParser, PathResolver* resolver)
     : reader(mftReader), parser(mftParser), pathResolver(resolver),
-      batchReader(nullptr), useBatchReading(true), filterLevel(FILTER_SKIP_PATH) {
+      useBatchReading(true), filterLevel(FILTER_SKIP_PATH) {
     // 默认启用批量读取以提高性能
     // 默认使用 FILTER_SKIP_PATH：跳过低价值文件的路径重建，平衡性能和完整性
 }
 
 DeletedFileScanner::~DeletedFileScanner() {
-    if (batchReader != nullptr) {
-        delete batchReader;
-        batchReader = nullptr;
-    }
+    // unique_ptr 自动释放 batchReader
 }
 
 vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFiles(ULONGLONG maxRecords) {
@@ -309,13 +306,12 @@ vector<DeletedFileInfo> DeletedFileScanner::ScanDeletedFilesBatch(ULONGLONG maxR
     }
 
     // 初始化批量读取器
-    if (batchReader == nullptr) {
-        batchReader = new MFTBatchReader();
+    if (!batchReader) {
+        batchReader = std::make_unique<MFTBatchReader>();
 
         if (!batchReader->Initialize(reader)) {
             LOG_ERROR("初始化批量读取器失败，回退到传统方法");
-            delete batchReader;
-            batchReader = nullptr;
+            batchReader.reset();
             useBatchReading = false;
             return ScanDeletedFiles(maxRecords);  // 回退到传统方法
         }

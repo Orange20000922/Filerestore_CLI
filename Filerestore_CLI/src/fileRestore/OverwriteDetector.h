@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include <vector>
 #include <string>
+#include <memory>
 #include "MFTStructures.h"
 #include "MFTReader.h"
 
@@ -72,7 +73,7 @@ private:
     bool storageTypeDetected;
 
     // 线程池
-    OverwriteDetectionThreadPool* threadPool;
+    std::unique_ptr<OverwriteDetectionThreadPool> threadPool;
 
     // 内部辅助函数
     double CalculateEntropy(const vector<BYTE>& data);

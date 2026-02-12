@@ -16,18 +16,14 @@ using namespace std::chrono;
 OverwriteDetector::OverwriteDetector(MFTReader* mftReader)
     : reader(mftReader), detectionMode(MODE_BALANCED),
       threadingStrategy(THREADING_AUTO),
-      cachedStorageType(STORAGE_UNKNOWN), storageTypeDetected(false),
-      threadPool(nullptr) {
+      cachedStorageType(STORAGE_UNKNOWN), storageTypeDetected(false) {
     bytesPerCluster = reader->GetBytesPerSector() * reader->GetSectorsPerCluster();
-    threadPool = new OverwriteDetectionThreadPool(this);
+    threadPool = std::make_unique<OverwriteDetectionThreadPool>(this);
     LOG_DEBUG("OverwriteDetector 已初始化，支持多线程");
 }
 
 OverwriteDetector::~OverwriteDetector() {
-    if (threadPool) {
-        delete threadPool;
-        threadPool = nullptr;
-    }
+    // unique_ptr 自动释放 threadPool
 }
 
 // 计算数据熵（用于判断数据是否为随机数据或被覆盖）

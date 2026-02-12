@@ -12,13 +12,13 @@
 #include <string>
 #include <immintrin.h>
 #include "CarvedFileTypes.h"
+#include "FileFormatUtils.h"
 #include "MLClassifier.h"
 #include "../utils/CpuFeatures.h"
 
 using namespace std;
 
-// 前向声明
-struct FileSignature;
+// FileSignature 定义在 FileFormatUtils.h
 
 // ============================================================================
 // 扫描任务结构
@@ -148,6 +148,13 @@ private:
 
     // 使用ML分类增强验证结果
     void EnhanceWithML(const BYTE* data, size_t dataSize, CarvedFileInfo& info);
+
+    // 签名命中后的统一处理：子类型验证、大小估算、置信度计算、结果构建
+    // 返回跳过的字节数（>0 表示有效匹配或 ZIP 跳过），0 表示签名不匹配（应继续下一个签名）
+    size_t ProcessSignatureMatch(const BYTE* data, size_t dataSize,
+                                 size_t matchOffset, const ScanTask& task,
+                                 const FileSignature* sig,
+                                 std::vector<CarvedFileInfo>& localResults);
 
 public:
     // ==================== 构造和析构 ====================

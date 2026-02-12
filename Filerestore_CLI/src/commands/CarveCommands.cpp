@@ -13,10 +13,13 @@
 #include <cmath>
 #include "MFTReader.h"
 #include "FileCarver.h"
+#include "FileCarverRecovery.h"
+#include "CarvedResultEnricher.h"
 #include "FileIntegrityValidator.h"
 #include "CarvedResultsCache.h"
 #include "MemoryMappedResults.h"
 #include "CpuFeatures.h"
+#include "components/TuiInputBridge.h"
 
 using namespace std;
 
@@ -367,10 +370,11 @@ void CarveCommand::Execute(string command) {
 
 		// 检查删除状态并过滤
 		cout << "\n=== Checking Deletion Status ===" << endl;
-		carver.CheckDeletionStatusForResults(results, true);
+		CarvedResultEnricher enricher(&reader);
+		enricher.CheckDeletionStatusForResults(results, true);
 
-		size_t deletedCount = carver.CountDeletedFiles(results);
-		size_t activeCount = carver.CountActiveFiles(results);
+		size_t deletedCount = enricher.CountDeletedFiles(results);
+		size_t activeCount = enricher.CountActiveFiles(results);
 
 		cout << "\nDeleted files (recoverable): " << deletedCount << endl;
 		cout << "Active files (already exist): " << activeCount << " (will be skipped)" << endl;
@@ -380,6 +384,7 @@ void CarveCommand::Execute(string command) {
 
 		size_t recoveredCount = 0;
 		size_t skippedActiveCount = 0;
+		FileCarverRecovery recovery(&reader, carver.GetSignatures());
 		for (size_t i = 0; i < results.size(); i++) {
 			const auto& info = results[i];
 
@@ -402,20 +407,20 @@ void CarveCommand::Execute(string command) {
 				                  info.extension == "ooxml");
 
 				if (isZipType) {
-					FileCarver::ZipRecoveryConfig config;
+					FileCarverRecovery::ZipRecoveryConfig config;
 					config.verifyCRC = true;
 					config.stopOnFirstEOCD = true;
 					if (info.fileSize > 0) {
 						config.expectedSize = info.fileSize;
 						config.expectedSizeTolerance = info.fileSize / 5;
 					}
-					auto result = carver.RecoverZipWithEOCDScan(info.startLCN, outputPath, config);
+					auto result = recovery.RecoverZipWithEOCDScan(info.startLCN, outputPath, config);
 					if (result.success) {
 						recoveredCount++;
-					} else if (carver.RecoverCarvedFile(info, outputPath)) {
+					} else if (recovery.RecoverCarvedFile(info, outputPath)) {
 						recoveredCount++;
 					}
-				} else if (carver.RecoverCarvedFile(info, outputPath)) {
+				} else if (recovery.RecoverCarvedFile(info, outputPath)) {
 					recoveredCount++;
 				}
 
@@ -539,6 +544,7 @@ void CarveRecoverCommand::Execute(string command) {
 		}
 
 		FileCarver carver(&reader);
+		FileCarverRecovery recovery(&reader, carver.GetSignatures());
 
 		cout << "\n=== Recovering File #" << index << " ===" << endl;
 		cout << "  Type:       " << info.description << endl;
@@ -569,7 +575,7 @@ void CarveRecoverCommand::Execute(string command) {
 			cout << "Using ZIP smart recovery with EOCD scan..." << endl;
 
 			// 配置
-			FileCarver::ZipRecoveryConfig config;
+			FileCarverRecovery::ZipRecoveryConfig config;
 			config.maxSize = 50ULL * 1024 * 1024 * 1024;  // 50GB
 			config.verifyCRC = verifyCRC;
 			config.stopOnFirstEOCD = true;
@@ -587,7 +593,7 @@ void CarveRecoverCommand::Execute(string command) {
 			}
 
 			// 执行智能恢复
-			auto result = carver.RecoverZipWithEOCDScan(info.startLCN, outputPath, config);
+			auto result = recovery.RecoverZipWithEOCDScan(info.startLCN, outputPath, config);
 
 			if (result.success) {
 				success = true;
@@ -636,7 +642,7 @@ void CarveRecoverCommand::Execute(string command) {
 			// 普通恢复模式
 			cout << "Using standard recovery mode..." << endl;
 
-			if (carver.RecoverCarvedFile(info, outputPath)) {
+			if (recovery.RecoverCarvedFile(info, outputPath)) {
 				success = true;
 				cout << "\n=== Recovery Successful ===" << endl;
 				cout << "File saved to: " << outputPath << endl;
@@ -644,7 +650,7 @@ void CarveRecoverCommand::Execute(string command) {
 				// 如果是 ZIP 且启用了 CRC 验证
 				if (info.extension == "zip" && verifyCRC) {
 					cout << "\nVerifying ZIP integrity..." << endl;
-					auto validation = FileCarver::ValidateZipFile(outputPath);
+					auto validation = FileCarverRecovery::ValidateZipFile(outputPath);
 
 					if (validation.success) {
 						cout << "CRC Status:    " << (validation.crcValid ? "PASS" : "FAIL") << endl;
@@ -896,18 +902,18 @@ void CarveTimestampCommand::Execute(string command) {
 			return;
 		}
 
-		FileCarver carver(&reader);
+		CarvedResultEnricher enricher(&reader);
 
 		// 构建 MFT LCN 索引（可选）
 		if (buildMftIndex) {
 			cout << "Building MFT index for timestamp matching..." << endl;
-			if (!carver.BuildMFTIndex(false)) {
+			if (!enricher.BuildMFTIndex(false)) {
 				cout << "Warning: Failed to build MFT index. Using embedded metadata only." << endl;
 			}
 		}
 
 		// 提取时间戳
-		carver.ExtractTimestampsForResults(lastCarveResults, true);
+		enricher.ExtractTimestampsForResults(lastCarveResults, true);
 
 		// 显示带时间戳的结果
 		cout << "\n=== Files with Timestamps ===" << endl;
@@ -1230,14 +1236,14 @@ void CarveValidateCommand::Execute(string command) {
 			return;
 		}
 
-		FileCarver carver(&reader);
+		CarvedResultEnricher enricher(&reader);
 
 		cout << "\n=== File Integrity Validation ===" << endl;
 		cout << "Files to validate: " << lastCarveResults.size() << endl;
 		cout << "Minimum score threshold: " << fixed << setprecision(2) << minScore << endl;
 
 		// 执行完整性验证
-		carver.ValidateIntegrityForResults(lastCarveResults, true);
+		enricher.ValidateIntegrityForResults(lastCarveResults, true);
 
 		// 显示详细结果
 		cout << "\n=== Validation Results ===" << endl;
@@ -1277,7 +1283,7 @@ void CarveValidateCommand::Execute(string command) {
 
 		// 如果需要过滤结果
 		if (filterResults) {
-			vector<CarvedFileInfo> filtered = carver.FilterCorruptedFiles(lastCarveResults, minScore);
+			vector<CarvedFileInfo> filtered = enricher.FilterCorruptedFiles(lastCarveResults, minScore);
 			cout << "\nFiltered results: " << filtered.size() << " files (score >= "
 			     << fixed << setprecision(2) << minScore << ")" << endl;
 			lastCarveResults = filtered;
@@ -1328,7 +1334,7 @@ void CarveIntegrityCommand::Execute(string command) {
 			return;
 		}
 
-		FileCarver carver(&reader);
+		CarvedResultEnricher enricher(&reader);
 		const CarvedFileInfo& info = lastCarveResults[index];
 
 		cout << "\n=== Detailed Integrity Analysis ===" << endl;
@@ -1338,7 +1344,7 @@ void CarveIntegrityCommand::Execute(string command) {
 		cout << "LCN: " << info.startLCN << endl;
 
 		// 执行详细验证
-		FileIntegrityScore score = carver.ValidateFileIntegrity(info);
+		FileIntegrityScore score = enricher.ValidateFileIntegrity(info);
 
 		cout << "\n--- Entropy Analysis ---" << endl;
 		cout << "  Raw entropy: " << fixed << setprecision(3) << score.entropy << " bits/byte" << endl;
@@ -1607,6 +1613,7 @@ void CarveRecoverPageCommand::Execute(string command) {
 			return;
 		}
 		FileCarver carver(&reader);
+		FileCarverRecovery recovery(&reader, carver.GetSignatures());
 
 		// 开始交互循环
 		size_t currentPage = 0;
@@ -1692,9 +1699,8 @@ void CarveRecoverPageCommand::Execute(string command) {
 			cout << "Recovered this session: " << totalRecovered << endl;
 
 			// 获取用户输入
-			cout << "\nCommand> ";
 			string input;
-			getline(cin, input);
+			TuiInputBridge::Instance().GetLine("\nCommand> ", input);
 
 			// 去除首尾空格
 			size_t start = input.find_first_not_of(" \t");
@@ -1759,9 +1765,8 @@ void CarveRecoverPageCommand::Execute(string command) {
 
 				case 'c':  // 清空输出目录
 					{
-						cout << "Clear all files in " << outputDir << "? (y/n): ";
 						string confirm;
-						getline(cin, confirm);
+						TuiInputBridge::Instance().GetLine("Clear all files in " + outputDir + "? (y/n): ", confirm);
 						if (!confirm.empty() && (confirm[0] == 'y' || confirm[0] == 'Y')) {
 							size_t deleted = ClearDirectory(outputDir);
 							cout << "Deleted " << deleted << " files." << endl;
@@ -1776,9 +1781,8 @@ void CarveRecoverPageCommand::Execute(string command) {
 						size_t currentFileCount = GetFileCountInDirectory(outputDir);
 						if (currentFileCount >= autoCleanThreshold) {
 							cout << "\n[!] Output folder has " << currentFileCount << " files." << endl;
-							cout << "Clear folder before continuing? (y/n/skip): ";
 							string confirm;
-							getline(cin, confirm);
+							TuiInputBridge::Instance().GetLine("Clear folder before continuing? (y/n/skip): ", confirm);
 							if (!confirm.empty() && (confirm[0] == 'y' || confirm[0] == 'Y')) {
 								size_t deleted = ClearDirectory(outputDir);
 								cout << "Deleted " << deleted << " files." << endl;
@@ -1844,7 +1848,7 @@ void CarveRecoverPageCommand::Execute(string command) {
 							                  info.extension == "ooxml");
 
 							if (isZipType) {
-								FileCarver::ZipRecoveryConfig config;
+								FileCarverRecovery::ZipRecoveryConfig config;
 								config.verifyCRC = true;
 								config.stopOnFirstEOCD = true;
 								if (info.fileSize > 0) {
@@ -1852,7 +1856,7 @@ void CarveRecoverPageCommand::Execute(string command) {
 									config.expectedSizeTolerance = info.fileSize / 5;  // 20% 容差
 								}
 
-								auto result = carver.RecoverZipWithEOCDScan(info.startLCN, outputPath, config);
+								auto result = recovery.RecoverZipWithEOCDScan(info.startLCN, outputPath, config);
 
 								if (result.success) {
 									cout << "  [" << pageIdx << "] Recovered: " << filename;
@@ -1869,14 +1873,14 @@ void CarveRecoverPageCommand::Execute(string command) {
 									pageRecovered++;
 								} else {
 									// EOCD扫描失败，回退到普通恢复
-									if (carver.RecoverCarvedFile(info, outputPath)) {
+									if (recovery.RecoverCarvedFile(info, outputPath)) {
 										cout << "  [" << pageIdx << "] Recovered (fallback): " << filename << " [NO EOCD]" << endl;
 										pageRecovered++;
 									} else {
 										cout << "  [" << pageIdx << "] FAILED to recover" << endl;
 									}
 								}
-							} else if (carver.RecoverCarvedFile(info, outputPath)) {
+							} else if (recovery.RecoverCarvedFile(info, outputPath)) {
 								cout << "  [" << pageIdx << "] Recovered: " << filename;
 								if (forceMode && info.confidence < 0.5) {
 									cout << " [FORCED]";
@@ -1899,9 +1903,8 @@ void CarveRecoverPageCommand::Execute(string command) {
 						size_t currentFileCount = GetFileCountInDirectory(outputDir);
 						if (currentFileCount >= autoCleanThreshold) {
 							cout << "\n[!] Output folder has " << currentFileCount << " files." << endl;
-							cout << "Clear folder before continuing? (y/n/skip): ";
 							string confirm;
-							getline(cin, confirm);
+							TuiInputBridge::Instance().GetLine("Clear folder before continuing? (y/n/skip): ", confirm);
 							if (!confirm.empty() && (confirm[0] == 'y' || confirm[0] == 'Y')) {
 								size_t deleted = ClearDirectory(outputDir);
 								cout << "Deleted " << deleted << " files." << endl;
@@ -1974,7 +1977,7 @@ void CarveRecoverPageCommand::Execute(string command) {
 							cout << endl;
 
 							// 配置 ZIP 恢复
-							FileCarver::ZipRecoveryConfig config;
+							FileCarverRecovery::ZipRecoveryConfig config;
 							config.maxSize = 50ULL * 1024 * 1024 * 1024;  // 50GB
 							config.verifyCRC = verifyCRC;
 							config.stopOnFirstEOCD = true;
@@ -1989,7 +1992,7 @@ void CarveRecoverPageCommand::Execute(string command) {
 							}
 
 							// 执行智能恢复
-							auto result = carver.RecoverZipWithEOCDScan(info.startLCN, outputPath, config);
+							auto result = recovery.RecoverZipWithEOCDScan(info.startLCN, outputPath, config);
 
 							if (result.success) {
 								cout << "      [OK] " << filename << endl;

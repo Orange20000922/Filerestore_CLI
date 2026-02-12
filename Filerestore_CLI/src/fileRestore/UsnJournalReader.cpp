@@ -40,12 +40,12 @@ using namespace std;
 #endif
 
 UsnJournalReader::UsnJournalReader()
-    : hVolume(INVALID_HANDLE_VALUE), driveLetter(0), journalDataValid(false) {
+    : driveLetter(0), journalDataValid(false) {
     ZeroMemory(&journalData, sizeof(journalData));
 }
 
 UsnJournalReader::~UsnJournalReader() {
-    Close();
+    // ScopedHandle 自动关闭 hVolume
 }
 
 bool UsnJournalReader::Open(char driveLetter) {
@@ -60,7 +60,7 @@ bool UsnJournalReader::Open(char driveLetter) {
     LOG_INFO_FMT("Opening volume for USN Journal: %c:", this->driveLetter);
 
     // 打开卷（需要管理员权限）
-    hVolume = CreateFileW(
+    hVolume.Reset(CreateFileW(
         volumePath,
         GENERIC_READ,
         FILE_SHARE_READ | FILE_SHARE_WRITE,
@@ -68,9 +68,9 @@ bool UsnJournalReader::Open(char driveLetter) {
         OPEN_EXISTING,
         FILE_ATTRIBUTE_NORMAL,
         NULL
-    );
+    ));
 
-    if (hVolume == INVALID_HANDLE_VALUE) {
+    if (!hVolume.IsValid()) {
         DWORD error = ::GetLastError();
         stringstream ss;
         ss << "打开卷 " << this->driveLetter << " 失败: (错误码: " << error << ")";
@@ -95,10 +95,7 @@ bool UsnJournalReader::Open(char driveLetter) {
 }
 
 void UsnJournalReader::Close() {
-    if (hVolume != INVALID_HANDLE_VALUE) {
-        CloseHandle(hVolume);
-        hVolume = INVALID_HANDLE_VALUE;
-    }
+    hVolume.Close();
     driveLetter = 0;
     journalDataValid = false;
 }
@@ -237,7 +234,8 @@ vector<UsnDeletedFileInfo> UsnJournalReader::ScanRecentlyDeletedFiles(
 
     cout << "正在扫描 USN 日志..." << endl;
 
-    while (true) {
+    bool reachedLimit = false;
+    while (!reachedLimit) {
         BOOL result = DeviceIoControl(
             hVolume,
             FSCTL_READ_USN_JOURNAL,
@@ -303,7 +301,8 @@ vector<UsnDeletedFileInfo> UsnJournalReader::ScanRecentlyDeletedFiles(
                     // 检查是否达到最大记录数
                     if (maxRecords > 0 && deletedFiles.size() >= maxRecords) {
                         LOG_INFO_FMT("Reached max records limit: %zu", maxRecords);
-                        goto done;
+                        reachedLimit = true;
+                        break;
                     }
                 }
             }
@@ -319,7 +318,6 @@ vector<UsnDeletedFileInfo> UsnJournalReader::ScanRecentlyDeletedFiles(
         }
     }
 
-done:
     cout << "\r  扫描完成: 共扫描 " << totalRecordsScanned << " 条记录, "
          << "发现 " << deleteRecordsFound << " 条删除记录" << endl;
 

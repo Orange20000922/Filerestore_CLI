@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include "ResourceWrappers.h"
 
 // FileReferenceNumber 格式说明:
 // ┌──────────────────┬────────────────────────────────────────────┐
@@ -85,7 +86,7 @@ public:
     void Close();
 
     // 检查是否已打开
-    bool IsOpen() const { return hVolume != INVALID_HANDLE_VALUE; }
+    bool IsOpen() const { return hVolume.IsValid(); }
 
     // 获取 USN 日志统计信息
     // forceRefresh: true = 强制刷新获取实时数据, false = 使用缓存数据（如果可用）
@@ -118,7 +119,7 @@ public:
     std::string GetLastError() const { return lastError; }
 
 private:
-    HANDLE hVolume;
+    FR::ScopedHandle hVolume;
     char driveLetter;
     std::string lastError;
     USN_JOURNAL_DATA_V0 journalData;

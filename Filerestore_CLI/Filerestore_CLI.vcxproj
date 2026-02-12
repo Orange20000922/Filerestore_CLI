@@ -184,6 +184,9 @@
     <ClCompile Include="src\utils\SimdSignatureScanner.cpp" />
     <ClCompile Include="src\fileRestore\DeletedFileScanner.cpp" />
     <ClCompile Include="src\fileRestore\FileCarver.cpp" />
+    <ClCompile Include="src\fileRestore\FileFormatUtils.cpp" />
+    <ClCompile Include="src\fileRestore\FileCarverRecovery.cpp" />
+    <ClCompile Include="src\fileRestore\CarvedResultEnricher.cpp" />
     <ClCompile Include="src\fileRestore\FileRestore.cpp" />
     <ClCompile Include="src\analysis\ImageTable.cpp" />
     <ClCompile Include="src\utils\LocalizationManager.cpp" />
@@ -205,7 +208,7 @@
     <ClCompile Include="src\fileRestore\MemoryMappedResults.cpp" />
     <ClCompile Include="src\fileRestore\MLClassifier.cpp" />
     <ClCompile Include="src\fileRestore\DatasetGenerator.cpp" />
-    <ClCompile Include="src\fileRestore\BlockContinuityDetector.cpp" />
+
     <ClCompile Include="src\fileRestore\UsnTargetedRecovery.cpp" />
     <ClCompile Include="src\fileRestore\MLFileRepair.cpp" />
     <ClCompile Include="src\fileRestore\ImageHeaderRepairer.cpp" />
@@ -216,6 +219,7 @@
     <ClCompile Include="src\tui\CommandHelper.cpp" />
     <ClCompile Include="src\tui\TuiProgressTracker.cpp" />
     <ClCompile Include="src\tui\components\OutputCapture.cpp" />
+    <ClCompile Include="src\tui\components\TuiInputBridge.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\core\cli.h" />
@@ -232,6 +236,9 @@
     <ClInclude Include="src\utils\SimdSignatureScanner.h" />
     <ClInclude Include="src\fileRestore\DeletedFileScanner.h" />
     <ClInclude Include="src\fileRestore\FileCarver.h" />
+    <ClInclude Include="src\fileRestore\FileFormatUtils.h" />
+    <ClInclude Include="src\fileRestore\FileCarverRecovery.h" />
+    <ClInclude Include="src\fileRestore\CarvedResultEnricher.h" />
     <ClInclude Include="src\fileRestore\FileRestore.h" />
     <ClInclude Include="src\analysis\ImageTable.h" />
     <ClInclude Include="src\utils\LocalizationManager.h" />
@@ -254,7 +261,7 @@
     <ClInclude Include="src\fileRestore\MemoryMappedResults.h" />
     <ClInclude Include="src\fileRestore\MLClassifier.h" />
     <ClInclude Include="src\fileRestore\DatasetGenerator.h" />
-    <ClInclude Include="src\fileRestore\BlockContinuityDetector.h" />
+
     <ClInclude Include="src\fileRestore\UsnTargetedRecovery.h" />
     <ClInclude Include="src\fileRestore\MLFileRepair.h" />
     <ClInclude Include="src\fileRestore\ImageHeaderRepairer.h" />
@@ -265,6 +272,7 @@
     <ClInclude Include="src\tui\CommandHelper.h" />
     <ClInclude Include="src\tui\TuiProgressTracker.h" />
     <ClInclude Include="src\tui\components\OutputCapture.h" />
+    <ClInclude Include="src\tui\components\TuiInputBridge.h" />
     <ClInclude Include="src\platform\PlatformConfig.h" />
     <ClInclude Include="src\platform\PlatformTypes.h" />
   </ItemGroup>
