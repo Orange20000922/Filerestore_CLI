@@ -169,7 +169,6 @@
     <ClCompile Include="src\core\climodule.cpp" />
     <ClCompile Include="src\core\ErrorCodes.cpp" />
     <ClCompile Include="src\core\FileRestoreAPI.cpp" />
-    <ClCompile Include="src\commands\cmd.cpp" />
     <ClCompile Include="src\commands\SystemCommands.cpp" />
     <ClCompile Include="src\commands\RestoreCommands.cpp" />
     <ClCompile Include="src\commands\SearchCommands.cpp" />
@@ -207,7 +206,6 @@
     <ClCompile Include="src\fileRestore\CarvedResultsCache.cpp" />
     <ClCompile Include="src\fileRestore\MLClassifier.cpp" />
     <ClCompile Include="src\fileRestore\DatasetGenerator.cpp" />
-
     <ClCompile Include="src\fileRestore\UsnTargetedRecovery.cpp" />
     <ClCompile Include="src\fileRestore\MLFileRepair.cpp" />
     <ClCompile Include="src\fileRestore\ImageHeaderRepairer.cpp" />
@@ -259,7 +257,6 @@
     <ClInclude Include="src\fileRestore\CarvedResultsCache.h" />
     <ClInclude Include="src\fileRestore\MLClassifier.h" />
     <ClInclude Include="src\fileRestore\DatasetGenerator.h" />
-
     <ClInclude Include="src\fileRestore\UsnTargetedRecovery.h" />
     <ClInclude Include="src\fileRestore\MLFileRepair.h" />
     <ClInclude Include="src\fileRestore\ImageHeaderRepairer.h" />
