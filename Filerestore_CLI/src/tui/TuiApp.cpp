@@ -5,6 +5,7 @@
 #include "TuiProgressTracker.h"
 #include "cli.h"
 #include "Logger.h"
+#include "MonitorDaemon.h"
 
 #include "ftxui/component/component.hpp"
 #include "ftxui/component/screen_interactive.hpp"
@@ -253,6 +254,7 @@ void TuiApp::Run() {
         "Scan for Deleted Files",
         "Deep Scan (Signature Carving)",
         "Repair Corrupted Files",
+        "USN Delete Monitor",
         "Browse Previous Results",
         "Advanced (Command Line)",
     };
@@ -265,8 +267,9 @@ void TuiApp::Run() {
         "listdeleted",  // 1: Scan Deleted
         "carvepool",    // 2: Deep Scan
         "repair",       // 3: Repair
-        "",             // 4: Browse Results (直接执行)
-        "",             // 5: Advanced
+        "",             // 4: Monitor Dashboard
+        "",             // 5: Browse Results (直接执行)
+        "",             // 6: Advanced
     };
 
     auto menuWithAction = CatchEvent(mainMenu, [&](Event event) {
@@ -276,8 +279,14 @@ void TuiApp::Run() {
                 EnterParamMode(menuCommands[menuSelected]);
                 screen_.PostEvent(Event::Custom);
             } else if (menuSelected == 4) {
-                ExecuteCommand("carvelist");
+                // Monitor Dashboard
+                monitorDrive_ = 0;  // 自动检测
+                SetViewMode(ViewMode::Monitor);
+                focusArea_ = 1;
+                screen_.PostEvent(Event::Custom);
             } else if (menuSelected == 5) {
+                ExecuteCommand("carvelist");
+            } else if (menuSelected == 6) {
                 SetViewMode(ViewMode::Output);
                 focusArea_ = 1;
                 AppendOutput("Command mode. Type commands below.");
@@ -453,6 +462,169 @@ void TuiApp::Run() {
                 text(" [Enter] Execute  [Esc] Cancel  [Up/Down] Navigate Fields") | dim
             );
             mainContent = vbox(paramElements) | border;
+
+        } else if (mode == ViewMode::Monitor) {
+            // ---- Monitor Dashboard ----
+            Elements monitorElems;
+            monitorElems.push_back(
+                text(" USN Delete Monitor Dashboard ") | bold | center
+            );
+            monitorElems.push_back(separator());
+
+            // 读取共享内存快照（安全方式：try-catch + 边界保护）
+            MonitorSharedState state = {};
+            bool hasState = false;
+
+            try {
+                MonitorDaemon daemon;
+                char activeDrive = 0;
+
+                if (monitorDrive_ != 0) {
+                    // 只检查已知驱动器，避免每帧扫描 24 个 Mutex
+                    if (daemon.IsDaemonRunning(monitorDrive_)) {
+                        activeDrive = monitorDrive_;
+                    }
+                } else {
+                    // 首次进入时扫描一次
+                    for (char d = 'C'; d <= 'Z'; d++) {
+                        if (daemon.IsDaemonRunning(d)) {
+                            activeDrive = d;
+                            monitorDrive_ = d;
+                            break;
+                        }
+                    }
+                    if (!activeDrive) monitorDrive_ = 'C';  // 默认 C
+                }
+
+                if (activeDrive && daemon.AttachSharedMemory(activeDrive)) {
+                    hasState = daemon.ReadState(state);
+                    daemon.DetachSharedMemory();
+                }
+            } catch (...) {
+                hasState = false;
+            }
+
+            if (!hasState) {
+                // 未运行
+                monitorElems.push_back(text(""));
+                monitorElems.push_back(
+                    text(" No monitor daemon is currently running.") | color(Color::Yellow)
+                );
+                monitorElems.push_back(text(""));
+                monitorElems.push_back(
+                    text(std::string(" Target drive: ") + monitorDrive_ + ":")
+                );
+                monitorElems.push_back(
+                    text(" Press [S] to start a monitor daemon.")
+                );
+                monitorElems.push_back(
+                    text(" Press [Esc] to return to main menu.") | dim
+                );
+            } else {
+                // 头部信息
+                SYSTEMTIME st;
+                FileTimeToSystemTime(&state.startTime, &st);
+                std::ostringstream startStr;
+                startStr << st.wYear << "-"
+                         << std::setfill('0') << std::setw(2) << st.wMonth << "-"
+                         << std::setw(2) << st.wDay << " "
+                         << std::setw(2) << st.wHour << ":"
+                         << std::setw(2) << st.wMinute << ":"
+                         << std::setw(2) << st.wSecond;
+
+                monitorElems.push_back(hbox({
+                    text(" Drive: ") | bold,
+                    text(std::string(1, state.driveLetter) + ":/") | color(Color::Green),
+                    text("  PID: ") | bold,
+                    text(std::to_string(state.pid)),
+                    text("  Status: ") | bold,
+                    text(state.daemonRunning ? "Running" : "Stopped") |
+                        color(state.daemonRunning ? Color::Green : Color::Red),
+                    text("  AutoStart: ") | bold,
+                    text(state.autoStartEnabled ? "ON" : "OFF") |
+                        color(state.autoStartEnabled ? Color::Green : Color::GrayDark),
+                }));
+                monitorElems.push_back(
+                    text(" Started: " + startStr.str() +
+                         "  Poll: " + std::to_string(state.pollIntervalMs) + "ms") | dim
+                );
+                monitorElems.push_back(separator());
+
+                // 统计面板
+                monitorElems.push_back(text(" Statistics ") | bold);
+                monitorElems.push_back(hbox({
+                    vbox({
+                        hbox({text(" Events:   ") | bold, text(std::to_string(state.totalEvents))}),
+                        hbox({text(" Captured: ") | bold, text(std::to_string(state.capturedCount)) | color(Color::Green)}),
+                    }) | size(WIDTH, EQUAL, 30),
+                    vbox({
+                        hbox({text(" Missed:   ") | bold, text(std::to_string(state.missedCount)) | color(Color::Red)}),
+                        hbox({text(" Skipped:  ") | bold, text(std::to_string(state.skippedCount))}),
+                    }) | size(WIDTH, EQUAL, 30),
+                    vbox({
+                        hbox({text(" Snapshots: ") | bold, text(std::to_string(state.snapshotCount)) | color(Color::Cyan)}),
+                    }),
+                }));
+                monitorElems.push_back(separator());
+
+                // 最近事件表
+                LONG eventCount = state.recentEventCount;
+                if (eventCount > 0) {
+                    monitorElems.push_back(text(" Recent Events ") | bold);
+                    monitorElems.push_back(hbox({
+                        text(" Status") | bold | size(WIDTH, EQUAL, 8),
+                        text(" MFT#") | bold | size(WIDTH, EQUAL, 10),
+                        text(" Size") | bold | size(WIDTH, EQUAL, 12),
+                        text(" File Name") | bold,
+                    }));
+
+                    int displayCount = std::min((int)eventCount, MONITOR_RECENT_EVENT_MAX);
+                    displayCount = std::min(displayCount, 8);
+                    LONG head = state.recentEventHead;
+                    for (int i = 0; i < displayCount; i++) {
+                        LONG idx = (head - 1 - i + MONITOR_RECENT_EVENT_MAX * 100) % MONITOR_RECENT_EVENT_MAX;
+                        if (idx < 0 || idx >= MONITOR_RECENT_EVENT_MAX) continue;  // 安全边界检查
+
+                        auto& evt = state.recentEvents[idx];
+
+                        // 强制 null 终止，防止 wcslen 越界
+                        evt.fileName[259] = L'\0';
+
+                        // 文件名 wide -> narrow（安全边界）
+                        std::string narrowName;
+                        for (int c = 0; c < 259 && evt.fileName[c] != L'\0'; c++) {
+                            wchar_t wc = evt.fileName[c];
+                            if (wc > 0 && wc < 128) narrowName += (char)wc;
+                            else narrowName += '?';
+                            if (narrowName.size() >= 50) break;  // 截断显示
+                        }
+
+                        // 大小格式化
+                        std::string sizeStr;
+                        if (evt.fileSize == 0) sizeStr = "-";
+                        else if (evt.fileSize < 1024) sizeStr = std::to_string(evt.fileSize) + " B";
+                        else if (evt.fileSize < 1024 * 1024) sizeStr = std::to_string(evt.fileSize / 1024) + " KB";
+                        else sizeStr = std::to_string(evt.fileSize / (1024 * 1024)) + " MB";
+
+                        monitorElems.push_back(hbox({
+                            text(evt.captured ? " [OK]  " : " [MISS]") |
+                                color(evt.captured ? Color::Green : Color::Red) |
+                                size(WIDTH, EQUAL, 8),
+                            text(" " + std::to_string(evt.mftRecord)) | size(WIDTH, EQUAL, 10),
+                            text(" " + sizeStr) | size(WIDTH, EQUAL, 12),
+                            text(" " + narrowName),
+                        }));
+                    }
+                } else {
+                    monitorElems.push_back(text(" No events captured yet.") | dim);
+                }
+            }
+
+            monitorElems.push_back(separator());
+            monitorElems.push_back(
+                text(" [S] Start  [T] Stop  [A] Toggle AutoStart  [Esc] Back") | dim
+            );
+            mainContent = vbox(monitorElems) | border;
 
         } else {
             // ---- 命令输出 ----
@@ -641,6 +813,59 @@ void TuiApp::Run() {
             }
         }
 
+        // Monitor Dashboard 键盘快捷键
+        if (currentView_.load() == ViewMode::Monitor && !commandRunning_) {
+            if (event == Event::Character('s') || event == Event::Character('S')) {
+                // 启动守护进程
+                char drive = monitorDrive_ != 0 ? monitorDrive_ : 'C';
+                MonitorDaemon d;
+                if (d.IsDaemonRunning(drive)) {
+                    AppendLog("[INFO] Monitor daemon already running on " + std::string(1, drive) + ":");
+                } else {
+                    AppendLog("[INFO] Starting monitor daemon on " + std::string(1, drive) + ":...");
+                    if (d.StartDaemon(drive)) {
+                        monitorDrive_ = drive;
+                        AppendLog("[OK] Monitor daemon started (PID: " + std::to_string(d.GetDaemonPID(drive)) + ")");
+                    } else {
+                        AppendLog("[ERROR] Failed to start monitor daemon");
+                    }
+                }
+                screen_.PostEvent(Event::Custom);
+                return true;
+            }
+            if (event == Event::Character('t') || event == Event::Character('T')) {
+                // 停止守护进程
+                if (monitorDrive_ != 0) {
+                    MonitorDaemon d;
+                    if (d.IsDaemonRunning(monitorDrive_)) {
+                        AppendLog("[INFO] Stopping monitor daemon on " + std::string(1, monitorDrive_) + ":...");
+                        if (d.StopDaemon(monitorDrive_)) {
+                            AppendLog("[OK] Monitor daemon stopped");
+                        } else {
+                            AppendLog("[ERROR] Failed to stop monitor daemon");
+                        }
+                    } else {
+                        AppendLog("[INFO] No daemon running on " + std::string(1, monitorDrive_) + ":");
+                    }
+                    screen_.PostEvent(Event::Custom);
+                    return true;
+                }
+            }
+            if (event == Event::Character('a') || event == Event::Character('A')) {
+                // 切换自启动
+                char drive = monitorDrive_ != 0 ? monitorDrive_ : 'C';
+                if (MonitorDaemon::IsAutoStartInstalled(drive)) {
+                    MonitorDaemon::UninstallAutoStart(drive);
+                    AppendLog("[OK] AutoStart disabled for " + std::string(1, drive) + ":");
+                } else {
+                    MonitorDaemon::InstallAutoStart(drive);
+                    AppendLog("[OK] AutoStart enabled for " + std::string(1, drive) + ":");
+                }
+                screen_.PostEvent(Event::Custom);
+                return true;
+            }
+        }
+
         return false;
     });
 
@@ -650,7 +875,7 @@ void TuiApp::Run() {
     std::thread refreshThread([this]() {
         while (running_) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
-            if (commandRunning_) {
+            if (commandRunning_ || currentView_.load() == ViewMode::Monitor) {
                 screen_.PostEvent(Event::Custom);
             }
         }

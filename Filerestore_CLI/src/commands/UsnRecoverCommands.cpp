@@ -17,8 +17,11 @@
 #include "FileCarverRecovery.h"
 #include "TripleValidator.h"
 #include "MFTCache.h"
+#include "MFTSnapshotStore.h"
+#include "UsnDeleteMonitor.h"
+#include "MonitorDaemon.h"
 #include "components/TuiInputBridge.h"
-
+#include "CarvedResultsCache.h"
 namespace fs = std::filesystem;
 
 using namespace std;
@@ -568,6 +571,7 @@ void RecoverCommand::Execute(string command) {
     string targetStr;
     string outputDir;
     string patternStr;
+    bool hascarveresult = false;
     int hoursArg = 1;  // 默认搜索最近1小时
 
     // 收集位置参数
@@ -631,6 +635,14 @@ void RecoverCommand::Execute(string command) {
 
     MFTParser parser(&reader);
     UsnTargetedRecovery recovery(&reader, &parser);
+
+    // 尝试加载快照存储（用于 MFT 已复用时的回退恢复）
+    MFTSnapshotStore snapshotStore;
+    string snapshotPath = MFTSnapshotStore::GenerateStorePath(driveLetter);
+    if (snapshotStore.LoadFromFile(snapshotPath)) {
+        recovery.SetSnapshotStore(&snapshotStore);
+        cout << "  快照存储已加载 (" << snapshotStore.GetCount() << " 个快照)" << endl;
+    }
 
     cout << "\n=== 智能文件恢复 ===" << endl;
     cout << "驱动器: " << driveLetter << ":/" << endl;
@@ -811,30 +823,62 @@ void RecoverCommand::Execute(string command) {
 
     // ========== 第3步：签名扫描（回退路径）==========
     cout << "\n[3/4] 签名扫描磁盘..." << endl;
-
-    // 根据文件扩展名确定要扫描的类型
-    wstring ext = UsnTargetedRecovery::GetExtension(targetFileName);
-    string extNarrow = UsnTargetedRecovery::WideToNarrow(ext);
-    transform(extNarrow.begin(), extNarrow.end(), extNarrow.begin(), ::tolower);
-
-    vector<string> scanTypes;
-    if (!extNarrow.empty()) {
-        // 映射扩展名到签名类型
-        if (extNarrow == "docx" || extNarrow == "xlsx" || extNarrow == "pptx") {
-            scanTypes.push_back("zip");  // Office 文档是 ZIP 格式
-        } else {
-            scanTypes.push_back(extNarrow);
-        }
-    } else {
-        // 没有扩展名，扫描常见类型
-        scanTypes = {"zip", "pdf", "jpg", "png"};
-    }
-
+    cout << " 尝试加载签名扫描缓存" << endl;
     FileCarver carver(&reader);
     FileCarverRecovery carveRecovery(&reader, carver.GetSignatures());
-    vector<CarvedFileInfo> carveResults = carver.ScanForFileTypes(scanTypes, CARVE_SMART, 200);
+    HybridScanConfig hybridconfig;
+    vector<CarvedFileInfo> carveResults;
+    if (!CarvedResultsCache::HasValidCache(driveLetter)) {
+        // 根据文件扩展名确定要扫描的类型
+        cout << " 不存在有效缓存，将执行完整扫描 " << endl;
+        wstring ext = UsnTargetedRecovery::GetExtension(targetFileName);
+        string extNarrow = UsnTargetedRecovery::WideToNarrow(ext);
+        transform(extNarrow.begin(), extNarrow.end(), extNarrow.begin(), ::tolower);
 
-    cout << "  找到 " << carveResults.size() << " 个候选文件" << endl;
+        vector<string> scanTypes;
+        if (!extNarrow.empty()) {
+            // 映射扩展名到签名类型
+            if (extNarrow == "docx" || extNarrow == "xlsx" || extNarrow == "pptx") {
+                scanTypes.push_back("zip");  // Office 文档是 ZIP 格式
+            }
+            else {
+                scanTypes.push_back(extNarrow);
+            }
+        }
+        else {
+            // 没有扩展名，扫描常见类型
+            scanTypes = { "zip", "pdf", "jpg", "png" };
+        }
+        carveResults = carver.ScanHybridMode(scanTypes, hybridconfig, CARVE_SMART, 1000);
+        cout << "  找到 " << carveResults.size() << " 个候选文件" << endl;
+    }
+    else {
+        cout << " 使用缓存的签名扫描结果" << endl;
+        CarvedResultsCache carvecache;
+        if (carvecache.InitFromDrive(driveLetter) &&
+            carvecache.LoadAllResults(carveResults, driveLetter)) {
+            cout << "  加载到 " << carveResults.size() << " 个候选文件" << endl;
+        } else {
+            cout << "  缓存加载失败，执行完整扫描..." << endl;
+            wstring ext = UsnTargetedRecovery::GetExtension(targetFileName);
+            string extNarrow = UsnTargetedRecovery::WideToNarrow(ext);
+            transform(extNarrow.begin(), extNarrow.end(), extNarrow.begin(), ::tolower);
+
+            vector<string> scanTypes;
+            if (!extNarrow.empty()) {
+                if (extNarrow == "docx" || extNarrow == "xlsx" || extNarrow == "pptx") {
+                    scanTypes.push_back("zip");
+                } else {
+                    scanTypes.push_back(extNarrow);
+                }
+            } else {
+                scanTypes = { "zip", "pdf", "jpg", "png" };
+            }
+			carver.SetSimdEnabled(true);
+            carveResults = carver.ScanHybridMode(scanTypes, hybridconfig, CARVE_SMART, 1000);
+            cout << "  找到 " << carveResults.size() << " 个候选文件" << endl;
+        }
+    }
 
     // ========== 第4步：三角交叉验证 ==========
     cout << "\n[4/4] 执行三角交叉验证 (USN + MFT + 签名)..." << endl;
@@ -855,7 +899,7 @@ void RecoverCommand::Execute(string command) {
         cout << "  提示: 使用 'listdeleted " << driveLetter << " cache' 预先构建缓存以加速恢复" << endl;
         validator.BuildLcnIndex(true, false);
     }
-
+    
     // 加载 USN 记录
     validator.LoadUsnDeletedRecords(matchedUsn);
 
@@ -1135,3 +1179,368 @@ void RecoverCommand::Execute(string command) {
         }
     }
 }
+
+// ============================================================================
+// SnapshotCommand - 立即扫描 USN 删除记录并捕获 MFT 快照
+// ============================================================================
+// 用法: snapshot <drive> [hours]
+// 示例: snapshot D
+//       snapshot D 72
+// ============================================================================
+DEFINE_COMMAND_BASE(SnapshotCommand, "snapshot |name |name", TRUE)
+REGISTER_COMMAND(SnapshotCommand);
+
+void SnapshotCommand::Execute(string command) {
+    if (!CheckName(command)) {
+        return;
+    }
+
+    if (GET_ARG_COUNT() < 1) {
+        cout << "\n=== MFT 快照捕获 ===" << endl;
+        cout << "用法: snapshot <drive> [hours]" << endl;
+        cout << "功能: 扫描 USN 删除记录，为每个被删文件捕获 MFT 元数据快照" << endl;
+        cout << "\n示例:" << endl;
+        cout << "  snapshot D          # 捕获最近 24 小时内删除文件的快照" << endl;
+        cout << "  snapshot D 72       # 捕获最近 72 小时内删除文件的快照" << endl;
+        cout << "\n说明:" << endl;
+        cout << "  快照保存了被删文件的 Data Run (LCN 映射) 信息。" << endl;
+        cout << "  即使 MFT 记录被复用，也可以通过快照直接定位文件数据。" << endl;
+        cout << "  建议在发现误删后立即运行此命令。" << endl;
+        return;
+    }
+
+    string driveStr = GET_ARG_STRING(0);
+    char driveLetter;
+    if (!CommandUtils::ValidateDriveLetter(driveStr, driveLetter)) {
+        cout << "错误: 无效的驱动器字母" << endl;
+        return;
+    }
+
+    int maxHours = 24;
+    if (GET_ARG_COUNT() >= 2) {
+        try {
+            maxHours = stoi(GET_ARG_STRING(1));
+        } catch (...) {
+            cout << "警告: 无效的小时数，使用默认值 24" << endl;
+        }
+    }
+
+    cout << "\n=== MFT 快照捕获 ===" << endl;
+    cout << "驱动器: " << driveLetter << ":/" << endl;
+    cout << "回溯时间: " << maxHours << " 小时" << endl;
+
+    // 加载已有快照
+    MFTSnapshotStore store;
+    store.SetDriveLetter(driveLetter);
+    string storePath = MFTSnapshotStore::GenerateStorePath(driveLetter);
+    store.LoadFromFile(storePath);
+    size_t existingCount = store.GetCount();
+
+    // 使用 UsnDeleteMonitor 的一次性扫描功能
+    UsnDeleteMonitor monitor(driveLetter);
+
+    // 将已有快照传递给 monitor（通过直接操作 store）
+    // 注意: monitor 内部有自己的 store，这里单独使用 CaptureExistingDeleted
+    cout << "\n正在扫描 USN 日志..." << endl;
+    size_t captured = monitor.CaptureExistingDeleted(maxHours);
+
+    // 合并到持久化存储
+    // 从 monitor 的 store 获取所有新捕获的快照
+    auto& monitorStore = monitor.GetSnapshotStore();
+
+    // 保存 monitor 的快照（直接保存即可，因为是独立 store）
+    monitorStore.SaveToFile(storePath);
+
+    cout << "\n=== 快照捕获完成 ===" << endl;
+    cout << "新捕获: " << captured << " 个快照" << endl;
+    cout << "总计: " << monitorStore.GetCount() << " 个快照" << endl;
+    cout << "存储位置: " << storePath << endl;
+
+    auto& stats = monitor.GetStats();
+    if (stats.missedCount > 0) {
+        cout << "未能捕获: " << stats.missedCount.load() << " 个 (MFT 记录无法解析)" << endl;
+    }
+    if (stats.skippedCount > 0) {
+        cout << "已跳过: " << stats.skippedCount.load() << " 个 (目录/系统文件)" << endl;
+    }
+}
+
+// ============================================================================
+// MonitorCommand - 启动/停止后台 USN 删除监控
+// ============================================================================
+// 用法: monitor <drive> [start|stop|status]
+// ============================================================================
+DEFINE_COMMAND_BASE(MonitorCommand, "monitor |name |name", TRUE)
+REGISTER_COMMAND(MonitorCommand);
+
+void MonitorCommand::Execute(string command) {
+    if (!CheckName(command)) {
+        return;
+    }
+
+    if (GET_ARG_COUNT() < 1) {
+        cout << "\n=== USN 删除监控守护进程 ===" << endl;
+        cout << "用法: monitor <drive> [start|stop|status|autostart|unautostart]" << endl;
+        cout << "功能: 启动独立后台守护进程，实时监控文件删除并自动捕获 MFT 快照" << endl;
+        cout << "\n示例:" << endl;
+        cout << "  monitor D start         # 启动 D 盘监控守护进程" << endl;
+        cout << "  monitor D stop          # 停止守护进程" << endl;
+        cout << "  monitor D status        # 查看守护进程状态" << endl;
+        cout << "  monitor D autostart     # 启用开机自启动" << endl;
+        cout << "  monitor D unautostart   # 禁用开机自启动" << endl;
+        return;
+    }
+
+    string driveStr = GET_ARG_STRING(0);
+    char driveLetter;
+    if (!CommandUtils::ValidateDriveLetter(driveStr, driveLetter)) {
+        cout << "错误: 无效的驱动器字母" << endl;
+        return;
+    }
+
+    string action = "start";
+    if (GET_ARG_COUNT() >= 2) {
+        action = GET_ARG_STRING(1);
+        transform(action.begin(), action.end(), action.begin(), ::tolower);
+    }
+
+    MonitorDaemon daemon;
+
+    if (action == "start") {
+        if (daemon.IsDaemonRunning(driveLetter)) {
+            DWORD pid = daemon.GetDaemonPID(driveLetter);
+            cout << "监控守护进程已在运行中 (PID: " << pid << ")" << endl;
+            return;
+        }
+
+        cout << "正在启动监控守护进程..." << endl;
+        if (daemon.StartDaemon(driveLetter)) {
+            DWORD pid = daemon.GetDaemonPID(driveLetter);
+            cout << "USN 删除监控守护进程已启动: 驱动器 " << driveLetter << ":/" << endl;
+            cout << "PID: " << pid << endl;
+            cout << "守护进程在后台独立运行，CLI 退出后仍会继续监控。" << endl;
+            cout << "使用 'monitor " << driveLetter << " status' 查看状态，'monitor " << driveLetter << " stop' 停止。" << endl;
+        } else {
+            cout << "错误: 无法启动监控守护进程" << endl;
+        }
+    }
+    else if (action == "stop") {
+        if (!daemon.IsDaemonRunning(driveLetter)) {
+            cout << "监控守护进程未在运行" << endl;
+            return;
+        }
+
+        // 先读取统计信息
+        MonitorSharedState state = {};
+        if (daemon.AttachSharedMemory(driveLetter)) {
+            daemon.ReadState(state);
+            daemon.DetachSharedMemory();
+        }
+
+        cout << "正在停止监控守护进程..." << endl;
+        if (daemon.StopDaemon(driveLetter)) {
+            cout << "USN 删除监控守护进程已停止" << endl;
+            cout << "  检测到的删除事件: " << state.totalEvents << endl;
+            cout << "  成功捕获快照: " << state.capturedCount << endl;
+            cout << "  未能捕获: " << state.missedCount << endl;
+            cout << "  快照总数: " << state.snapshotCount << endl;
+        } else {
+            cout << "错误: 无法停止守护进程（可能需要手动结束进程）" << endl;
+        }
+    }
+    else if (action == "status") {
+        if (!daemon.IsDaemonRunning(driveLetter)) {
+            cout << "监控守护进程未在运行" << endl;
+
+            // 检查是否有已保存的快照
+            string path = MFTSnapshotStore::GenerateStorePath(driveLetter);
+            MFTSnapshotStore store;
+            if (store.LoadFromFile(path)) {
+                cout << "已保存的快照: " << store.GetCount() << " 个" << endl;
+            }
+
+            cout << "自启动: " << (MonitorDaemon::IsAutoStartInstalled(driveLetter) ? "已启用" : "未启用") << endl;
+            return;
+        }
+
+        if (!daemon.AttachSharedMemory(driveLetter)) {
+            cout << "错误: 无法读取守护进程状态" << endl;
+            return;
+        }
+
+        MonitorSharedState state;
+        if (!daemon.ReadState(state)) {
+            cout << "错误: 共享内存数据无效" << endl;
+            daemon.DetachSharedMemory();
+            return;
+        }
+
+        // 格式化启动时间
+        SYSTEMTIME st;
+        FileTimeToSystemTime(&state.startTime, &st);
+
+        cout << "=== 监控守护进程状态 ===" << endl;
+        cout << "驱动器: " << state.driveLetter << ":/" << endl;
+        cout << "状态: 运行中" << endl;
+        cout << "PID: " << state.pid << endl;
+        cout << "启动时间: " << st.wYear << "-"
+             << setfill('0') << setw(2) << st.wMonth << "-"
+             << setw(2) << st.wDay << " "
+             << setw(2) << st.wHour << ":"
+             << setw(2) << st.wMinute << ":"
+             << setw(2) << st.wSecond << setfill(' ') << endl;
+        cout << "轮询间隔: " << state.pollIntervalMs << "ms" << endl;
+        cout << "自启动: " << (state.autoStartEnabled ? "已启用" : "未启用") << endl;
+        cout << "========================================" << endl;
+        cout << "删除事件: " << state.totalEvents << endl;
+        cout << "捕获快照: " << state.capturedCount << endl;
+        cout << "未能捕获: " << state.missedCount << endl;
+        cout << "已跳过: " << state.skippedCount << endl;
+        cout << "快照总数: " << state.snapshotCount << endl;
+
+        // 显示最近事件
+        LONG eventCount = state.recentEventCount;
+        if (eventCount > 0) {
+            cout << "========================================" << endl;
+            cout << "最近事件:" << endl;
+            int displayCount = min((int)eventCount, MONITOR_RECENT_EVENT_MAX);
+            LONG head = state.recentEventHead;
+            for (int i = displayCount - 1; i >= 0; i--) {
+                LONG idx = (head - 1 - i + MONITOR_RECENT_EVENT_MAX * 100) % MONITOR_RECENT_EVENT_MAX;
+                auto& evt = state.recentEvents[idx];
+                // wide-to-narrow for console output
+                string narrowName;
+                for (size_t c = 0; c < wcslen(evt.fileName); c++) {
+                    wchar_t wc = evt.fileName[c];
+                    if (wc < 128) narrowName += (char)wc;
+                    else narrowName += '?';
+                }
+                cout << "  " << (evt.captured ? "[OK]" : "[MISS]")
+                     << " MFT#" << evt.mftRecord
+                     << " " << narrowName << endl;
+            }
+        }
+
+        daemon.DetachSharedMemory();
+    }
+    else if (action == "autostart") {
+        if (MonitorDaemon::InstallAutoStart(driveLetter)) {
+            cout << "已启用开机自启动: 驱动器 " << driveLetter << ":/" << endl;
+        } else {
+            cout << "错误: 无法设置自启动（请检查权限）" << endl;
+        }
+    }
+    else if (action == "unautostart") {
+        if (MonitorDaemon::UninstallAutoStart(driveLetter)) {
+            cout << "已禁用开机自启动: 驱动器 " << driveLetter << ":/" << endl;
+        } else {
+            cout << "错误: 无法移除自启动设置" << endl;
+        }
+    }
+    else {
+        cout << "错误: 未知操作 '" << action << "'，可用: start, stop, status, autostart, unautostart" << endl;
+    }
+}
+
+// ============================================================================
+// SnapshotQueryCommand - 查询快照存储中的文件
+// ============================================================================
+// 用法: snapshotquery <drive> [pattern]
+// ============================================================================
+DEFINE_COMMAND_BASE(SnapshotQueryCommand, "snapshotquery |name |name", TRUE)
+REGISTER_COMMAND(SnapshotQueryCommand);
+
+void SnapshotQueryCommand::Execute(string command) {
+    if (!CheckName(command)) {
+        return;
+    }
+
+    if (GET_ARG_COUNT() < 1) {
+        cout << "\n=== 快照查询 ===" << endl;
+        cout << "用法: snapshotquery <drive> [pattern]" << endl;
+        cout << "功能: 查询快照存储中的文件" << endl;
+        cout << "\n示例:" << endl;
+        cout << "  snapshotquery D              # 列出所有快照" << endl;
+        cout << "  snapshotquery D .cpp          # 搜索 .cpp 文件" << endl;
+        cout << "  snapshotquery D document      # 搜索含 'document' 的文件" << endl;
+        return;
+    }
+
+    string driveStr = GET_ARG_STRING(0);
+    char driveLetter;
+    if (!CommandUtils::ValidateDriveLetter(driveStr, driveLetter)) {
+        cout << "错误: 无效的驱动器字母" << endl;
+        return;
+    }
+
+    // 加载快照
+    MFTSnapshotStore store;
+    string storePath = MFTSnapshotStore::GenerateStorePath(driveLetter);
+    if (!store.LoadFromFile(storePath)) {
+        cout << "未找到快照存储文件。" << endl;
+        cout << "提示: 使用 'snapshot " << driveLetter << "' 先捕获快照。" << endl;
+        return;
+    }
+
+    cout << "\n=== 快照查询 ===" << endl;
+    cout << "快照总数: " << store.GetCount() << endl;
+
+    // 查询
+    wstring pattern = L"";
+    if (GET_ARG_COUNT() >= 2) {
+        pattern = UsnTargetedRecovery::NarrowToWide(GET_ARG_STRING(1));
+    }
+
+    vector<const MFTSnapshot*> results;
+    if (pattern.empty()) {
+        // 列出所有（限制 100 条）
+        results = store.SearchByName(L"");
+    } else {
+        results = store.SearchByName(pattern);
+    }
+
+    if (results.empty()) {
+        cout << "未找到匹配的快照" << endl;
+        return;
+    }
+
+    // 显示结果
+    size_t displayCount = min(results.size(), (size_t)100);
+    cout << "\n找到 " << results.size() << " 个快照";
+    if (results.size() > 100) {
+        cout << " (显示前 100 条)";
+    }
+    cout << "\n" << endl;
+
+    cout << left << setw(8) << "MFT#"
+         << setw(6) << "Seq"
+         << setw(12) << "大小"
+         << setw(8) << "Runs"
+         << setw(10) << "类型"
+         << "文件名" << endl;
+    cout << string(70, '-') << endl;
+
+    for (size_t i = 0; i < displayCount; i++) {
+        const MFTSnapshot* snap = results[i];
+
+        // 格式化大小
+        string sizeStr;
+        if (snap->fileSize < 1024) {
+            sizeStr = to_string(snap->fileSize) + " B";
+        } else if (snap->fileSize < 1024 * 1024) {
+            sizeStr = to_string(snap->fileSize / 1024) + " KB";
+        } else {
+            sizeStr = to_string(snap->fileSize / (1024 * 1024)) + " MB";
+        }
+
+        string typeStr = snap->isResident ? "常驻" : "非常驻";
+
+        cout << left << setw(8) << snap->recordNumber
+             << setw(6) << snap->sequenceNumber
+             << setw(12) << sizeStr
+             << setw(8) << snap->dataRuns.size()
+             << setw(10) << typeStr
+             << UsnTargetedRecovery::WideToNarrow(snap->fileName) << endl;
+    }
+}
+

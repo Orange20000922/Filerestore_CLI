@@ -34,7 +34,6 @@ FileRestore::FileRestore() : currentDrive(0), volumeOpened(false) {
 
 FileRestore::~FileRestore() {
     CloseDrive();
-    // unique_ptr 自动释放资源，无需手动 delete
 }
 
 bool FileRestore::OpenDrive(char driveLetter) {

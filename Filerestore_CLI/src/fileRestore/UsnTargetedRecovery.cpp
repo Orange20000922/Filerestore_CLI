@@ -1,4 +1,5 @@
 #include "UsnTargetedRecovery.h"
+#include "MFTSnapshotStore.h"
 #include "OverwriteDetector.h"
 #include "../utils/Logger.h"
 #include <fstream>
@@ -559,6 +560,31 @@ UsnTargetedRecoveryResult UsnTargetedRecovery::Validate(const UsnDeletedFileInfo
         }
     }
 
+    // 快照回退：Validate 阶段就检查快照，让 canRecover 正确反映可恢复性
+    if (!result.canRecover && snapshotStore &&
+        (result.status == UsnRecoveryStatus::MFT_RECORD_REUSED ||
+         result.status == UsnRecoveryStatus::NO_DATA_ATTRIBUTE)) {
+
+        ULONGLONG recordNum = usnInfo.GetMftRecordNumber();
+        WORD expectedSeq = ExtractSequenceNumber(usnInfo.FileReferenceNumber);
+
+        const MFTSnapshot* snapshot = snapshotStore->FindByRecord(recordNum, expectedSeq);
+        if (!snapshot) {
+            snapshot = snapshotStore->FindLatestByRecord(recordNum);
+        }
+
+        if (snapshot && (!snapshot->dataRuns.empty() || snapshot->isResident)) {
+            result.canRecover = true;
+            result.status = UsnRecoveryStatus::SNAPSHOT_RECOVERED;
+            result.fileSize = snapshot->fileSize;
+            result.dataRuns = snapshot->dataRuns;
+            result.isResident = snapshot->isResident;
+            result.residentData = snapshot->residentData;
+            LOG_INFO_FMT("Validate: 快照可用于 MFT#%llu (seq %u), 标记为可恢复",
+                         recordNum, snapshot->sequenceNumber);
+        }
+    }
+
     result.statusMessage = GetStatusMessage(result.status);
     return result;
 }
@@ -577,7 +603,38 @@ UsnTargetedRecoveryResult UsnTargetedRecovery::Recover(
 
     // 检查是否可以恢复
     if (!result.canRecover && !forceRecover) {
-        return result;
+        // 快照回退：如果 MFT 已复用，尝试从快照存储恢复
+        if (snapshotStore &&
+            (result.status == UsnRecoveryStatus::MFT_RECORD_REUSED ||
+             result.status == UsnRecoveryStatus::NO_DATA_ATTRIBUTE)) {
+
+            ULONGLONG recordNum = usnInfo.GetMftRecordNumber();
+            WORD expectedSeq = ExtractSequenceNumber(usnInfo.FileReferenceNumber);
+
+            const MFTSnapshot* snapshot = snapshotStore->FindByRecord(recordNum, expectedSeq);
+            if (!snapshot) {
+                snapshot = snapshotStore->FindLatestByRecord(recordNum);
+            }
+
+            if (snapshot && (!snapshot->dataRuns.empty() || snapshot->isResident)) {
+                LOG_INFO_FMT("MFT 已复用，使用快照恢复: MFT#%llu (seq %u)",
+                             recordNum, snapshot->sequenceNumber);
+
+                // 用快照数据恢复
+                result.dataRuns = snapshot->dataRuns;
+                result.fileSize = snapshot->fileSize;
+                result.isResident = snapshot->isResident;
+                result.residentData = snapshot->residentData;
+                result.canRecover = true;
+                result.status = UsnRecoveryStatus::SNAPSHOT_RECOVERED;
+                result.statusMessage = GetStatusMessage(result.status);
+                // 继续执行恢复流程（不 return）
+            }
+        }
+
+        if (!result.canRecover) {
+            return result;
+        }
     }
 
     // 读取文件数据
@@ -843,6 +900,7 @@ string UsnTargetedRecovery::GetStatusString(UsnRecoveryStatus status) {
         case UsnRecoveryStatus::READ_ERROR: return "READ_ERROR";
         case UsnRecoveryStatus::WRITE_ERROR: return "WRITE_ERROR";
         case UsnRecoveryStatus::RESIDENT_DATA: return "RESIDENT";
+        case UsnRecoveryStatus::SNAPSHOT_RECOVERED: return "SNAPSHOT";
         default: return "UNKNOWN";
     }
 }
@@ -873,6 +931,8 @@ string UsnTargetedRecovery::GetStatusMessage(UsnRecoveryStatus status) {
             return "写入文件错误";
         case UsnRecoveryStatus::RESIDENT_DATA:
             return "小文件，数据完整（常驻数据）";
+        case UsnRecoveryStatus::SNAPSHOT_RECOVERED:
+            return "通过 MFT 快照恢复（MFT 已复用，使用预保存的 Data Runs）";
         default:
             return "未知错误";
     }

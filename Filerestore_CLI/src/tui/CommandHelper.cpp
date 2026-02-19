@@ -141,6 +141,23 @@ void CommandHelper::InitializeMetadata() {
         {"output", "Output Directory", false, "", {}},
     }};
 
+    // ======== 监控命令 ========
+    commandMetadata_["monitor"] = {"monitor", "Start/stop deletion monitor daemon",
+        "monitor <drive> [start|stop|status|autostart|unautostart]", {
+        {"drive", "Drive", true, "", {"C:", "D:", "E:", "F:"}},
+        {"action", "Action", false, "start", {"start", "stop", "status", "autostart", "unautostart"}},
+    }};
+    commandMetadata_["snapshot"] = {"snapshot", "Capture MFT snapshots for deleted files",
+        "snapshot <drive> [hours]", {
+        {"drive", "Drive", true, "", {"C:", "D:", "E:", "F:"}},
+        {"hours", "Hours", false, "24", {}},
+    }};
+    commandMetadata_["snapshotquery"] = {"snapshotquery", "Query saved MFT snapshots",
+        "snapshotquery <drive> [pattern]", {
+        {"drive", "Drive", true, "", {"C:", "D:", "E:", "F:"}},
+        {"pattern", "Pattern", false, "", {}},
+    }};
+
     // ======== 机器学习命令 ========
     commandMetadata_["mlpredict"] = {"mlpredict", "ML-predict file integrity",
         "mlpredict <file_path>", {

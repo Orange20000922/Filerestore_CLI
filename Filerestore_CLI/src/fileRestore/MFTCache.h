@@ -11,7 +11,7 @@ using namespace std;
 
 // MFT 缓存魔术字节
 constexpr DWORD MFT_CACHE_MAGIC = 0x4D465443;  // "MFTC"
-constexpr DWORD MFT_CACHE_VERSION = 2;
+constexpr DWORD MFT_CACHE_VERSION = 3;
 
 // ============================================================================
 // MFT 缓存条目 - 轻量级，只保留恢复必需的信息
@@ -19,7 +19,7 @@ constexpr DWORD MFT_CACHE_VERSION = 2;
 struct MFTCacheEntry {
     ULONGLONG recordNumber;         // MFT 记录号
     ULONGLONG fileSize;             // 文件大小
-    ULONGLONG startLCN;             // 起始 LCN（第一个数据运行）
+    ULONGLONG startLCN;             // 起始 LCN（第一个数据运行，兼容旧查询）
     ULONGLONG totalClusters;        // 总簇数
     FILETIME creationTime;          // 创建时间
     FILETIME modificationTime;      // 修改时间
@@ -30,6 +30,7 @@ struct MFTCacheEntry {
     bool isDirectory;               // 是否是目录
     bool isResident;                // 数据是否驻留在 MFT 中
     WORD sequenceNumber;            // 序列号（用于验证）
+    vector<pair<ULONGLONG, ULONGLONG>> dataRuns;  // 完整 Data Runs: (LCN, 簇数)
 
     MFTCacheEntry() :
         recordNumber(0), fileSize(0), startLCN(0), totalClusters(0),

@@ -234,6 +234,18 @@
     <ClCompile Include="src\fileRestore\MFTCache.cpp">
       <Filter>源文件\FileRestore\Carving</Filter>
     </ClCompile>
+    <ClCompile Include="src\fileRestore\MFTSnapshotStore.cpp">
+      <Filter>源文件\FileRestore\Carving</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\UsnDeleteMonitor.cpp">
+      <Filter>源文件\FileRestore\Carving</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\MonitorDaemon.cpp">
+      <Filter>源文件\FileRestore\Carving</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\KernelBridgeClient.cpp">
+      <Filter>源文件\FileRestore\Carving</Filter>
+    </ClCompile>
     <ClCompile Include="src\utils\CpuFeatures.cpp">
       <Filter>源文件\FileRestore\Carving</Filter>
     </ClCompile>
@@ -400,6 +412,18 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\fileRestore\MFTCache.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\MFTSnapshotStore.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\UsnDeleteMonitor.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\MonitorDaemon.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\KernelBridgeClient.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\tui\TuiApp.h">

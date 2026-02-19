@@ -8,7 +8,8 @@
       "Bash(powershell:*)",
       "Bash(python -c:*)",
       "WebSearch",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(du:*)"
     ]
   }
 }

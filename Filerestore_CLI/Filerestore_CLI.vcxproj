@@ -212,6 +212,10 @@
     <ClCompile Include="src\fileRestore\ZipStructureParser.cpp" />
     <ClCompile Include="src\fileRestore\TripleValidator.cpp" />
     <ClCompile Include="src\fileRestore\MFTCache.cpp" />
+    <ClCompile Include="src\fileRestore\MFTSnapshotStore.cpp" />
+    <ClCompile Include="src\fileRestore\UsnDeleteMonitor.cpp" />
+    <ClCompile Include="src\fileRestore\MonitorDaemon.cpp" />
+    <ClCompile Include="src\fileRestore\KernelBridgeClient.cpp" />
     <ClCompile Include="src\tui\TuiApp.cpp" />
     <ClCompile Include="src\tui\CommandHelper.cpp" />
     <ClCompile Include="src\tui\TuiProgressTracker.cpp" />
@@ -263,6 +267,10 @@
     <ClInclude Include="src\fileRestore\ZipStructureParser.h" />
     <ClInclude Include="src\fileRestore\TripleValidator.h" />
     <ClInclude Include="src\fileRestore\MFTCache.h" />
+    <ClInclude Include="src\fileRestore\MFTSnapshotStore.h" />
+    <ClInclude Include="src\fileRestore\UsnDeleteMonitor.h" />
+    <ClInclude Include="src\fileRestore\MonitorDaemon.h" />
+    <ClInclude Include="src\fileRestore\KernelBridgeClient.h" />
     <ClInclude Include="src\tui\TuiApp.h" />
     <ClInclude Include="src\tui\CommandHelper.h" />
     <ClInclude Include="src\tui\TuiProgressTracker.h" />
