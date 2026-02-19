@@ -41,6 +41,18 @@ TuiApp::~TuiApp() {
     }
 }
 
+// 线程安全的刷新请求：通过 WriteConsoleInput 注入一个 WINDOW_BUFFER_SIZE_EVENT，
+// FTXUI 的 FetchTerminalEvents() 在主线程读到后会调 Post()，避免跨线程访问 TaskQueue。
+void TuiApp::RequestRefresh() {
+    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+    if (hInput == INVALID_HANDLE_VALUE) return;
+    INPUT_RECORD ir = {};
+    ir.EventType = WINDOW_BUFFER_SIZE_EVENT;
+    ir.Event.WindowBufferSizeEvent.dwSize = {0, 0};
+    DWORD written = 0;
+    WriteConsoleInputW(hInput, &ir, 1, &written);
+}
+
 void TuiApp::AppendOutput(const std::string& text) {
     std::lock_guard<std::mutex> lock(outputMutex_);
     outputLines_.push_back(text);
@@ -108,7 +120,7 @@ void TuiApp::ExecuteCommand(const std::string& command) {
         if (capture_) capture_->EndCapture();
         commandRunning_ = false;
         AppendLog("[DONE] " + command);
-        screen_.PostEvent(Event::Custom);
+        RequestRefresh();
     }).detach();
 }
 
@@ -126,7 +138,7 @@ void TuiApp::Run() {
     OutputCapture capture;
     capture.SetCallback([this](const std::string& line) {
         AppendOutput(line);
-        screen_.PostEvent(Event::Custom);
+        RequestRefresh();
     });
     capture.Install();
     capture_ = &capture;
@@ -876,7 +888,7 @@ void TuiApp::Run() {
         while (running_) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
             if (commandRunning_ || currentView_.load() == ViewMode::Monitor) {
-                screen_.PostEvent(Event::Custom);
+                RequestRefresh();
             }
         }
     });

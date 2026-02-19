@@ -10,6 +10,18 @@ using namespace std;
 // seqlock 辅助函数（跨进程安全）
 // ============================================================================
 
+// 写端互斥：获取（保证同一时刻只有一个线程进入 seqlock 写区间）
+static void WriterLockAcquire(volatile LONG* lock) {
+    while (InterlockedCompareExchange(lock, 1, 0) != 0) {
+        YieldProcessor();
+    }
+}
+
+// 写端互斥：释放
+static void WriterLockRelease(volatile LONG* lock) {
+    InterlockedExchange(lock, 0);
+}
+
 // 写端：开始写入（seqCounter 变为奇数）
 static void SeqLockWriteBegin(volatile LONG* seq) {
     InterlockedIncrement(seq);
@@ -22,11 +34,13 @@ static void SeqLockWriteEnd(volatile LONG* seq) {
     InterlockedIncrement(seq);
 }
 
-// 读端：读取序列号（偶数时数据稳定）
+// 读端：读取序列号（偶数时数据稳定），带自旋上限防止写端崩溃后死锁
 static LONG SeqLockReadBegin(volatile LONG* seq) {
     LONG s;
+    int spin = 0;
     while ((s = InterlockedCompareExchange(seq, 0, 0)) & 1) {
-        YieldProcessor();  // 写入中，短暂自旋
+        if (++spin > 4096) return s;  // 写端可能已崩溃，放弃等待
+        YieldProcessor();
     }
     MemoryBarrier();
     return s;
@@ -212,6 +226,12 @@ bool MonitorDaemon::ReadState(MonitorSharedState& out) {
     // seqlock 读端：重试直到拿到一致快照
     for (int retry = 0; retry < 100; retry++) {
         LONG seq = SeqLockReadBegin(&sharedPtr_->seqCounter);
+        if (seq & 1) {
+            // SeqLockReadBegin 超时返回了奇数（写端可能已崩溃）
+            // 仍拷贝一份尽力而为的快照
+            memcpy(&out, (const void*)sharedPtr_, sizeof(MonitorSharedState));
+            return true;
+        }
         memcpy(&out, (const void*)sharedPtr_, sizeof(MonitorSharedState));
         if (SeqLockReadValidate(&sharedPtr_->seqCounter, seq)) {
             return true;  // 一致快照
@@ -341,10 +361,11 @@ int MonitorDaemon::RunDaemonMain(char drive) {
 
     shared->pollIntervalMs = monitor.GetPollInterval();
 
-    // 设置事件回调 - 写入环形缓冲区（seqlock 保护）
+    // 设置事件回调 - 写入环形缓冲区（writerLock + seqlock 保护）
     monitor.SetEventCallback([shared](ULONGLONG recordNum, ULONGLONG fileSize,
                                        FILETIME deleteTime, const wstring& fileName,
                                        bool captured) {
+        WriterLockAcquire(&shared->writerLock);
         SeqLockWriteBegin(&shared->seqCounter);
 
         LONG head = shared->recentEventHead;
@@ -367,6 +388,7 @@ int MonitorDaemon::RunDaemonMain(char drive) {
         shared->recentEventCount = count;
 
         SeqLockWriteEnd(&shared->seqCounter);
+        WriterLockRelease(&shared->writerLock);
     });
 
     // 6. 捕获现有删除记录
@@ -391,8 +413,9 @@ int MonitorDaemon::RunDaemonMain(char drive) {
 
     // 8. 主循环 - 等待停止信号，定期更新统计
     while (WaitForSingleObject(hStopEvent, 500) == WAIT_TIMEOUT) {
-        // 更新统计到共享内存（seqlock 保护）
+        // 更新统计到共享内存（writerLock + seqlock 保护）
         auto& stats = monitor.GetStats();
+        WriterLockAcquire(&shared->writerLock);
         SeqLockWriteBegin(&shared->seqCounter);
         shared->totalEvents = (LONGLONG)stats.totalEvents.load();
         shared->capturedCount = (LONGLONG)stats.capturedCount.load();
@@ -401,6 +424,7 @@ int MonitorDaemon::RunDaemonMain(char drive) {
         shared->snapshotCount = (LONGLONG)monitor.GetSnapshotStore().GetCount();
         GetSystemTimeAsFileTime(&shared->lastUpdate);
         SeqLockWriteEnd(&shared->seqCounter);
+        WriterLockRelease(&shared->writerLock);
     }
 
     // 9. 清理退出

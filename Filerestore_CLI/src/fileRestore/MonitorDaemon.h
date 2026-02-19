@@ -31,6 +31,8 @@ struct MonitorSharedState {
     // 统计（seqlock 保护）
     LONGLONG totalEvents, capturedCount, missedCount, skippedCount, snapshotCount;
     DWORD pollIntervalMs; DWORD pad2;
+    // 写端互斥锁（进程内多线程序列化，读端不碰）
+    volatile LONG writerLock;
     // seqlock: 奇数=写入中, 偶数=稳定
     volatile LONG seqCounter;
     // 环形缓冲区

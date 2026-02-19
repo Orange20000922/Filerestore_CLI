@@ -82,4 +82,7 @@ private:
 
     // Monitor Dashboard 当前驱动器
     char monitorDrive_ = 0;
+
+    // 线程安全刷新请求（通过注入 console event 触发主线程重绘）
+    void RequestRefresh();
 };
