@@ -106,6 +106,104 @@ bool MFTParser::ParseDataRuns(BYTE* dataRun, vector<pair<ULONGLONG, ULONGLONG>>&
     return !runs.empty();
 }
 
+optional<FileDataInfo> MFTParser::ExtractFileDataInfo(BYTE* recordBuffer, size_t recordSize) {
+    if (!recordBuffer || recordSize < sizeof(FILE_RECORD_HEADER)) {
+        LOG_ERROR("ExtractFileDataInfo: 记录缓冲区无效或太小");
+        return nullopt;
+    }
+
+    PFILE_RECORD_HEADER header = reinterpret_cast<PFILE_RECORD_HEADER>(recordBuffer);
+
+    // 验证签名 "FILE"
+    if (header->Signature != 0x454C4946) {
+        LOG_DEBUG_FMT("ExtractFileDataInfo: 无效的 MFT 记录签名 0x%08X", header->Signature);
+        return nullopt;
+    }
+
+    FileDataInfo info;
+    info.sequenceNumber = header->SequenceNumber;
+
+    // 确定有效的记录边界
+    size_t effectiveEnd = recordSize;
+    if (header->UsedSize > 0 && header->UsedSize <= recordSize) {
+        effectiveEnd = header->UsedSize;
+    }
+
+    if (header->FirstAttributeOffset >= effectiveEnd) {
+        LOG_DEBUG("ExtractFileDataInfo: FirstAttributeOffset 超出边界");
+        return nullopt;
+    }
+
+    // 遍历属性查找未命名的 $DATA (0x80)
+    BYTE* attrPtr = recordBuffer + header->FirstAttributeOffset;
+    BYTE* endPtr = recordBuffer + effectiveEnd;
+
+    while (attrPtr + sizeof(ATTRIBUTE_HEADER) <= endPtr) {
+        PATTRIBUTE_HEADER attrHeader = reinterpret_cast<PATTRIBUTE_HEADER>(attrPtr);
+
+        // 结束标记
+        if (attrHeader->Type == AttributeEndOfList || attrHeader->Length == 0) {
+            break;
+        }
+
+        // 边界检查
+        if (attrPtr + attrHeader->Length > endPtr) {
+            break;
+        }
+
+        // 找到 $DATA 属性 (0x80)，跳过命名流 (ADS)
+        if (attrHeader->Type == AttributeData && attrHeader->NameLength == 0) {
+            if (attrHeader->NonResident == 0) {
+                // 常驻数据
+                info.isResident = true;
+                if (attrPtr + sizeof(ATTRIBUTE_HEADER) + sizeof(RESIDENT_ATTRIBUTE) > endPtr) {
+                    return nullopt;
+                }
+
+                PRESIDENT_ATTRIBUTE resAttr = reinterpret_cast<PRESIDENT_ATTRIBUTE>(
+                    attrPtr + sizeof(ATTRIBUTE_HEADER));
+                info.fileSize = resAttr->ValueLength;
+
+                if (resAttr->ValueLength > 0) {
+                    BYTE* dataStart = attrPtr + resAttr->ValueOffset;
+                    if (dataStart + resAttr->ValueLength <= endPtr) {
+                        info.residentData.assign(dataStart, dataStart + resAttr->ValueLength);
+                    }
+                }
+                return info;
+            }
+            else {
+                // 非常驻数据
+                info.isResident = false;
+                if (attrPtr + sizeof(ATTRIBUTE_HEADER) + sizeof(NONRESIDENT_ATTRIBUTE) > endPtr) {
+                    return nullopt;
+                }
+
+                PNONRESIDENT_ATTRIBUTE nonResAttr = reinterpret_cast<PNONRESIDENT_ATTRIBUTE>(
+                    attrPtr + sizeof(ATTRIBUTE_HEADER));
+                info.fileSize = nonResAttr->RealSize;
+
+                // 解析 Data Runs
+                BYTE* dataRunPtr = attrPtr + nonResAttr->DataRunOffset;
+                if (dataRunPtr >= endPtr) {
+                    return nullopt;
+                }
+
+                if (ParseDataRuns(dataRunPtr, info.dataRuns)) {
+                    return info;
+                }
+                // Data runs 解析失败，但 fileSize 等信息仍有效
+                return info;
+            }
+        }
+
+        attrPtr += attrHeader->Length;
+    }
+
+    LOG_DEBUG("ExtractFileDataInfo: 未找到 $DATA 属性");
+    return nullopt;
+}
+
 bool MFTParser::ExtractFileData(vector<BYTE>& mftRecord, vector<BYTE>& fileData) {
     // 边界检查
     if (mftRecord.size() < sizeof(FILE_RECORD_HEADER)) {

@@ -67,9 +67,8 @@ public:
 
     // 卷操作
     bool OpenVolume(char driveLetter);
-    void CloseVolume();
     bool IsVolumeOpen() const { return hVolume.IsValid(); }
-
+    bool CloseVolume();
     // 基础读取操作
     bool ReadClusters(ULONGLONG startLCN, ULONGLONG clusterCount, vector<BYTE>& buffer);
     bool ReadMFT(ULONGLONG fileRecordNumber, vector<BYTE>& record);

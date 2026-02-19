@@ -11,6 +11,8 @@
 
 using namespace std;
 
+class MFTSnapshotStore;  // 前向声明
+
 // ============================================================================
 // USN 定点恢复 - 结合 USN 日志和签名验证的精准文件恢复
 // ============================================================================
@@ -29,6 +31,7 @@ enum class UsnRecoveryStatus {
     READ_ERROR,                 // 读取错误
     WRITE_ERROR,                // 写入错误
     RESIDENT_DATA,              // 常驻数据（小文件，数据在 MFT 记录内）
+    SNAPSHOT_RECOVERED,         // 通过 MFT 快照恢复成功（MFT 已复用但快照中有 Data Runs）
     UNKNOWN_ERROR               // 未知错误
 };
 
@@ -99,6 +102,7 @@ private:
     MFTReader* reader;
     MFTParser* parser;
     UsnJournalReader usnReader;
+    MFTSnapshotStore* snapshotStore = nullptr;  // 可选的快照存储
 
     // 签名数据库（简化版，用于快速验证）
     struct SimpleSignature {
@@ -142,6 +146,11 @@ private:
 public:
     UsnTargetedRecovery(MFTReader* mftReader, MFTParser* mftParser);
     ~UsnTargetedRecovery();
+
+    // ==================== 快照集成 ====================
+
+    // 设置快照存储（可选，用于 MFT 复用时的回退恢复）
+    void SetSnapshotStore(MFTSnapshotStore* store) { snapshotStore = store; }
 
     // ==================== 核心功能 ====================
 

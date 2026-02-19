@@ -161,6 +161,15 @@ DECLARE_COMMAND(UsnRecoverCommand);
 // 智能恢复向导（USN + 签名扫描联合）
 DECLARE_COMMAND(RecoverCommand);
 
+// MFT 快照捕获（扫描 USN 删除记录，保存 MFT 元数据快照）
+DECLARE_COMMAND(SnapshotCommand);
+
+// USN 删除监控（后台实时监控删除事件，自动捕获快照）
+DECLARE_COMMAND(MonitorCommand);
+
+// 快照查询（查询已保存的 MFT 快照）
+DECLARE_COMMAND(SnapshotQueryCommand);
+
 // ============================================================================
 // 文件修复命令
 // ============================================================================

@@ -110,3 +110,6 @@ Filerestore_CLI/deps/ftxui/.git/
 Filerestore_CLI/deps/ftxui/build/
 Filerestore_CLI/deps/ftxui/.cache/
 Filerestore_CLI/deps/ftxui/cmake-build-*/
+
+# Developer notes (private, not tracked)
+dev_notes/

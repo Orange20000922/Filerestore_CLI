@@ -101,9 +101,6 @@
       <Filter>源文件\Core</Filter>
     </ClCompile>
     <!-- Commands - 命令实现 -->
-    <ClCompile Include="src\commands\cmd.cpp">
-      <Filter>源文件\Commands</Filter>
-    </ClCompile>
     <ClCompile Include="src\commands\SystemCommands.cpp">
       <Filter>源文件\Commands</Filter>
     </ClCompile>
@@ -192,7 +189,6 @@
     <ClCompile Include="src\fileRestore\DatasetGenerator.cpp">
       <Filter>源文件\FileRestore\ML</Filter>
     </ClCompile>
-
     <!-- FileRestore - 主入口 -->
     <ClCompile Include="src\fileRestore\FileRestore.cpp">
       <Filter>源文件\FileRestore</Filter>
@@ -236,6 +232,18 @@
       <Filter>源文件\FileRestore\Carving</Filter>
     </ClCompile>
     <ClCompile Include="src\fileRestore\MFTCache.cpp">
+      <Filter>源文件\FileRestore\Carving</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\MFTSnapshotStore.cpp">
+      <Filter>源文件\FileRestore\Carving</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\UsnDeleteMonitor.cpp">
+      <Filter>源文件\FileRestore\Carving</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\MonitorDaemon.cpp">
+      <Filter>源文件\FileRestore\Carving</Filter>
+    </ClCompile>
+    <ClCompile Include="src\fileRestore\KernelBridgeClient.cpp">
       <Filter>源文件\FileRestore\Carving</Filter>
     </ClCompile>
     <ClCompile Include="src\utils\CpuFeatures.cpp">
@@ -357,7 +365,6 @@
     <ClInclude Include="src\fileRestore\DatasetGenerator.h">
       <Filter>头文件\FileRestore\ML</Filter>
     </ClInclude>
-
     <!-- FileRestore - 主入口 -->
     <ClInclude Include="src\fileRestore\FileRestore.h">
       <Filter>头文件\FileRestore</Filter>
@@ -405,6 +412,18 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\fileRestore\MFTCache.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\MFTSnapshotStore.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\UsnDeleteMonitor.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\MonitorDaemon.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\KernelBridgeClient.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="src\tui\TuiApp.h">

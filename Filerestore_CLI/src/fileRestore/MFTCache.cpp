@@ -1,5 +1,6 @@
 #include "MFTCache.h"
 #include "MFTReader.h"
+#include "MFTParser.h"
 #include "Logger.h"
 #include <iostream>
 #include <iomanip>
@@ -68,6 +69,8 @@ bool MFTCache::BuildFromMFT(char drive, bool includeActive, bool showProgress) {
     ULONGLONG processedRecords = 0;
     ULONGLONG indexedFiles = 0;
     ULONGLONG deletedCount = 0;
+
+    MFTParser parser(&reader);
 
     for (ULONGLONG startRecord = 0; startRecord < totalRecords; startRecord += BATCH_SIZE) {
         ULONGLONG recordCount = min(BATCH_SIZE, totalRecords - startRecord);
@@ -153,54 +156,21 @@ bool MFTCache::BuildFromMFT(char drive, bool includeActive, bool showProgress) {
                         }
                     }
                 }
-                // $DATA (0x80)
+                // $DATA (0x80) - 使用 ExtractFileDataInfo 提取完整 Data Runs
                 else if (attrHeader->Type == AttributeData && !hasData) {
-                    if (attrHeader->NonResident == 1) {
-                        PNONRESIDENT_ATTRIBUTE nrAttr = (PNONRESIDENT_ATTRIBUTE)(record + attrOffset + sizeof(ATTRIBUTE_HEADER));
-                        entry.fileSize = nrAttr->RealSize;
-                        entry.isResident = false;
+                    auto dataInfo = parser.ExtractFileDataInfo(
+                        const_cast<BYTE*>(record), recordSize);
+                    if (dataInfo) {
+                        entry.fileSize = dataInfo->fileSize;
+                        entry.isResident = dataInfo->isResident;
+                        entry.dataRuns = dataInfo->dataRuns;
 
-                        // 解析第一个数据运行获取起始 LCN
-                        const BYTE* dataRuns = record + attrOffset + nrAttr->DataRunOffset;
-                        size_t maxLen = attrHeader->Length - nrAttr->DataRunOffset;
-
-                        if (maxLen > 0 && dataRuns[0] != 0) {
-                            BYTE hdr = dataRuns[0];
-                            int lengthSize = hdr & 0x0F;
-                            int offsetSize = (hdr >> 4) & 0x0F;
-
-                            if (lengthSize > 0 && offsetSize > 0 && 1 + lengthSize + offsetSize <= maxLen) {
-                                // 读取长度
-                                ULONGLONG runLength = 0;
-                                for (int j = 0; j < lengthSize; j++) {
-                                    runLength |= ((ULONGLONG)dataRuns[1 + j] << (j * 8));
-                                }
-
-                                // 读取偏移
-                                LONGLONG runOffset = 0;
-                                for (int j = 0; j < offsetSize; j++) {
-                                    runOffset |= ((LONGLONG)dataRuns[1 + lengthSize + j] << (j * 8));
-                                }
-                                // 符号扩展
-                                if (dataRuns[lengthSize + offsetSize] & 0x80) {
-                                    for (int j = offsetSize; j < 8; j++) {
-                                        runOffset |= (0xFFLL << (j * 8));
-                                    }
-                                }
-
-                                if (runOffset > 0) {
-                                    entry.startLCN = (ULONGLONG)runOffset;
-                                    entry.totalClusters = runLength;
-                                    hasData = true;
-                                }
-                            }
+                        // 兼容性：保留 startLCN 和 totalClusters
+                        entry.startLCN = dataInfo->dataRuns.empty() ? 0 : dataInfo->dataRuns[0].first;
+                        entry.totalClusters = 0;
+                        for (const auto& [lcn, count] : dataInfo->dataRuns) {
+                            entry.totalClusters += count;
                         }
-                    } else {
-                        // 驻留数据
-                        PRESIDENT_ATTRIBUTE resAttr = (PRESIDENT_ATTRIBUTE)(record + attrOffset + sizeof(ATTRIBUTE_HEADER));
-                        entry.fileSize = resAttr->ValueLength;
-                        entry.isResident = true;
-                        entry.startLCN = 0;
                         hasData = true;
                     }
                 }
@@ -284,6 +254,14 @@ void MFTCache::SerializeEntry(ofstream& out, const MFTCacheEntry& entry) {
     if (extLen > 0) {
         out.write((char*)entry.extension.data(), extLen * sizeof(WCHAR));
     }
+
+    // Data Runs (v3)
+    DWORD runCount = (DWORD)entry.dataRuns.size();
+    out.write((char*)&runCount, sizeof(DWORD));
+    for (const auto& [lcn, count] : entry.dataRuns) {
+        out.write((char*)&lcn, sizeof(ULONGLONG));
+        out.write((char*)&count, sizeof(ULONGLONG));
+    }
 }
 
 bool MFTCache::DeserializeEntry(ifstream& in, MFTCacheEntry& entry) {
@@ -314,6 +292,17 @@ bool MFTCache::DeserializeEntry(ifstream& in, MFTCacheEntry& entry) {
     if (extLen > 0 && extLen < 32) {
         entry.extension.resize(extLen);
         in.read((char*)entry.extension.data(), extLen * sizeof(WCHAR));
+    }
+
+    // Data Runs (v3)
+    DWORD runCount = 0;
+    in.read((char*)&runCount, sizeof(DWORD));
+    if (runCount > 0 && runCount < 10000) {
+        entry.dataRuns.resize(runCount);
+        for (DWORD j = 0; j < runCount; j++) {
+            in.read((char*)&entry.dataRuns[j].first, sizeof(ULONGLONG));
+            in.read((char*)&entry.dataRuns[j].second, sizeof(ULONGLONG));
+        }
     }
 
     return in.good();

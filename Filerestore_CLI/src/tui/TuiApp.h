@@ -33,6 +33,7 @@ public:
         ParamInput,  // 参数填充表单
         Scan,        // 扫描进度（Phase 3）
         Results,     // 结果表格（Phase 4）
+        Monitor,     // 实时监控面板
     };
     void SetViewMode(ViewMode mode);
 
@@ -78,4 +79,7 @@ private:
 
     // 进入参数填充模式
     void EnterParamMode(const std::string& cmdName);
+
+    // Monitor Dashboard 当前驱动器
+    char monitorDrive_ = 0;
 };

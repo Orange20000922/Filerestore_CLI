@@ -3,6 +3,7 @@
 #include "TimestampExtractor.h"
 #include "MFTLCNIndex.h"
 #include "Logger.h"
+#include "../tui/TuiProgressTracker.h"
 #include <iostream>
 #include <algorithm>
 #include <iomanip>
@@ -601,16 +602,21 @@ vector<CarvedFileInfo> FileCarver::ScanForFileTypes(const vector<string>& fileTy
 
             // 更新进度
             if (stats.scannedClusters - lastProgressLCN > PROGRESS_UPDATE_INTERVAL) {
-                DWORD elapsed = GetTickCount() - startTime;
-                double progress = (double)stats.scannedClusters / stats.totalClusters * 100.0;
-                double speedMBps = (elapsed > 0) ?
-                    ((double)stats.bytesRead / (1024 * 1024)) / (elapsed / 1000.0) : 0;
+                if (TuiProgressTracker::Instance().IsEnabled()) {
+                    TuiProgressTracker::Instance().UpdateProgress(
+                        "Signature Scan", stats.scannedClusters, stats.totalClusters, stats.filesFound);
+                } else {
+                    DWORD elapsed = GetTickCount() - startTime;
+                    double progress = (double)stats.scannedClusters / stats.totalClusters * 100.0;
+                    double speedMBps = (elapsed > 0) ?
+                        ((double)stats.bytesRead / (1024 * 1024)) / (elapsed / 1000.0) : 0;
 
-                cout << "\rProgress: " << fixed << setprecision(1) << progress << "% | "
-                     << "Scanned: " << (stats.scannedClusters / 1000) << "K clusters | "
-                     << "Skipped: " << (stats.skippedClusters / 1000) << "K | "
-                     << "Found: " << stats.filesFound << " files | "
-                     << "Speed: " << setprecision(1) << speedMBps << " MB/s" << flush;
+                    cout << "\rProgress: " << fixed << setprecision(1) << progress << "% | "
+                         << "Scanned: " << (stats.scannedClusters / 1000) << "K clusters | "
+                         << "Skipped: " << (stats.skippedClusters / 1000) << "K | "
+                         << "Found: " << stats.filesFound << " files | "
+                         << "Speed: " << setprecision(1) << speedMBps << " MB/s" << flush;
+                }
 
                 lastProgressLCN = stats.scannedClusters;
             }
@@ -626,16 +632,21 @@ vector<CarvedFileInfo> FileCarver::ScanForFileTypes(const vector<string>& fileTy
 
         // 更新进度
         if (stats.scannedClusters - lastProgressLCN > PROGRESS_UPDATE_INTERVAL) {
-            DWORD elapsed = GetTickCount() - startTime;
-            double progress = (double)stats.scannedClusters / stats.totalClusters * 100.0;
-            double speedMBps = (elapsed > 0) ?
-                ((double)stats.bytesRead / (1024 * 1024)) / (elapsed / 1000.0) : 0;
+            if (TuiProgressTracker::Instance().IsEnabled()) {
+                TuiProgressTracker::Instance().UpdateProgress(
+                    "Signature Scan", stats.scannedClusters, stats.totalClusters, stats.filesFound);
+            } else {
+                DWORD elapsed = GetTickCount() - startTime;
+                double progress = (double)stats.scannedClusters / stats.totalClusters * 100.0;
+                double speedMBps = (elapsed > 0) ?
+                    ((double)stats.bytesRead / (1024 * 1024)) / (elapsed / 1000.0) : 0;
 
-            cout << "\rProgress: " << fixed << setprecision(1) << progress << "% | "
-                 << "Scanned: " << (stats.scannedClusters / 1000) << "K clusters | "
-                 << "Skipped: " << (stats.skippedClusters / 1000) << "K | "
-                 << "Found: " << stats.filesFound << " files | "
-                 << "Speed: " << setprecision(1) << speedMBps << " MB/s" << flush;
+                cout << "\rProgress: " << fixed << setprecision(1) << progress << "% | "
+                     << "Scanned: " << (stats.scannedClusters / 1000) << "K clusters | "
+                     << "Skipped: " << (stats.skippedClusters / 1000) << "K | "
+                     << "Found: " << stats.filesFound << " files | "
+                     << "Speed: " << setprecision(1) << speedMBps << " MB/s" << flush;
+            }
 
             lastProgressLCN = stats.scannedClusters;
         }
@@ -647,6 +658,7 @@ vector<CarvedFileInfo> FileCarver::ScanForFileTypes(const vector<string>& fileTy
         ((double)stats.bytesRead / (1024 * 1024)) / (stats.elapsedMs / 1000.0) : 0;
 
     // 显示结果
+    TuiProgressTracker::Instance().FinishProgress();
     cout << "\r                                                                              " << endl;
     cout << "\n============================================" << endl;
     cout << "           Scan Complete" << endl;
@@ -958,16 +970,21 @@ vector<CarvedFileInfo> FileCarver::ScanForFileTypesAsync(const vector<string>& f
 
         // 更新进度
         if (stats.scannedClusters - lastProgressUpdate > PROGRESS_UPDATE_INTERVAL) {
-            DWORD elapsed = GetTickCount() - startTime;
-            double progress = (double)stats.scannedClusters / stats.totalClusters * 100.0;
-            double speedMBps = (elapsed > 0) ?
-                ((double)stats.bytesRead / (1024 * 1024)) / (elapsed / 1000.0) : 0;
+            if (TuiProgressTracker::Instance().IsEnabled()) {
+                TuiProgressTracker::Instance().UpdateProgress(
+                    "Async Scan", stats.scannedClusters, stats.totalClusters, stats.filesFound);
+            } else {
+                DWORD elapsed = GetTickCount() - startTime;
+                double progress = (double)stats.scannedClusters / stats.totalClusters * 100.0;
+                double speedMBps = (elapsed > 0) ?
+                    ((double)stats.bytesRead / (1024 * 1024)) / (elapsed / 1000.0) : 0;
 
-            cout << "\rProgress: " << fixed << setprecision(1) << progress << "% | "
-                 << "Scanned: " << (stats.scannedClusters / 1000) << "K | "
-                 << "Skipped: " << (stats.skippedClusters / 1000) << "K | "
-                 << "Found: " << stats.filesFound << " | "
-                 << "Speed: " << setprecision(1) << speedMBps << " MB/s [ASYNC]" << flush;
+                cout << "\rProgress: " << fixed << setprecision(1) << progress << "% | "
+                     << "Scanned: " << (stats.scannedClusters / 1000) << "K | "
+                     << "Skipped: " << (stats.skippedClusters / 1000) << "K | "
+                     << "Found: " << stats.filesFound << " | "
+                     << "Speed: " << setprecision(1) << speedMBps << " MB/s [ASYNC]" << flush;
+            }
 
             lastProgressUpdate = stats.scannedClusters;
         }
@@ -1000,6 +1017,7 @@ vector<CarvedFileInfo> FileCarver::ScanForFileTypesAsync(const vector<string>& f
     }
 
     // 显示结果
+    TuiProgressTracker::Instance().FinishProgress();
     cout << "\r                                                                              " << endl;
     cout << "\n============================================" << endl;
     cout << "        Async Scan Complete" << endl;
@@ -1218,27 +1236,33 @@ vector<CarvedFileInfo> FileCarver::ScanForFileTypesThreadPool(const vector<strin
 
         // 更新进度
         if (stats.scannedClusters - lastProgressLCN > PROGRESS_UPDATE_INTERVAL) {
-            DWORD elapsed = GetTickCount() - startTime;
-            double progress = (double)stats.scannedClusters / stats.totalClusters * 100.0;
-            double speedMBps = (elapsed > 0) ?
-                ((double)stats.bytesRead / (1024 * 1024)) / (elapsed / 1000.0) : 0;
-
             ULONGLONG filesFound = scanThreadPool->GetTotalFilesFound();
-            double poolProgress = scanThreadPool->GetProgress();
 
-            // 构建进度信息
-            cout << "\rI/O: " << fixed << setprecision(1) << progress << "% | "
-                 << "Pool: " << setprecision(1) << poolProgress << "% | "
-                 << "Scanned: " << (stats.scannedClusters / 1000) << "K | "
-                 << "Skipped: " << (stats.skippedClusters / 1000) << "K | "
-                 << "Found: " << filesFound;
+            if (TuiProgressTracker::Instance().IsEnabled()) {
+                TuiProgressTracker::Instance().UpdateProgress(
+                    "ThreadPool Scan", stats.scannedClusters, stats.totalClusters, filesFound);
+            } else {
+                DWORD elapsed = GetTickCount() - startTime;
+                double progress = (double)stats.scannedClusters / stats.totalClusters * 100.0;
+                double speedMBps = (elapsed > 0) ?
+                    ((double)stats.bytesRead / (1024 * 1024)) / (elapsed / 1000.0) : 0;
 
-            // 如果ML启用，显示ML增强计数
-            if (mlEnabled) {
-                cout << " (ML:" << scanThreadPool->GetMLEnhancedCount() << ")";
+                double poolProgress = scanThreadPool->GetProgress();
+
+                // 构建进度信息
+                cout << "\rI/O: " << fixed << setprecision(1) << progress << "% | "
+                     << "Pool: " << setprecision(1) << poolProgress << "% | "
+                     << "Scanned: " << (stats.scannedClusters / 1000) << "K | "
+                     << "Skipped: " << (stats.skippedClusters / 1000) << "K | "
+                     << "Found: " << filesFound;
+
+                // 如果ML启用，显示ML增强计数
+                if (mlEnabled) {
+                    cout << " (ML:" << scanThreadPool->GetMLEnhancedCount() << ")";
+                }
+
+                cout << " | Speed: " << setprecision(1) << speedMBps << " MB/s" << flush;
             }
-
-            cout << " | Speed: " << setprecision(1) << speedMBps << " MB/s" << flush;
 
             lastProgressLCN = stats.scannedClusters;
         }
@@ -1265,6 +1289,7 @@ vector<CarvedFileInfo> FileCarver::ScanForFileTypesThreadPool(const vector<strin
         ((double)stats.scannedClusters * bytesPerCluster / (1024 * 1024)) / (stats.elapsedMs / 1000.0) : 0;
 
     // 显示结果
+    TuiProgressTracker::Instance().FinishProgress();
     cout << "\r                                                                              " << endl;
     cout << "\n============================================" << endl;
     cout << "     Thread Pool Scan Complete" << endl;
@@ -1431,14 +1456,20 @@ void FileCarver::EnhanceResultsWithML(vector<CarvedFileInfo>& results, bool show
         processedCount++;
 
         if (showProgress && processedCount % 100 == 0) {
-            double progress = (double)processedCount / results.size() * 100.0;
-            cout << "\rML Enhancement: " << fixed << setprecision(1) << progress << "%" << flush;
+            if (TuiProgressTracker::Instance().IsEnabled()) {
+                TuiProgressTracker::Instance().UpdateProgress(
+                    "ML Enhancement", processedCount, results.size(), enhancedCount);
+            } else {
+                double progress = (double)processedCount / results.size() * 100.0;
+                cout << "\rML Enhancement: " << fixed << setprecision(1) << progress << "%" << flush;
+            }
         }
     }
 
     DWORD elapsed = GetTickCount() - startTime;
 
     if (showProgress) {
+        TuiProgressTracker::Instance().FinishProgress();
         cout << "\r                                                          " << endl;
         cout << "\n--- ML Enhancement Complete ---" << endl;
         cout << "Time: " << (elapsed / 1000) << "." << ((elapsed % 1000) / 100) << " seconds" << endl;
@@ -1509,14 +1540,20 @@ vector<CarvedFileInfo> FileCarver::ScanWithMLOnly(CarvingMode mode,
 
         // 进度显示
         if (stats.scannedClusters % PROGRESS_UPDATE_INTERVAL == 0) {
-            double progress = (double)stats.scannedClusters / totalClusters * 100.0;
-            cout << "\rML Scan: " << fixed << setprecision(1) << progress << "% | "
-                 << "Found: " << stats.filesFound << flush;
+            if (TuiProgressTracker::Instance().IsEnabled()) {
+                TuiProgressTracker::Instance().UpdateProgress(
+                    "ML Scan", stats.scannedClusters, totalClusters, stats.filesFound);
+            } else {
+                double progress = (double)stats.scannedClusters / totalClusters * 100.0;
+                cout << "\rML Scan: " << fixed << setprecision(1) << progress << "% | "
+                     << "Found: " << stats.filesFound << flush;
+            }
         }
     }
 
     stats.elapsedMs = GetTickCount() - startTime;
 
+    TuiProgressTracker::Instance().FinishProgress();
     cout << "\r                                                          " << endl;
     cout << "\n--- ML-Only Scan Complete ---" << endl;
     cout << "Time: " << (stats.elapsedMs / 1000) << "." << ((stats.elapsedMs % 1000) / 100) << " seconds" << endl;
@@ -1799,13 +1836,19 @@ vector<CarvedFileInfo> FileCarver::ScanHybridMode(
 
             // 进度显示
             if (currentLCN % (BUFFER_CLUSTERS * 10) == 0) {
-                double progress = (double)currentLCN / totalClusters * 100.0;
-                cout << "\rML Scan: " << fixed << setprecision(1) << progress << "% | "
-                     << "Candidates: " << mlCandidates << " | Found: " << mlResults.size() << flush;
+                if (TuiProgressTracker::Instance().IsEnabled()) {
+                    TuiProgressTracker::Instance().UpdateProgress(
+                        "ML Scan", currentLCN, totalClusters, mlResults.size());
+                } else {
+                    double progress = (double)currentLCN / totalClusters * 100.0;
+                    cout << "\rML Scan: " << fixed << setprecision(1) << progress << "% | "
+                         << "Candidates: " << mlCandidates << " | Found: " << mlResults.size() << flush;
+                }
             }
         }
 
         DWORD elapsed = GetTickCount() - startTime;
+        TuiProgressTracker::Instance().FinishProgress();
         cout << "\r                                                                    " << endl;
         cout << "ML scan found: " << mlResults.size() << " files (candidates: " << mlCandidates
              << ", time: " << (elapsed / 1000) << "s)" << endl;

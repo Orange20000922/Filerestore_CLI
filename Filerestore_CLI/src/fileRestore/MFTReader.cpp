@@ -12,7 +12,6 @@ MFTReader::MFTReader() :
 }
 
 MFTReader::~MFTReader() {
-    // ScopedHandle 自动关闭 hVolume
 }
 
 bool MFTReader::OpenVolume(char driveLetter) {
@@ -125,9 +124,13 @@ bool MFTReader::OpenVolume(char driveLetter) {
     return true;
 }
 
-void MFTReader::CloseVolume() {
-    hVolume.Close();
+bool MFTReader::CloseVolume()
+{
+	hVolume.Close();
+    return true;
 }
+
+
 
 bool MFTReader::ReadClusters(ULONGLONG startLCN, ULONGLONG clusterCount, vector<BYTE>& buffer) {
     if (!hVolume.IsValid()) {

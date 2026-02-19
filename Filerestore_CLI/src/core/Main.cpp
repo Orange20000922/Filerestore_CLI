@@ -10,6 +10,7 @@
 #include "CrashHandler.h"
 #include "LocalizationManager.h"
 #include "TuiApp.h"
+#include "MonitorDaemon.h"
 using namespace std;
 
 // ============================================================================
@@ -130,6 +131,8 @@ int main(int argc, char* argv[])
 	std::string cmdArg;
 	bool hasCmd = false;
 	bool testMode = false;
+	bool daemonMode = false;
+	char daemonDrive = 0;
 
 	for (int i = 1; i < argc; i++) {
 		std::string arg = argv[i];
@@ -138,6 +141,10 @@ int main(int argc, char* argv[])
 		}
 		else if (arg == "--test") {
 			testMode = true;
+		}
+		else if (arg == "--monitor-daemon" && i + 1 < argc) {
+			daemonDrive = (char)toupper(argv[++i][0]);
+			if (isalpha((unsigned char)daemonDrive)) daemonMode = true;
 		}
 		else if (arg == "--cmd" || arg == "-c") {
 			// 下一个参数是命令字符串
@@ -152,6 +159,16 @@ int main(int argc, char* argv[])
 				return 1;
 			}
 		}
+	}
+
+	// --monitor-daemon 模式：作为无窗口后台守护进程运行
+	if (daemonMode) {
+		logger.SetConsoleOutput(false);
+		LOG_INFO_FMT("Starting monitor daemon for drive %c:", daemonDrive);
+		int result = MonitorDaemon::RunDaemonMain(daemonDrive);
+		logger.Close();
+		CrashHandler::Uninstall();
+		return result;
 	}
 
 	// --cmd 模式优先级最高（直接执行命令并退出）
