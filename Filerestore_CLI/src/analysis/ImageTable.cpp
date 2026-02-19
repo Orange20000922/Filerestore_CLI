@@ -57,6 +57,7 @@ ULONGLONG ImageTableAnalyzer::GetFuncaddressByName(string name,string file)
 					PIMAGE_IMPORT_BY_NAME pImportByName = (PIMAGE_IMPORT_BY_NAME)((DWORD_PTR)lpBuffer + RVAtoFOA((DWORD)IAT->u1.AddressOfData,lpBuffer));
 					if (name.compare(string((char*)pImportByName->Name))==0) {
 						funcAddress = IAT->u1.Function+pOptionalHeader64->ImageBase;
+						CleanupMappedFile();
 						return funcAddress;
 					}
 				}
@@ -65,6 +66,7 @@ ULONGLONG ImageTableAnalyzer::GetFuncaddressByName(string name,string file)
 			pImportDescriptor++;
 		}
 	}
+	CleanupMappedFile();
 	return 0;
 }
 //遍历导入表中的DLL名称
@@ -128,6 +130,7 @@ vector<string> ImageTableAnalyzer::AnalyzeTableForDLL(string file)
 		dllList.push_back(string(dllName));
 		pImportDescriptor++;
 	}
+    CleanupMappedFile();
     return dllList;
 }
 //遍历导入表中的函数名称
@@ -226,6 +229,7 @@ map<string, vector<string>> ImageTableAnalyzer::AnalyzeTableForFunctions(string 
 		funcList[string(dllName)] = funcNames;
 		pImportDescriptor++;
 	}
+	CleanupMappedFile();
 	return funcList;
 }
 bool ImageTableAnalyzer::IsImagineTable(LPVOID lpBuffer)
@@ -332,7 +336,19 @@ BOOL ImageTableAnalyzer::CheckIsAdmin()
 ImageTableAnalyzer::ImageTableAnalyzer() {
 }
 ImageTableAnalyzer::~ImageTableAnalyzer() {
-	CloseHandle(ImageTableAnalyzer::hFileMapping);
-	CloseHandle(ImageTableAnalyzer::hFile);
-	UnmapViewOfFile(lpBuffer);
+	CleanupMappedFile();
+}
+void ImageTableAnalyzer::CleanupMappedFile() {
+	if (lpBuffer) {
+		UnmapViewOfFile(lpBuffer);
+		lpBuffer = NULL;
+	}
+	if (hFileMapping) {
+		CloseHandle(hFileMapping);
+		hFileMapping = NULL;
+	}
+	if (hFile && hFile != INVALID_HANDLE_VALUE) {
+		CloseHandle(hFile);
+		hFile = NULL;
+	}
 }

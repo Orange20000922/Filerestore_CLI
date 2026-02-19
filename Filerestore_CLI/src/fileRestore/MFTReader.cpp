@@ -296,7 +296,47 @@ bool MFTReader::ReadMFTBatch(ULONGLONG startRecordNumber, ULONGLONG recordCount,
         return false;
     }
 
-    // 计算需要读取的簇范围
+    // 碎片化 MFT 路径：逐簇读取，缓存避免重复 I/O
+    if (mftDataRunsLoaded && mftDataRuns.size() > 1) {
+        LOG_DEBUG("Using fragmented MFT batch read path");
+
+        ULONGLONG lastLCN = (ULONGLONG)-1;
+        vector<BYTE> cachedCluster;
+
+        for (ULONGLONG i = 0; i < recordCount; i++) {
+            ULONGLONG recordNumber = startRecordNumber + i;
+            ULONGLONG lcn, offsetInCluster;
+
+            if (!GetMFTRecordLCN(recordNumber, lcn, offsetInCluster)) {
+                LOG_WARNING_FMT("Record #%llu: cannot resolve LCN, skipping", recordNumber);
+                continue;
+            }
+
+            // 同一个簇内的多条记录只读一次磁盘
+            if (lcn != lastLCN) {
+                if (!ReadClusters(lcn, 1, cachedCluster)) {
+                    LOG_WARNING_FMT("Failed to read cluster at LCN %llu for record #%llu", lcn, recordNumber);
+                    continue;
+                }
+                lastLCN = lcn;
+            }
+
+            if (offsetInCluster + bytesPerFileRecord > cachedCluster.size()) {
+                LOG_WARNING_FMT("Record #%llu offset out of bounds, skipping", recordNumber);
+                continue;
+            }
+
+            vector<BYTE> record(bytesPerFileRecord);
+            memcpy(record.data(), cachedCluster.data() + offsetInCluster, bytesPerFileRecord);
+            ApplyUSAFixup(record, bytesPerSector);
+            records.push_back(move(record));
+        }
+
+        LOG_DEBUG_FMT("ReadMFTBatch (fragmented) completed: extracted %zu valid records", records.size());
+        return true;
+    }
+
+    // 连续 MFT 路径：批量读取（原始代码）
     ULONGLONG startCluster = startRecordNumber / recordsPerCluster;
     ULONGLONG endRecord = startRecordNumber + recordCount - 1;
     ULONGLONG endCluster = endRecord / recordsPerCluster;
