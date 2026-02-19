@@ -24,11 +24,17 @@ KernelBridgeClient::~KernelBridgeClient() {
 bool KernelBridgeClient::Connect() {
     if (IsConnected()) return true;
 
+    // 构造连接上下文（握手信息）
+    CONNECTION_CONTEXT ctx = {};
+    ctx.Magic = FILERESTORE_CONNECTION_MAGIC;
+    ctx.Version = FILERESTORE_PROTOCOL_VERSION;
+    ctx.ProcessId = GetCurrentProcessId();
+
     HRESULT hr = FilterConnectCommunicationPort(
         FILERESTORE_PORT_NAME,
         0,              // options
-        nullptr,        // context
-        0,              // context size
+        &ctx,           // 连接上下文
+        sizeof(ctx),    // 上下文大小
         nullptr,        // security attributes
         &hPort);
 
