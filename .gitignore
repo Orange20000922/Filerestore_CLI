@@ -33,6 +33,8 @@ x86/
 *.VC.db-wal
 *.VC.opendb
 
+#development notes
+dev_notes/
 # NuGet packages (can be restored via nuget restore)
 packages/
 *.nupkg
