@@ -6,7 +6,7 @@
 // 共享内存常量
 // ============================================================================
 constexpr DWORD MONITOR_SHARED_MAGIC = 0x46524D44;   // 'FRMD'
-constexpr DWORD MONITOR_SHARED_VERSION = 1;
+constexpr DWORD MONITOR_SHARED_VERSION = 2;
 constexpr int MONITOR_RECENT_EVENT_MAX = 16;
 
 // ============================================================================
@@ -28,11 +28,11 @@ struct MonitorSharedState {
     char driveLetter; char pad1[3];
     DWORD pid;
     FILETIME startTime, lastUpdate;
-    // 统计（Interlocked 更新）
-    volatile LONGLONG totalEvents, capturedCount, missedCount, skippedCount, snapshotCount;
+    // 统计（seqlock 保护）
+    LONGLONG totalEvents, capturedCount, missedCount, skippedCount, snapshotCount;
     DWORD pollIntervalMs; DWORD pad2;
-    // 环形缓冲区自旋锁
-    volatile LONG spinLock;
+    // seqlock: 奇数=写入中, 偶数=稳定
+    volatile LONG seqCounter;
     // 环形缓冲区
     volatile LONG recentEventCount, recentEventHead;
     MonitorRecentEvent recentEvents[MONITOR_RECENT_EVENT_MAX];
@@ -77,4 +77,5 @@ public:
 private:
     HANDLE hSharedMem_ = nullptr;
     MonitorSharedState* sharedPtr_ = nullptr;
+    char attachedDrive_ = 0;
 };

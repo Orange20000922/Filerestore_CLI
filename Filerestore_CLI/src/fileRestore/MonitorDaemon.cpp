@@ -7,16 +7,35 @@
 using namespace std;
 
 // ============================================================================
-// 共享内存自旋锁（跨进程安全）
+// seqlock 辅助函数（跨进程安全）
 // ============================================================================
-static void SpinLockAcquire(volatile LONG* lock) {
-    while (InterlockedCompareExchange(lock, 1, 0) != 0) {
-        YieldProcessor();
-    }
+
+// 写端：开始写入（seqCounter 变为奇数）
+static void SeqLockWriteBegin(volatile LONG* seq) {
+    InterlockedIncrement(seq);
+    MemoryBarrier();
 }
 
-static void SpinLockRelease(volatile LONG* lock) {
-    InterlockedExchange(lock, 0);
+// 写端：结束写入（seqCounter 变为偶数）
+static void SeqLockWriteEnd(volatile LONG* seq) {
+    MemoryBarrier();
+    InterlockedIncrement(seq);
+}
+
+// 读端：读取序列号（偶数时数据稳定）
+static LONG SeqLockReadBegin(volatile LONG* seq) {
+    LONG s;
+    while ((s = InterlockedCompareExchange(seq, 0, 0)) & 1) {
+        YieldProcessor();  // 写入中，短暂自旋
+    }
+    MemoryBarrier();
+    return s;
+}
+
+// 读端：校验序列号未变化
+static bool SeqLockReadValidate(volatile LONG* seq, LONG expected) {
+    MemoryBarrier();
+    return InterlockedCompareExchange(seq, 0, 0) == expected;
 }
 
 // ============================================================================
@@ -153,7 +172,8 @@ bool MonitorDaemon::StopDaemon(char drive) {
 // AttachSharedMemory / DetachSharedMemory / ReadState
 // ============================================================================
 bool MonitorDaemon::AttachSharedMemory(char drive) {
-    if (sharedPtr_) return true;  // 已附加
+    if (sharedPtr_ && attachedDrive_ == drive) return true;  // 同盘已附加
+    if (sharedPtr_) DetachSharedMemory();  // 不同盘，先释放旧的
 
     wstring memName = GetSharedMemName(drive);
     hSharedMem_ = OpenFileMappingW(FILE_MAP_READ | FILE_MAP_WRITE, FALSE, memName.c_str());
@@ -169,6 +189,7 @@ bool MonitorDaemon::AttachSharedMemory(char drive) {
         return false;
     }
 
+    attachedDrive_ = drive;
     return true;
 }
 
@@ -181,19 +202,23 @@ void MonitorDaemon::DetachSharedMemory() {
         CloseHandle(hSharedMem_);
         hSharedMem_ = nullptr;
     }
+    attachedDrive_ = 0;
 }
 
 bool MonitorDaemon::ReadState(MonitorSharedState& out) {
     if (!sharedPtr_) return false;
     if (sharedPtr_->magic != MONITOR_SHARED_MAGIC) return false;
-    if (sharedPtr_->version != MONITOR_SHARED_VERSION) return false;
 
-    // 加锁拷贝，确保不会读到写了一半的事件
-    SpinLockAcquire(&sharedPtr_->spinLock);
-    memcpy(&out, (const void*)sharedPtr_, sizeof(MonitorSharedState));
-    SpinLockRelease(&sharedPtr_->spinLock);
-
-    // 拷贝完成后释放锁，out 是本地副本，后续操作无需锁
+    // seqlock 读端：重试直到拿到一致快照
+    for (int retry = 0; retry < 100; retry++) {
+        LONG seq = SeqLockReadBegin(&sharedPtr_->seqCounter);
+        memcpy(&out, (const void*)sharedPtr_, sizeof(MonitorSharedState));
+        if (SeqLockReadValidate(&sharedPtr_->seqCounter, seq)) {
+            return true;  // 一致快照
+        }
+        YieldProcessor();
+    }
+    // 超过重试上限（不应发生），仍返回最后一次拷贝
     return true;
 }
 
@@ -316,11 +341,11 @@ int MonitorDaemon::RunDaemonMain(char drive) {
 
     shared->pollIntervalMs = monitor.GetPollInterval();
 
-    // 设置事件回调 - 写入环形缓冲区（加锁）
+    // 设置事件回调 - 写入环形缓冲区（seqlock 保护）
     monitor.SetEventCallback([shared](ULONGLONG recordNum, ULONGLONG fileSize,
                                        FILETIME deleteTime, const wstring& fileName,
                                        bool captured) {
-        SpinLockAcquire(&shared->spinLock);
+        SeqLockWriteBegin(&shared->seqCounter);
 
         LONG head = shared->recentEventHead;
         LONG idx = head % MONITOR_RECENT_EVENT_MAX;
@@ -341,7 +366,7 @@ int MonitorDaemon::RunDaemonMain(char drive) {
         if (count > MONITOR_RECENT_EVENT_MAX) count = MONITOR_RECENT_EVENT_MAX;
         shared->recentEventCount = count;
 
-        SpinLockRelease(&shared->spinLock);
+        SeqLockWriteEnd(&shared->seqCounter);
     });
 
     // 6. 捕获现有删除记录
@@ -366,14 +391,16 @@ int MonitorDaemon::RunDaemonMain(char drive) {
 
     // 8. 主循环 - 等待停止信号，定期更新统计
     while (WaitForSingleObject(hStopEvent, 500) == WAIT_TIMEOUT) {
-        // 更新统计到共享内存
+        // 更新统计到共享内存（seqlock 保护）
         auto& stats = monitor.GetStats();
-        InterlockedExchange64(&shared->totalEvents, (LONGLONG)stats.totalEvents.load());
-        InterlockedExchange64(&shared->capturedCount, (LONGLONG)stats.capturedCount.load());
-        InterlockedExchange64(&shared->missedCount, (LONGLONG)stats.missedCount.load());
-        InterlockedExchange64(&shared->skippedCount, (LONGLONG)stats.skippedCount.load());
-        InterlockedExchange64(&shared->snapshotCount, (LONGLONG)monitor.GetSnapshotStore().GetCount());
+        SeqLockWriteBegin(&shared->seqCounter);
+        shared->totalEvents = (LONGLONG)stats.totalEvents.load();
+        shared->capturedCount = (LONGLONG)stats.capturedCount.load();
+        shared->missedCount = (LONGLONG)stats.missedCount.load();
+        shared->skippedCount = (LONGLONG)stats.skippedCount.load();
+        shared->snapshotCount = (LONGLONG)monitor.GetSnapshotStore().GetCount();
         GetSystemTimeAsFileTime(&shared->lastUpdate);
+        SeqLockWriteEnd(&shared->seqCounter);
     }
 
     // 9. 清理退出
