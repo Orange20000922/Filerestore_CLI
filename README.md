@@ -1,6 +1,6 @@
 # Filerestore_CLI - NTFS 文件恢复工具
 
-[![Version](https://img.shields.io/badge/version-v0.3.2-blue.svg)](https://github.com/Orange20000922/Filerestore_CLI/releases)
+[![Version](https://img.shields.io/badge/version-v1.0.0-blue.svg)](https://github.com/Orange20000922/Filerestore_CLI/releases)
 [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
 [![Language](https://img.shields.io/badge/language-C%2B%2B20-orange.svg)](https://isocpp.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -8,7 +8,7 @@
 
 **简体中文** | [English](#english-documentation)
 
-> NTFS 文件恢复工具，支持 MFT 扫描、签名搜索恢复、ML 文件分类、TUI 界面和多线程优化
+> NTFS 文件恢复工具，支持 MFT/USN 联合恢复、实时删除监控、签名搜索、ML 文件分类、TUI 界面、内核驱动桥接和多线程优化
 
 ---
 
@@ -21,53 +21,114 @@
 
 ---
 
-## 最新更新 (2026-02-07)
+## 最新更新 (2026-02-19)
 
-### v0.3.2 - TUI 界面与测试框架
+### v1.0.0 - USN 精准恢复、实时删除监控与内核驱动桥接
 
-#### 🎨 新增：TUI 现代化界面
-- **Terminal UI**：基于 FTXUI 的现代化终端界面
-- **三区域布局**：菜单导航 | 命令输入 | 状态面板
-- **交互式参数填充**：自动表单生成，可视化参数输入
-- **实时进度显示**：集成原有进度条，统一渲染
-- **智能恢复向导**：Smart Recovery (USN + Signature 联合扫描)
+本次为大版本更新，新增 USN 精准恢复体系、实时删除监控守护进程、MFT 快照存储、内核驱动桥接（实验性），并全面优化 TUI 界面的进度显示和交互体验。
 
-```bash
-# 启动 TUI 模式
-Filerestore_CLI.exe --tui
+---
 
-# 传统 CLI 模式
-Filerestore_CLI.exe
-```
+#### 1. USN 精准恢复体系
 
-**TUI 特性**：
-- 📁 **快速菜单**：Smart Recovery, Scan Deleted, Deep Scan, Repair
-- ⌨️ **命令模式**：支持所有 CLI 命令，Tab 自动补全，历史记录
-- 📊 **状态面板**：实时显示驱动器、MFT、USN、缓存状态
-- 🔄 **进度条**：无缝集成，显示扫描速度和 ETA
+新增三个核心命令，基于 USN 变更日志实现精准的文件恢复：
 
-#### 🧪 新增：单元测试框架
-- **Google Test 集成**：45 个单元测试覆盖核心功能
-- **CLI 参数测试**（26个）：命令解析、参数验证、边界条件
-- **SIMD 签名匹配测试**（19个）：SSE2/AVX2 优化验证
-- **自动化测试脚本**：`build_and_test.ps1` 一键测试
-- **CI/CD 集成**：GitHub Actions 自动运行测试
+| 命令 | 功能 |
+|------|------|
+| `usnlist <drive>` | 列出最近删除的文件，结合 MFT 验证和置信度评分 |
+| `usnrecover <drive> <target> <output>` | 按索引/文件名/MFT 记录号恢复文件 |
+| `recover <drive> [filename] [output]` | 智能恢复向导（USN + MFT + 签名联合扫描） |
+
+- **USN + MFT 交叉验证**：通过序列号比对确认文件数据未被覆盖
+- **签名回退**：当 MFT 记录被覆盖时，自动使用签名扫描搜索文件内容
+- **三重验证**：USN 元数据 + MFT 数据运行 + 文件签名，给出综合置信度评分
+- **批量操作**：支持按大小、扩展名过滤，批量恢复已删除文件
 
 ```bash
-# 运行单元测试
-cd Filerestore_CLI_Tests
-.\build_and_test.ps1
+# 列出最近删除的文件
+usnlist C
+
+# 按索引恢复
+usnrecover C 3 D:\recovered\
+
+# 智能恢复（交互式向导）
+recover C myfile.docx D:\recovered\
 ```
 
-#### ⚡ 性能优化：SIMD 签名匹配
-- **SSE2/AVX2 加速**：签名匹配速度提升 50-70%
-- **智能回退**：自动检测 CPU 特性，不支持时回退标量
-- **零风险优化**：完整的单元测试验证正确性
+---
 
-#### 🔧 新增：自动化测试支持
-- **--cmd 选项**：非交互式命令执行，支持 CI/CD
-- **退出码支持**：成功返回 0，失败返回 1
-- **日志系统增强**：性能指标、缓存命中率自动记录
+#### 2. MFT 快照存储
+
+新增 `MFTSnapshotStore` 模块，在文件删除的瞬间捕获完整的 MFT 元数据快照：
+
+- **删除时快照**：在 MFT 记录被覆盖前保存文件名、大小、数据运行、时间戳等完整元数据
+- **持久化存储**：快照序列化到磁盘，重启后不丢失
+- **多维查询**：支持按 MFT 记录号、序列号、文件名模式查找
+- **自动过期清理**：可配置时间阈值，自动清理过期快照
+- **线程安全**：全部操作支持多线程并发访问
+
+---
+
+#### 3. USN 删除监控
+
+新增 `UsnDeleteMonitor` 后台监控模块，实时轮询 USN 变更日志：
+
+- **实时监控**：持续监听文件删除事件，立即触发 MFT 快照
+- **事件回调**：支持注册自定义回调函数，响应删除事件
+- **定时保存**：可配置自动保存间隔，防止数据丢失
+- **一次性扫描**：支持扫描已有 USN 记录，补全历史删除信息
+
+---
+
+#### 4. 监控守护进程
+
+新增 `MonitorDaemon` 守护进程管理器：
+
+- **共享内存 IPC**：通过命名共享内存与 CLI/TUI 通信，查询守护进程状态
+- **事件环形缓冲**：记录最近删除事件，供 CLI/TUI 查询
+- **Windows 自启动**：支持注册为开机自启动，实现 7x24 监控
+- **状态查询**：PID、事件计数、最近事件列表
+
+---
+
+#### 5. 内核驱动桥接（实验性）
+
+新增 `KernelBridgeClient`，可选连接 FileRestoreMon minifilter 驱动：
+
+- **内核级通知**：通过 `FilterConnectCommunicationPort` 接收内核级删除通知
+- **LCN 映射**：直接获取文件的物理簇位置，跳过 MFT 解析
+- **默认禁用**：需启用 `ENABLE_KERNEL_BRIDGE` 预处理宏
+- **独立分支**：驱动源码位于 `feature/kernel-driver` 分支
+
+> 内核驱动源码（`Filerestore_sys/`）位于 `feature/kernel-driver` 分支，基于 Windows minifilter 框架开发，拦截 IRP_MJ_CREATE 的删除操作并通过通信端口转发给用户态。
+
+---
+
+#### 6. TUI 全面增强
+
+- **多视图模式**：欢迎页、命令输出、参数表单、扫描进度、结果表格五种视图
+- **交互式参数填充**：自动生成参数表单，可视化输入
+- **FileCarver 进度同步**：6 个扫描函数（Signature Scan / Async Scan / ThreadPool Scan / ML Enhancement / ML Scan / Hybrid ML Scan）的进度全部同步到 TUI 进度条
+- **命令历史与自动补全**：支持 Tab 补全和上下键历史浏览
+
+---
+
+#### 7. MFT 缓存 v2
+
+- **序列号字段**：新增 `sequenceNumber` 用于删除验证
+- **LCN 映射**：签名扫描结果与 MFT 记录关联
+- **全局单例**：`MFTCacheManager` 跨命令共享缓存
+- **有效期检查**：按缓存时间自动失效
+
+---
+
+#### 8. 其他改进
+
+- **MFTParser**：新增 `EnrichWithMFT()` 方法，从 MFT 补全文件大小、时间戳等信息
+- **UsnTargetedRecovery**：新增大小/扩展名静态过滤器，支持批量操作
+- **MFTReader**：优化簇读取性能
+- **代码重构**：移除废弃的 `cmd.cpp`，统一命令注册架构
+- **多项 Bug 修复**
 
 ---
 
@@ -86,21 +147,33 @@ Filerestore_CLI.exe --tui
 - Browse Results: 浏览历史扫描结果
 ```
 
-### 2. MFT 文件恢复
+### 2. USN 精准恢复 (v1.0.0+)
+```bash
+usnlist C                                    # 列出最近删除文件
+usnrecover C 3 D:\recovered\                 # 按索引恢复
+recover C important.docx D:\recovered\       # 智能恢复向导
+```
+
+### 3. 实时删除监控 (v1.0.0+)
+- 后台守护进程监听 USN 删除事件
+- 文件删除瞬间自动捕获 MFT 快照
+- 支持内核驱动桥接获取 LCN 映射（实验性）
+
+### 4. MFT 文件恢复
 ```bash
 listdeleted C              # 列出已删除文件
 searchdeleted C doc .docx  # 搜索文件
 restorebyrecord C 12345 D:\out.docx  # 恢复文件
 ```
 
-### 3. 签名搜索恢复 (File Carving)
+### 5. 签名搜索恢复 (File Carving)
 ```bash
 carve C zip D:\recovered\           # 异步扫描ZIP文件
 carvepool C jpg,png D:\recovered\   # 线程池扫描图片
 carvepool D all D:\recovered\ 8     # 指定8线程扫描所有类型
 ```
 
-### 4. 混合扫描模式 (v0.3.0+)
+### 6. 混合扫描模式 (v0.3.0+)
 ```bash
 # 自动选择最佳方式：有签名用签名，无签名用 ML
 carvepool C all D:\recovered\
@@ -246,7 +319,13 @@ msbuild Filerestore_CLI.vcxproj /p:Configuration=Release /p:Platform=x64
 | `listdeleted <drive>` | 列出已删除文件 |
 | `searchdeleted <drive> <pattern>` | 搜索文件 |
 | `restorebyrecord <drive> <record> <output>` | 恢复文件 |
-| `recover <drive> [filename] [output]` | 智能恢复 |
+| `recover <drive> [filename] [output]` | 智能恢复向导（USN + MFT + 签名） |
+
+### USN 恢复 (v1.0.0+)
+| 命令 | 说明 |
+|------|------|
+| `usnlist <drive>` | 列出最近删除文件（含置信度评分） |
+| `usnrecover <drive> <target> <output>` | 按索引/文件名/记录号恢复 |
 
 ### 签名搜索
 | 命令 | 说明 |
@@ -274,7 +353,14 @@ msbuild Filerestore_CLI.vcxproj /p:Configuration=Release /p:Platform=x64
 Filerestore_CLI/
 ├── src/
 │   ├── tui/                       # TUI 界面 (v0.3.2+)
-│   ├── fileRestore/               # 文件恢复（SIMD 优化）
+│   ├── commands/                   # 命令实现
+│   │   └── UsnRecoverCommands.cpp  # USN 恢复命令 (v1.0.0+)
+│   ├── fileRestore/               # 文件恢复核心
+│   │   ├── MFTSnapshotStore.*     # MFT 快照存储 (v1.0.0+)
+│   │   ├── UsnDeleteMonitor.*     # USN 删除监控 (v1.0.0+)
+│   │   ├── MonitorDaemon.*        # 监控守护进程 (v1.0.0+)
+│   │   ├── KernelBridgeClient.*   # 内核驱动桥接 (v1.0.0+)
+│   │   └── ...                    # MFT/签名/ML 模块
 │   └── ...
 ├── Filerestore_CLI_Tests/         # 单元测试 (v0.3.2+)
 │   ├── tests/                     # 45 个测试
@@ -283,11 +369,33 @@ Filerestore_CLI/
 │   ├── ftxui/                     # FTXUI（手动克隆）
 │   └── onnxruntime/               # ONNX（可选）
 └── document/                      # 技术文档
+
+# 内核驱动（独立分支 feature/kernel-driver）
+Filerestore_sys/
+├── Filerestore_sys.sln
+└── Filerestore_sys/
+    ├── driver.c                   # 驱动入口
+    ├── filter.c                   # Minifilter 回调
+    ├── communication.c            # 用户态通信
+    └── Filerestore_sys.inf        # 驱动安装信息
 ```
 
 ---
 
 ## 更新日志
+
+### v1.0.0 (2026-02-19)
+- **新增** USN 精准恢复体系（`usnlist`、`usnrecover`、`recover` 命令）
+- **新增** MFT 快照存储，删除瞬间捕获完整元数据
+- **新增** USN 删除监控后台守护进程
+- **新增** 监控守护进程管理器（共享内存 IPC、Windows 自启动）
+- **新增** 内核驱动桥接客户端（实验性，minifilter 通信）
+- **新增** FileCarver 全部扫描函数 TUI 进度同步
+- **改进** MFT 缓存 v2（序列号验证、全局单例、有效期检查）
+- **改进** TUI 多视图模式（参数表单、扫描进度、结果表格）
+- **改进** UsnTargetedRecovery 批量操作和 MFT 富化
+- **重构** 统一命令注册架构，移除废弃 cmd.cpp
+- **修复** 多项已知问题
 
 ### v0.3.2 (2026-02-07)
 - **新增** TUI 现代化界面（FTXUI）
@@ -336,13 +444,13 @@ Filerestore_CLI/
 
 # Filerestore_CLI - NTFS File Recovery Tool
 
-[![Version](https://img.shields.io/badge/version-v0.3.2-blue.svg)](https://github.com/Orange20000922/Filerestore_CLI/releases)
+[![Version](https://img.shields.io/badge/version-v1.0.0-blue.svg)](https://github.com/Orange20000922/Filerestore_CLI/releases)
 [![Platform](https://img.shields.io/badge/platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows)
 [![Language](https://img.shields.io/badge/language-C%2B%2B20-orange.svg)](https://isocpp.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/Orange20000922/Filerestore_CLI/msbuild.yml?branch=master)](https://github.com/Orange20000922/Filerestore_CLI/actions)
 
-> NTFS file recovery tool with MFT scanning, signature-based carving, ML file classification, TUI interface, and multi-threading optimization
+> NTFS file recovery tool with MFT/USN joint recovery, real-time deletion monitoring, signature-based carving, ML file classification, TUI interface, kernel driver bridge, and multi-threading optimization
 
 ---
 
@@ -355,53 +463,112 @@ Filerestore_CLI/
 
 ---
 
-## Latest Update (2026-02-07)
+## Latest Update (2026-02-19)
 
-### v0.3.2 - TUI Interface & Testing Framework
+### v1.0.0 - USN Targeted Recovery, Real-time Deletion Monitoring & Kernel Driver Bridge
 
-#### 🎨 New: Modern TUI Interface
-- **Terminal UI**: Modern terminal interface based on FTXUI
-- **Three-Area Layout**: Menu navigation | Command input | Status panel
-- **Interactive Parameter Forms**: Auto-generated forms with visual parameter input
-- **Real-time Progress**: Integrated progress bar with unified rendering
-- **Smart Recovery Wizard**: USN + Signature combined scanning
+Major version update with USN-based targeted recovery, real-time deletion monitoring daemon, MFT snapshot storage, kernel driver bridge (experimental), and comprehensive TUI progress integration.
 
-```bash
-# Launch TUI mode
-Filerestore_CLI.exe --tui
+---
 
-# Traditional CLI mode
-Filerestore_CLI.exe
-```
+#### 1. USN Targeted Recovery System
 
-**TUI Features**:
-- 📁 **Quick Menu**: Smart Recovery, Scan Deleted, Deep Scan, Repair
-- ⌨️ **Command Mode**: All CLI commands supported, Tab autocomplete, command history
-- 📊 **Status Panel**: Real-time display of drive, MFT, USN, cache status
-- 🔄 **Progress Bar**: Seamlessly integrated, shows scan speed and ETA
+Three new core commands based on USN change journal for precise file recovery:
 
-#### 🧪 New: Unit Testing Framework
-- **Google Test Integration**: 45 unit tests covering core functionality
-- **CLI Parameter Tests** (26): Command parsing, argument validation, edge cases
-- **SIMD Signature Tests** (19): SSE2/AVX2 optimization verification
-- **Automated Test Scripts**: One-click testing with `build_and_test.ps1`
-- **CI/CD Integration**: Automatic test execution via GitHub Actions
+| Command | Function |
+|---------|----------|
+| `usnlist <drive>` | List recently deleted files with MFT validation and confidence scoring |
+| `usnrecover <drive> <target> <output>` | Recover by index, filename, or MFT record number |
+| `recover <drive> [filename] [output]` | Smart recovery wizard (USN + MFT + signature joint scan) |
+
+- **USN + MFT Cross-Validation**: Verify file data is not overwritten via sequence number comparison
+- **Signature Fallback**: Auto-fallback to signature scanning when MFT records are overwritten
+- **Triple Validation**: USN metadata + MFT data runs + file signature, with composite confidence scoring
+- **Batch Operations**: Filter by size/extension, batch recover deleted files
 
 ```bash
-# Run unit tests
-cd Filerestore_CLI_Tests
-.\build_and_test.ps1
+# List recently deleted files
+usnlist C
+
+# Recover by index
+usnrecover C 3 D:\recovered\
+
+# Smart recovery (interactive wizard)
+recover C myfile.docx D:\recovered\
 ```
 
-#### ⚡ Performance: SIMD Signature Matching
-- **SSE2/AVX2 Acceleration**: 50-70% faster signature matching
-- **Smart Fallback**: Auto-detect CPU features, fallback to scalar when unsupported
-- **Zero-Risk Optimization**: Comprehensive unit tests verify correctness
+---
 
-#### 🔧 New: Automation Support
-- **--cmd Option**: Non-interactive command execution for CI/CD
-- **Exit Codes**: Returns 0 on success, 1 on failure
-- **Enhanced Logging**: Performance metrics and cache hit rate auto-logging
+#### 2. MFT Snapshot Store
+
+Captures complete MFT metadata snapshots at the moment of file deletion:
+
+- **Deletion-time Snapshots**: Save filename, size, data runs, timestamps before MFT records get overwritten
+- **Persistent Storage**: Serialized to disk, survives restarts
+- **Multi-dimensional Query**: Lookup by MFT record number, sequence number, or filename pattern
+- **Auto-expiry Cleanup**: Configurable time threshold for automatic cleanup
+- **Thread-safe**: All operations support concurrent access
+
+---
+
+#### 3. USN Delete Monitor
+
+Background monitor polling the USN change journal in real-time:
+
+- **Real-time Monitoring**: Continuously listen for file deletion events, trigger MFT snapshots immediately
+- **Event Callbacks**: Register custom callbacks for deletion events
+- **Periodic Auto-save**: Configurable save interval to prevent data loss
+- **One-time Scan**: Scan existing USN records to fill in historical deletion info
+
+---
+
+#### 4. Monitor Daemon
+
+Daemon process manager with shared memory IPC:
+
+- **Shared Memory IPC**: Named shared memory for CLI/TUI communication and status queries
+- **Event Ring Buffer**: Record recent deletion events for CLI/TUI query
+- **Windows Auto-start**: Register as startup service for 24/7 monitoring
+- **Status Query**: PID, event counts, recent event list
+
+---
+
+#### 5. Kernel Driver Bridge (Experimental)
+
+Optional connection to the FileRestoreMon minifilter driver:
+
+- **Kernel-level Notifications**: Receive delete notifications via `FilterConnectCommunicationPort`
+- **LCN Mapping**: Direct physical cluster location, bypassing MFT parsing
+- **Disabled by Default**: Requires `ENABLE_KERNEL_BRIDGE` preprocessor macro
+- **Separate Branch**: Driver source code on `feature/kernel-driver` branch
+
+---
+
+#### 6. TUI Enhancements
+
+- **Multi-view Modes**: Welcome, Output, Parameter Form, Scan Progress, Results Table
+- **Interactive Parameter Forms**: Auto-generated forms with visual input
+- **FileCarver Progress Sync**: All 6 scan functions now forward progress to TUI
+- **Command History & Autocomplete**: Tab completion and arrow-key history browsing
+
+---
+
+#### 7. MFT Cache v2
+
+- **Sequence Number Field**: Added for delete validation
+- **LCN Mapping**: Correlate signature scan results with MFT records
+- **Global Singleton**: `MFTCacheManager` shared across commands
+- **Validity Check**: Auto-expire by cache age
+
+---
+
+#### 8. Other Improvements
+
+- **MFTParser**: New `EnrichWithMFT()` for filling file size/timestamp info
+- **UsnTargetedRecovery**: Static filters for size/extension, batch operations
+- **MFTReader**: Optimized cluster read performance
+- **Code Refactoring**: Removed deprecated `cmd.cpp`, unified command registration
+- **Multiple Bug Fixes**
 
 ---
 
@@ -420,21 +587,33 @@ Filerestore_CLI.exe --tui
 - Browse Results: Browse historical scan results
 ```
 
-### 2. MFT File Recovery
+### 2. USN Targeted Recovery (v1.0.0+)
+```bash
+usnlist C                                    # List recently deleted files
+usnrecover C 3 D:\recovered\                 # Recover by index
+recover C important.docx D:\recovered\       # Smart recovery wizard
+```
+
+### 3. Real-time Deletion Monitoring (v1.0.0+)
+- Background daemon monitors USN deletion events
+- Auto-capture MFT snapshots at the moment of file deletion
+- Optional kernel driver bridge for LCN mapping (experimental)
+
+### 4. MFT File Recovery
 ```bash
 listdeleted C                       # List deleted files
 searchdeleted C doc .docx           # Search files
 restorebyrecord C 12345 D:\out.docx # Restore file
 ```
 
-### 3. Signature-Based Carving
+### 5. Signature-Based Carving
 ```bash
 carve C zip D:\recovered\           # Async scan ZIP files
 carvepool C jpg,png D:\recovered\   # Thread pool scan images
 carvepool D all D:\recovered\ 8     # Specify 8 threads scan all types
 ```
 
-### 4. Hybrid Scanning (v0.3.0+)
+### 6. Hybrid Scanning (v0.3.0+)
 ```bash
 # Auto-select best method: signature if available, ML otherwise
 carvepool C all D:\recovered\
@@ -580,7 +759,13 @@ msbuild Filerestore_CLI.vcxproj /p:Configuration=Release /p:Platform=x64
 | `listdeleted <drive>` | List deleted files |
 | `searchdeleted <drive> <pattern>` | Search files |
 | `restorebyrecord <drive> <record> <output>` | Restore file |
-| `recover <drive> [filename] [output]` | Smart recovery |
+| `recover <drive> [filename] [output]` | Smart recovery wizard (USN + MFT + signature) |
+
+### USN Recovery (v1.0.0+)
+| Command | Description |
+|---------|-------------|
+| `usnlist <drive>` | List recently deleted files (with confidence scoring) |
+| `usnrecover <drive> <target> <output>` | Recover by index/filename/record number |
 
 ### Signature Carving
 | Command | Description |
@@ -608,7 +793,14 @@ msbuild Filerestore_CLI.vcxproj /p:Configuration=Release /p:Platform=x64
 Filerestore_CLI/
 ├── src/
 │   ├── tui/                       # TUI interface (v0.3.2+)
-│   ├── fileRestore/               # File recovery (SIMD optimized)
+│   ├── commands/                   # Command implementations
+│   │   └── UsnRecoverCommands.cpp  # USN recovery commands (v1.0.0+)
+│   ├── fileRestore/               # Core file recovery
+│   │   ├── MFTSnapshotStore.*     # MFT snapshot storage (v1.0.0+)
+│   │   ├── UsnDeleteMonitor.*     # USN delete monitor (v1.0.0+)
+│   │   ├── MonitorDaemon.*        # Monitor daemon (v1.0.0+)
+│   │   ├── KernelBridgeClient.*   # Kernel driver bridge (v1.0.0+)
+│   │   └── ...                    # MFT/signature/ML modules
 │   └── ...
 ├── Filerestore_CLI_Tests/         # Unit tests (v0.3.2+)
 │   ├── tests/                     # 45 tests
@@ -617,11 +809,33 @@ Filerestore_CLI/
 │   ├── ftxui/                     # FTXUI (manual clone)
 │   └── onnxruntime/               # ONNX (optional)
 └── document/                      # Technical documentation
+
+# Kernel driver (separate branch: feature/kernel-driver)
+Filerestore_sys/
+├── Filerestore_sys.sln
+└── Filerestore_sys/
+    ├── driver.c                   # Driver entry
+    ├── filter.c                   # Minifilter callbacks
+    ├── communication.c            # User-mode communication
+    └── Filerestore_sys.inf        # Driver installation info
 ```
 
 ---
 
 ## Changelog
+
+### v1.0.0 (2026-02-19)
+- **Added** USN targeted recovery system (`usnlist`, `usnrecover`, `recover` commands)
+- **Added** MFT snapshot storage, capturing complete metadata at deletion time
+- **Added** USN delete monitor background daemon
+- **Added** Monitor daemon manager (shared memory IPC, Windows auto-start)
+- **Added** Kernel driver bridge client (experimental, minifilter communication)
+- **Added** FileCarver progress sync to TUI for all scan functions
+- **Improved** MFT cache v2 (sequence number validation, global singleton, expiry check)
+- **Improved** TUI multi-view modes (parameter forms, scan progress, results table)
+- **Improved** UsnTargetedRecovery batch operations and MFT enrichment
+- **Refactored** Unified command registration, removed deprecated cmd.cpp
+- **Fixed** Multiple known issues
 
 ### v0.3.2 (2026-02-07)
 - **Added** Modern TUI interface (FTXUI)
