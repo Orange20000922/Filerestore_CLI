@@ -2,6 +2,7 @@
 #include <sstream>
 #include <algorithm>
 #include <vector>
+#include <nlohmann/json.hpp>
 #include "Logger.h"
 using namespace std;
 
@@ -17,6 +18,17 @@ static string WideToUtf8(const wstring& wide) {
     string utf8(len - 1, 0);
     WideCharToMultiByte(CP_UTF8, 0, wide.c_str(), -1, &utf8[0], len, NULL, NULL);
     return utf8;
+}
+
+static wstring Utf8ToWide(const string& utf8) {
+    if (utf8.empty()) return L"";
+
+    int len = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, NULL, 0);
+    if (len <= 0) return L"";
+
+    wstring wide(len - 1, 0);
+    MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, &wide[0], len);
+    return wide;
 }
 LocalizationManager::LocalizationManager() : currentLanguage(L"en") {
     // 默认加载英文
@@ -99,104 +111,6 @@ bool LocalizationManager::Reload() {
     return ParseLanguageFile(currentLanguage);
 }
 
-wstring LocalizationManager::ReadFileContent(const wstring& filePath) {
-    // 打开文件（UTF-8编码）
-    ifstream file(filePath, ios::binary);
-    if (!file.is_open()) {
-		LOG_ERROR_FMT("Cannot open language file: %ls", filePath.c_str());
-        return L"";
-    }
-
-    // 读取所有内容
-    stringstream buffer;
-    buffer << file.rdbuf();
-    file.close();
-
-    string content = buffer.str();
-
-    // 转换为宽字符串（UTF-8 to wstring）
-    int len = MultiByteToWideChar(CP_UTF8, 0, content.c_str(), -1, NULL, 0);
-    if (len <= 0) {
-		LOG_ERROR_FMT("Failed to convert language file content to wide string: %ls", filePath.c_str());
-        return L"";
-    }
-
-    wstring wideContent(len - 1, 0);
-    MultiByteToWideChar(CP_UTF8, 0, content.c_str(), -1, &wideContent[0], len);
-
-    return wideContent;
-}
-
-void LocalizationManager::ParseSimpleJson(const wstring& jsonContent) {
-    // 简单的JSON解析：查找 "key": "value" 模式
-    // 这是一个简化版本，足够处理简单的键值对JSON
-
-    translations.clear();
-
-    size_t pos = 0;
-    while (pos < jsonContent.length()) {
-        // 查找键的开始引号
-        size_t keyStart = jsonContent.find(L'"', pos);
-        if (keyStart == wstring::npos) break;
-        keyStart++;
-
-        // 查找键的结束引号
-        size_t keyEnd = jsonContent.find(L'"', keyStart);
-        if (keyEnd == wstring::npos) break;
-
-        wstring key = jsonContent.substr(keyStart, keyEnd - keyStart);
-
-        // 查找冒号
-        size_t colon = jsonContent.find(L':', keyEnd);
-        if (colon == wstring::npos) break;
-
-        // 查找值的开始引号
-        size_t valueStart = jsonContent.find(L'"', colon);
-        if (valueStart == wstring::npos) break;
-        valueStart++;
-
-        // 查找值的结束引号（处理转义字符）
-        size_t valueEnd = valueStart;
-        while (valueEnd < jsonContent.length()) {
-            valueEnd = jsonContent.find(L'"', valueEnd);
-            if (valueEnd == wstring::npos) break;
-
-            // 检查是否被转义
-            if (valueEnd > 0 && jsonContent[valueEnd - 1] != L'\\') {
-                break;
-            }
-            valueEnd++;
-        }
-
-        if (valueEnd == wstring::npos) break;
-
-        wstring value = jsonContent.substr(valueStart, valueEnd - valueStart);
-
-        // 处理转义字符
-        size_t escapePos = 0;
-        while ((escapePos = value.find(L"\\n", escapePos)) != wstring::npos) {
-            value.replace(escapePos, 2, L"\n");
-            escapePos++;
-        }
-        while ((escapePos = value.find(L"\\t", escapePos)) != wstring::npos) {
-            value.replace(escapePos, 2, L"\t");
-            escapePos++;
-        }
-        while ((escapePos = value.find(L"\\\"", escapePos)) != wstring::npos) {
-            value.replace(escapePos, 2, L"\"");
-            escapePos++;
-        }
-
-        // 存储键值对
-        translations[key] = value;
-
-        pos = valueEnd + 1;
-    }
-    if (translations.size()==0) {
-        LOG_WARNING_FMT("Failed to analyze any traslation!");
-    }
-}
-
 bool LocalizationManager::ParseLanguageFile(const wstring& languageCode) {
     // 构建语言文件路径
     wchar_t exePath[MAX_PATH];
@@ -209,15 +123,44 @@ bool LocalizationManager::ParseLanguageFile(const wstring& languageCode) {
 
     wstring langFilePath = exeDir + L"\\langs\\" + languageCode + L".json";
 
-    // 读取文件内容
-    wstring jsonContent = ReadFileContent(langFilePath);
-    if (jsonContent.empty()) {
+    // 以 UTF-8 读取文件
+    ifstream file(langFilePath, ios::binary);
+    if (!file.is_open()) {
+        LOG_ERROR_FMT("Cannot open language file: %ls", langFilePath.c_str());
         wcout << L"Failed to load language file: " << langFilePath << endl;
         return false;
     }
 
-    // 解析JSON
-    ParseSimpleJson(jsonContent);
+    string utf8Content((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
+    file.close();
+
+    // 跳过 UTF-8 BOM (EF BB BF)
+    if (utf8Content.size() >= 3 &&
+        (unsigned char)utf8Content[0] == 0xEF &&
+        (unsigned char)utf8Content[1] == 0xBB &&
+        (unsigned char)utf8Content[2] == 0xBF) {
+        utf8Content = utf8Content.substr(3);
+    }
+
+    // 使用 nlohmann/json 解析
+    try {
+        auto j = nlohmann::json::parse(utf8Content);
+        translations.clear();
+
+        for (auto& [key, value] : j.items()) {
+            if (value.is_string()) {
+                translations[Utf8ToWide(key)] = Utf8ToWide(value.get<string>());
+            }
+        }
+    } catch (const nlohmann::json::parse_error& e) {
+        LOG_ERROR_FMT("JSON parse error in %ls: %s", langFilePath.c_str(), e.what());
+        wcout << L"Failed to parse language file: " << langFilePath << endl;
+        return false;
+    }
+
+    if (translations.empty()) {
+        LOG_WARNING("No translations loaded from language file!");
+    }
 
     wcout << L"Language loaded: " << languageCode << L" (" << translations.size() << L" translations)" << endl;
     return true;

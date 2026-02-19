@@ -29,14 +29,8 @@ private:
     LocalizationManager(const LocalizationManager&) = delete;
     LocalizationManager& operator=(const LocalizationManager&) = delete;
 
-    // 解析JSON文件（简单实现，不依赖外部库）
+    // 解析语言文件
     bool ParseLanguageFile(const wstring& languageCode);
-
-    // 从文件读取所有内容
-    wstring ReadFileContent(const wstring& filePath);
-
-    // 简单的JSON解析（键值对提取）
-    void ParseSimpleJson(const wstring& jsonContent);
 
 public:
     // 获取单例实例

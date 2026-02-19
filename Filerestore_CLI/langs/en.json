@@ -276,11 +276,6 @@
   "crp.conf_med": "[MED]",
   "crp.conf_low": "[LOW!]",
 
-  "common.yes": "Yes",
-  "common.no": "No",
-
-  "error.invalid_drive": "Invalid drive letter",
-  "error.open_volume_failed": "Failed to open volume",
   "error.usn_open_failed": "Failed to open USN journal",
 
   "usnlist.usage": "Usage:",

@@ -523,9 +523,13 @@ void TuiApp::Run() {
                     text(" No monitor daemon is currently running.") | color(Color::Yellow)
                 );
                 monitorElems.push_back(text(""));
-                monitorElems.push_back(
-                    text(std::string(" Target drive: ") + monitorDrive_ + ":")
-                );
+                monitorElems.push_back(hbox({
+                    text(" Target drive: ") | bold,
+                    text(" < ") | dim,
+                    text(std::string(1, monitorDrive_) + ":") | bold | color(Color::Cyan),
+                    text(" > ") | dim,
+                    text("  (use Arrow Keys to change)") | dim,
+                }));
                 monitorElems.push_back(
                     text(" Press [S] to start a monitor daemon.")
                 );
@@ -634,7 +638,7 @@ void TuiApp::Run() {
 
             monitorElems.push_back(separator());
             monitorElems.push_back(
-                text(" [S] Start  [T] Stop  [A] Toggle AutoStart  [Esc] Back") | dim
+                text(" [S] Start  [T] Stop  [A] Toggle AutoStart  [</>] Drive  [Esc] Back") | dim
             );
             mainContent = vbox(monitorElems) | border;
 
@@ -827,6 +831,21 @@ void TuiApp::Run() {
 
         // Monitor Dashboard 键盘快捷键
         if (currentView_.load() == ViewMode::Monitor && !commandRunning_) {
+            // 左右箭头切换驱动器
+            if (event == Event::ArrowLeft || event == Event::ArrowRight) {
+                DWORD drives = GetLogicalDrives();
+                char current = monitorDrive_ != 0 ? monitorDrive_ : 'C';
+                int dir = (event == Event::ArrowRight) ? 1 : -1;
+                for (int i = 1; i <= 26; i++) {
+                    char next = 'A' + ((current - 'A' + dir * i + 26) % 26);
+                    if (drives & (1 << (next - 'A'))) {
+                        monitorDrive_ = next;
+                        break;
+                    }
+                }
+                screen_.PostEvent(Event::Custom);
+                return true;
+            }
             if (event == Event::Character('s') || event == Event::Character('S')) {
                 // 启动守护进程
                 char drive = monitorDrive_ != 0 ? monitorDrive_ : 'C';
