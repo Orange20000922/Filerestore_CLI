@@ -169,7 +169,7 @@ void UsnListCommand::Execute(string command) {
         string fileNameNarrow = UsnTargetedRecovery::WideToNarrow(fileName);
         cout << setw(40) << fileNameNarrow;
 
-        // 文件大小（从 MFT 获取，仅当 MFT 未复用时有效）
+        // 文件大小（从 MFT 获取）
         if (item.usnInfo.MftInfoValid && item.usnInfo.FileSize > 0) {
             string sizeStr = UsnTargetedRecovery::WideToNarrow(
                 UsnTargetedRecovery::FormatFileSize(item.usnInfo.FileSize));

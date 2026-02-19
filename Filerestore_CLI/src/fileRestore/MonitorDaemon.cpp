@@ -34,16 +34,27 @@ static void SeqLockWriteEnd(volatile LONG* seq) {
     InterlockedIncrement(seq);
 }
 
-// 读端：读取序列号（偶数时数据稳定），带自旋上限防止写端崩溃后死锁
+// 读端：读取序列号（偶数时数据稳定），短暂自旋等待写入完成
 static LONG SeqLockReadBegin(volatile LONG* seq) {
     LONG s;
     int spin = 0;
     while ((s = InterlockedCompareExchange(seq, 0, 0)) & 1) {
-        if (++spin > 4096) return s;  // 写端可能已崩溃，放弃等待
+        if (++spin > 128) return s;  // 短暂自旋后返回，由调用者判断
         YieldProcessor();
     }
     MemoryBarrier();
     return s;
+}
+
+// 检查指定 PID 的进程是否仍在运行
+static bool IsProcessAlive(DWORD pid) {
+    if (pid == 0) return false;
+    HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+    if (!hProcess) return false;
+    DWORD exitCode;
+    BOOL ok = GetExitCodeProcess(hProcess, &exitCode);
+    CloseHandle(hProcess);
+    return ok && exitCode == STILL_ACTIVE;
 }
 
 // 读端：校验序列号未变化
@@ -227,8 +238,15 @@ bool MonitorDaemon::ReadState(MonitorSharedState& out) {
     for (int retry = 0; retry < 100; retry++) {
         LONG seq = SeqLockReadBegin(&sharedPtr_->seqCounter);
         if (seq & 1) {
-            // SeqLockReadBegin 超时返回了奇数（写端可能已崩溃）
-            // 仍拷贝一份尽力而为的快照
+            // seqCounter 为奇数：写端正在写入或已崩溃
+            // 通过查询进程存活状态区分，避免误判
+            if (IsProcessAlive(sharedPtr_->pid)) {
+                // 守护进程仍在运行，写入尚未完成，等待后重试
+                Sleep(1);
+                continue;
+            }
+            // 守护进程已退出，seqCounter 不会再恢复为偶数
+            // 拷贝一份尽力而为的快照
             memcpy(&out, (const void*)sharedPtr_, sizeof(MonitorSharedState));
             return true;
         }
@@ -239,6 +257,7 @@ bool MonitorDaemon::ReadState(MonitorSharedState& out) {
         YieldProcessor();
     }
     // 超过重试上限（不应发生），仍返回最后一次拷贝
+    memcpy(&out, (const void*)sharedPtr_, sizeof(MonitorSharedState));
     return true;
 }
 
