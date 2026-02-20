@@ -116,12 +116,18 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;$(ProjectDir)src\platform;$(ProjectDir)src\tui;$(ProjectDir)third_party;$(ProjectDir)deps\ftxui\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /arch:AVX2 /MP %(AdditionalOptions)</AdditionalOptions>
+      <!-- 安全加固：Control Flow Guard + Spectre 缓解 -->
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <SpectreMitigation>Spectre</SpectreMitigation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <UACExecutionLevel>RequireAdministrator</UACExecutionLevel>
       <UACUIAccess>false</UACUIAccess>
+      <!-- 安全加固：显式启用 ASLR + DEP + CFG -->
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
+      <DataExecutionPrevention>true</DataExecutionPrevention>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -154,6 +160,9 @@
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>$(ProjectDir)src\core;$(ProjectDir)src\commands;$(ProjectDir)src\fileRestore;$(ProjectDir)src\utils;$(ProjectDir)src\analysis;$(ProjectDir)src\platform;$(ProjectDir)src\tui;$(ProjectDir)third_party;$(ProjectDir)deps\ftxui\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>/utf-8 /arch:AVX2 /MP %(AdditionalOptions)</AdditionalOptions>
+      <!-- 安全加固：Control Flow Guard + Spectre 缓解 -->
+      <ControlFlowGuard>Guard</ControlFlowGuard>
+      <SpectreMitigation>Spectre</SpectreMitigation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -162,6 +171,11 @@
       <UACUIAccess>false</UACUIAccess>
       <AdditionalLibraryDirectories>$(ProjectDir)deps\ftxui\build\Release;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>ftxui-component.lib;ftxui-dom.lib;ftxui-screen.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <!-- 安全加固：显式启用 ASLR + DEP + 高熵VA + CFG + CET -->
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
+      <DataExecutionPrevention>true</DataExecutionPrevention>
+      <HighEntropyVA>true</HighEntropyVA>
+      <CETCompat>true</CETCompat>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -284,4 +298,17 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <!-- 可选：Authenticode 代码签名（发布用）
+       启用方式：MSBuild 命令行添加 /p:CodeSignCert="证书指纹"
+       例如：/p:CodeSignCert="AABBCCDD..." /p:CodeSignTimestamp="http://timestamp.digicert.com"
+  -->
+  <PropertyGroup>
+    <CodeSignCert Condition="'$(CodeSignCert)'==''"></CodeSignCert>
+    <CodeSignTimestamp Condition="'$(CodeSignTimestamp)'==''">http://timestamp.digicert.com</CodeSignTimestamp>
+  </PropertyGroup>
+  <Target Name="SignExecutable" AfterTargets="Build"
+          Condition="'$(Configuration)'=='Release' AND '$(CodeSignCert)'!=''">
+    <Exec Command="signtool sign /sha1 &quot;$(CodeSignCert)&quot; /fd SHA256 /tr &quot;$(CodeSignTimestamp)&quot; /td SHA256 &quot;$(TargetPath)&quot;" />
+    <Message Importance="high" Text="[签名] $(TargetPath) 已使用 Authenticode SHA-256 签名" />
+  </Target>
 </Project>

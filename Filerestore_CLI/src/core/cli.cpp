@@ -324,6 +324,11 @@ CLI::CLI() {
 }
 
 CLI::~CLI() {
-    CLIModule::UnregisterModules();
+    // 全局清理由 main() 退出前显式调用 CLI::Shutdown() 完成。
     delete analyzer;
+}
+
+void CLI::Shutdown() {
+    CLIModule::UnregisterModules();
+    initialized = false;
 }
