@@ -35,47 +35,49 @@ jobs:
     - name: Install CMake
       uses: lukka/get-cmake@latest
 
-    - name: Cache FTXUI build
+    - name: Cache FTXUI
       id: cache-ftxui
       uses: actions/cache@v4
       with:
-        path: Filerestore_CLI/deps/ftxui/build
-        key: ftxui-${{ runner.os }}-${{ hashFiles('Filerestore_CLI/deps/ftxui/CMakeLists.txt') }}
-        restore-keys: |
-          ftxui-${{ runner.os }}-
+        path: Filerestore_CLI/deps/ftxui
+        key: ftxui-${{ runner.os }}-v6.1.9
 
     - name: Clone and Build FTXUI
+      if: steps.cache-ftxui.outputs.cache-hit != 'true'
       shell: pwsh
       run: |
-        # Clone FTXUI
-        if (!(Test-Path "Filerestore_CLI/deps/ftxui")) {
-          Write-Host "Cloning FTXUI..."
-          git clone --depth 1 https://github.com/ArthurSonzogni/FTXUI.git Filerestore_CLI/deps/ftxui
-        }
+        Write-Host "Cloning FTXUI v6.1.9..."
+        git clone --depth 1 --branch v6.1.9 https://github.com/ArthurSonzogni/FTXUI.git Filerestore_CLI/deps/ftxui
 
-        # Build FTXUI (skip if cached)
-        if ("${{ steps.cache-ftxui.outputs.cache-hit }}" -ne "true") {
-          Write-Host "Building FTXUI..."
-          cd Filerestore_CLI/deps/ftxui
+        Write-Host "Building FTXUI..."
+        Set-Location Filerestore_CLI/deps/ftxui
+        New-Item -ItemType Directory -Force -Path build | Out-Null
+        Set-Location build
 
-          # Create build directory
-          New-Item -ItemType Directory -Force -Path build | Out-Null
-          cd build
+        cmake .. -G "Visual Studio 17 2022" -A x64
 
-          # Configure with CMake
-          cmake .. -G "Visual Studio 17 2022" -A x64
+        Write-Host "Building FTXUI Debug..."
+        cmake --build . --config Debug
 
-          # Build Debug
-          Write-Host "Building FTXUI Debug..."
-          cmake --build . --config Debug
+        Write-Host "Building FTXUI Release..."
+        cmake --build . --config Release
 
-          # Build Release
-          Write-Host "Building FTXUI Release..."
-          cmake --build . --config Release
+        Write-Host "FTXUI build completed"
 
-          Write-Host "FTXUI build completed"
+    - name: Verify FTXUI
+      shell: pwsh
+      run: |
+        if (Test-Path "Filerestore_CLI/deps/ftxui/include/ftxui/component/component.hpp") {
+          Write-Host "FTXUI headers OK"
         } else {
-          Write-Host "FTXUI restored from cache"
+          Write-Error "FTXUI headers missing"
+          exit 1
+        }
+        if (Test-Path "Filerestore_CLI/deps/ftxui/build/Release/ftxui-component.lib") {
+          Write-Host "FTXUI libs OK"
+        } else {
+          Write-Error "FTXUI Release libs missing"
+          exit 1
         }
 
     - name: Cache ONNX Runtime
