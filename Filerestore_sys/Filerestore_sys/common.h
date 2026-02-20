@@ -31,6 +31,19 @@ extern "C" {
 #define MAX_FILE_PATH_CHARS     520
 #define DRIVER_VERSION_STRING   "1.0.0"
 
+/* Connection authentication */
+#define FILERESTORE_CONNECTION_MAGIC     0x46524D43   /* 'FRMC' */
+#define FILERESTORE_PROTOCOL_VERSION     1
+#define FILERESTORE_CLIENT_IMAGE_NAME    L"\\Filerestore_CLI.exe"
+
+/* Connection context (user -> kernel, passed via FilterConnectCommunicationPort) */
+typedef struct _CONNECTION_CONTEXT {
+    ULONG Magic;            /* must be FILERESTORE_CONNECTION_MAGIC */
+    ULONG Version;          /* must be FILERESTORE_PROTOCOL_VERSION */
+    ULONG ProcessId;        /* caller PID (kernel can cross-validate) */
+    ULONG Reserved;         /* alignment padding */
+} CONNECTION_CONTEXT, *PCONNECTION_CONTEXT;
+
 /* ===== Structures ===== */
 
 /* LCN (Logical Cluster Number) entry for file extent mapping */

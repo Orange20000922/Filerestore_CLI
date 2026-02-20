@@ -8,7 +8,7 @@
 #include <fltKernel.h>
 #include <ntstrsafe.h>
 #include "common.h"
-
+#include <ntddk.h>
 /* Pool tag: 'MsFR' (stored little-endian as 'RFsM') */
 #define POOL_TAG                'RFsM'
 

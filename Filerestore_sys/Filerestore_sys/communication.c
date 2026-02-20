@@ -70,6 +70,66 @@ SetupCommunicationPort(VOID)
     return status;
 }
 
+/* ===== VerifyCallerImage ===== */
+
+/* ZwQueryInformationProcess is not declared in standard WDK headers */
+NTSYSAPI NTSTATUS NTAPI ZwQueryInformationProcess(
+    _In_ HANDLE ProcessHandle,
+    _In_ PROCESSINFOCLASS ProcessInformationClass,
+    _Out_writes_bytes_(ProcessInformationLength) PVOID ProcessInformation,
+    _In_ ULONG ProcessInformationLength,
+    _Out_opt_ PULONG ReturnLength
+    );
+
+/*
+ * VerifyCallerImage - Verify the calling process image name matches the
+ * expected client executable. Uses ZwQueryInformationProcess(ProcessImageFileName)
+ * to get the NT path, then checks if the path suffix matches
+ * FILERESTORE_CLIENT_IMAGE_NAME.
+ */
+static NTSTATUS VerifyCallerImage(VOID)
+{
+    NTSTATUS status;
+    UCHAR buffer[512];
+    ULONG returnedLength;
+    PUNICODE_STRING imagePath;
+    UNICODE_STRING expectedSuffix;
+    UNICODE_STRING actualSuffix;
+    USHORT suffixBytes;
+
+    status = ZwQueryInformationProcess(
+        NtCurrentProcess(),
+        ProcessImageFileName,       /* = 27 */
+        buffer,
+        sizeof(buffer),
+        &returnedLength
+        );
+    if (!NT_SUCCESS(status)) {
+        return status;
+    }
+
+    imagePath = (PUNICODE_STRING)buffer;
+    RtlInitUnicodeString(&expectedSuffix, FILERESTORE_CLIENT_IMAGE_NAME);
+
+    suffixBytes = expectedSuffix.Length;
+    if (imagePath->Length < suffixBytes) {
+        return STATUS_ACCESS_DENIED;
+    }
+
+    /* Extract the suffix of the image path matching the expected length */
+    actualSuffix.Buffer = (PWCH)((PUCHAR)imagePath->Buffer +
+                                  imagePath->Length - suffixBytes);
+    actualSuffix.Length = suffixBytes;
+    actualSuffix.MaximumLength = suffixBytes;
+
+    /* Case-insensitive comparison */
+    if (RtlCompareUnicodeString(&actualSuffix, &expectedSuffix, TRUE) != 0) {
+        return STATUS_ACCESS_DENIED;
+    }
+
+    return STATUS_SUCCESS;
+}
+
 /* ===== ConnectNotifyCallback ===== */
 
 static NTSTATUS
@@ -81,9 +141,26 @@ ConnectNotifyCallback(
     _Outptr_result_maybenull_ PVOID *ConnectionCookie
     )
 {
+    PCONNECTION_CONTEXT ctx;
+
     UNREFERENCED_PARAMETER(ServerPortCookie);
-    UNREFERENCED_PARAMETER(ConnectionContext);
-    UNREFERENCED_PARAMETER(SizeOfContext);
+
+    /* 1. Validate connection context (handshake) */
+    if (ConnectionContext == NULL ||
+        SizeOfContext < sizeof(CONNECTION_CONTEXT)) {
+        return STATUS_ACCESS_DENIED;
+    }
+
+    ctx = (PCONNECTION_CONTEXT)ConnectionContext;
+    if (ctx->Magic != FILERESTORE_CONNECTION_MAGIC ||
+        ctx->Version != FILERESTORE_PROTOCOL_VERSION) {
+        return STATUS_ACCESS_DENIED;
+    }
+
+    /* 2. Verify caller process image name */
+    if (!NT_SUCCESS(VerifyCallerImage())) {
+        return STATUS_ACCESS_DENIED;
+    }
 
     g_Context.ClientPort = ClientPort;
     *ConnectionCookie = NULL;
