@@ -21,11 +21,11 @@
 
 ---
 
-## 最新更新 (2026-02-19)
+## 最新更新 (2026-02-20)
 
-### v1.0.0 - USN 精准恢复、实时删除监控与内核驱动桥接
+### v1.0.0 - USN 精准恢复、实时删除监控、坏簇过滤与内核驱动桥接
 
-本次为大版本更新，新增 USN 精准恢复体系、实时删除监控守护进程、MFT 快照存储、内核驱动桥接（实验性），并全面优化 TUI 界面的进度显示和交互体验。
+本次为大版本更新，新增 USN 精准恢复体系、集中式坏簇过滤读取器、实时删除监控守护进程、MFT 快照存储、内核驱动桥接（实验性），并全面优化 TUI 界面的进度显示和交互体验。
 
 ---
 
@@ -129,6 +129,28 @@ recover C myfile.docx D:\recovered\
 - **MFTReader**：优化簇读取性能
 - **代码重构**：移除废弃的 `cmd.cpp`，统一命令注册架构
 - **多项 Bug 修复**
+
+---
+
+#### 9. 集中式坏簇过滤（ClusterFilteredReader）
+
+新增 `ClusterFilteredReader` 工具类，在数据读取阶段对每个簇进行覆写检测和过滤：
+
+- **三路径统一**：USN 定点恢复、签名雕刻恢复、API 恢复三条路径全部使用同一个过滤器
+- **逐簇覆写检测**：复用 OverwriteDetector 的 $Bitmap + 熵分析 + NVMe 多线程基础设施
+- **坏簇零填充**：被覆盖的簇以零字节填充，保持偏移对齐，不破坏文件结构
+- **格式感知截断**：识别 PNG IEND / ZIP EOCD / JPEG FFD9 / PDF %%EOF 并截断尾部垃圾数据
+- **安全阈值**：截断点不得小于文件大小的 50%，防止格式解析器被零字节误导导致灾难性截断
+- **簇健康报告**：每次恢复输出 `ClusterHealthReport`，包含健康百分比、检测耗时、截断信息
+- **状态自动降级**：检测到覆写簇时自动将恢复状态标记为 `PARTIAL_RECOVERY`
+
+```bash
+# 恢复输出示例（有坏簇时）
+=== 部分恢复 ===
+文件大小: 1048576 bytes
+已保存到: D:\recovered\test.docx
+簇健康: 850/1000 (85.0%) | 覆写簇: 150 | 检测: 12.3ms
+```
 
 ---
 
@@ -356,6 +378,7 @@ Filerestore_CLI/
 │   ├── commands/                   # 命令实现
 │   │   └── UsnRecoverCommands.cpp  # USN 恢复命令 (v1.0.0+)
 │   ├── fileRestore/               # 文件恢复核心
+│   │   ├── ClusterFilteredReader.*# 集中式坏簇过滤读取器 (v1.0.0+)
 │   │   ├── MFTSnapshotStore.*     # MFT 快照存储 (v1.0.0+)
 │   │   ├── UsnDeleteMonitor.*     # USN 删除监控 (v1.0.0+)
 │   │   ├── MonitorDaemon.*        # 监控守护进程 (v1.0.0+)
@@ -384,17 +407,20 @@ Filerestore_sys/
 
 ## 更新日志
 
-### v1.0.0 (2026-02-19)
+### v1.0.0 (2026-02-20)
 - **新增** USN 精准恢复体系（`usnlist`、`usnrecover`、`recover` 命令）
 - **新增** MFT 快照存储，删除瞬间捕获完整元数据
 - **新增** USN 删除监控后台守护进程
 - **新增** 监控守护进程管理器（共享内存 IPC、Windows 自启动）
 - **新增** 内核驱动桥接客户端（实验性，minifilter 通信）
+- **新增** 集中式坏簇过滤读取器（ClusterFilteredReader）
 - **新增** FileCarver 全部扫描函数 TUI 进度同步
+- **改进** 三条恢复路径统一使用簇过滤，输出簇健康报告
 - **改进** MFT 缓存 v2（序列号验证、全局单例、有效期检查）
 - **改进** TUI 多视图模式（参数表单、扫描进度、结果表格）
 - **改进** UsnTargetedRecovery 批量操作和 MFT 富化
 - **重构** 统一命令注册架构，移除废弃 cmd.cpp
+- **修复** JPEG 格式截断使用前向搜索导致误截断到缩略图的问题
 - **修复** 多项已知问题
 
 ### v0.3.2 (2026-02-07)
@@ -420,6 +446,9 @@ Filerestore_sys/
 - [FTXUI CI 修复](document/FTXUI_CI_FIX.md)
 - [依赖检查报告](document/DEPENDENCY_CHECK.md)
 - [单元测试文档](Filerestore_CLI_Tests/README.md)
+- [贡献指南](CONTRIBUTING.md)
+- [安全策略](SECURITY.md)
+- [更新日志](CHANGELOG.md)
 
 ---
 
@@ -463,11 +492,11 @@ Filerestore_sys/
 
 ---
 
-## Latest Update (2026-02-19)
+## Latest Update (2026-02-20)
 
-### v1.0.0 - USN Targeted Recovery, Real-time Deletion Monitoring & Kernel Driver Bridge
+### v1.0.0 - USN Targeted Recovery, Real-time Deletion Monitoring, Bad Cluster Filtering & Kernel Driver Bridge
 
-Major version update with USN-based targeted recovery, real-time deletion monitoring daemon, MFT snapshot storage, kernel driver bridge (experimental), and comprehensive TUI progress integration.
+Major version update with USN-based targeted recovery, centralized bad cluster filtering reader, real-time deletion monitoring daemon, MFT snapshot storage, kernel driver bridge (experimental), and comprehensive TUI progress integration.
 
 ---
 
@@ -569,6 +598,28 @@ Optional connection to the FileRestoreMon minifilter driver:
 - **MFTReader**: Optimized cluster read performance
 - **Code Refactoring**: Removed deprecated `cmd.cpp`, unified command registration
 - **Multiple Bug Fixes**
+
+---
+
+#### 9. Centralized Bad Cluster Filtering (ClusterFilteredReader)
+
+New `ClusterFilteredReader` utility class performs per-cluster overwrite detection and filtering at the data reading stage:
+
+- **Unified across all 3 recovery paths**: USN targeted recovery, signature carving, and API recovery all use the same filter
+- **Per-cluster overwrite detection**: Reuses OverwriteDetector's $Bitmap + entropy analysis + NVMe multi-threading infrastructure
+- **Zero-fill bad clusters**: Overwritten clusters are zero-filled to maintain offset alignment without breaking file structure
+- **Format-aware truncation**: Detects PNG IEND / ZIP EOCD / JPEG FFD9 / PDF %%EOF and truncates trailing garbage
+- **Safety threshold**: Truncation point must exceed 50% of file size, preventing catastrophic truncation from zero-byte-confused format parsers
+- **Cluster health report**: Each recovery outputs a `ClusterHealthReport` with health percentage, detection time, and truncation info
+- **Automatic status downgrade**: Recovery status is set to `PARTIAL_RECOVERY` when overwritten clusters are detected
+
+```bash
+# Recovery output example (with bad clusters)
+=== Partial Recovery ===
+File size: 1048576 bytes
+Saved to: D:\recovered\test.docx
+Cluster health: 850/1000 (85.0%) | Overwritten: 150 | Detection: 12.3ms
+```
 
 ---
 
@@ -796,6 +847,7 @@ Filerestore_CLI/
 │   ├── commands/                   # Command implementations
 │   │   └── UsnRecoverCommands.cpp  # USN recovery commands (v1.0.0+)
 │   ├── fileRestore/               # Core file recovery
+│   │   ├── ClusterFilteredReader.*# Centralized bad cluster filter (v1.0.0+)
 │   │   ├── MFTSnapshotStore.*     # MFT snapshot storage (v1.0.0+)
 │   │   ├── UsnDeleteMonitor.*     # USN delete monitor (v1.0.0+)
 │   │   ├── MonitorDaemon.*        # Monitor daemon (v1.0.0+)
@@ -824,17 +876,20 @@ Filerestore_sys/
 
 ## Changelog
 
-### v1.0.0 (2026-02-19)
+### v1.0.0 (2026-02-20)
 - **Added** USN targeted recovery system (`usnlist`, `usnrecover`, `recover` commands)
 - **Added** MFT snapshot storage, capturing complete metadata at deletion time
 - **Added** USN delete monitor background daemon
 - **Added** Monitor daemon manager (shared memory IPC, Windows auto-start)
 - **Added** Kernel driver bridge client (experimental, minifilter communication)
+- **Added** Centralized bad cluster filtered reader (ClusterFilteredReader)
 - **Added** FileCarver progress sync to TUI for all scan functions
+- **Improved** All 3 recovery paths now use unified cluster filtering with health reports
 - **Improved** MFT cache v2 (sequence number validation, global singleton, expiry check)
 - **Improved** TUI multi-view modes (parameter forms, scan progress, results table)
 - **Improved** UsnTargetedRecovery batch operations and MFT enrichment
 - **Refactored** Unified command registration, removed deprecated cmd.cpp
+- **Fixed** JPEG format truncation using forward search incorrectly truncating to thumbnail
 - **Fixed** Multiple known issues
 
 ### v0.3.2 (2026-02-07)
@@ -860,6 +915,9 @@ Filerestore_sys/
 - [FTXUI CI Fix](document/FTXUI_CI_FIX.md)
 - [Dependency Check Report](document/DEPENDENCY_CHECK.md)
 - [Unit Test Documentation](Filerestore_CLI_Tests/README.md)
+- [Contributing Guide](CONTRIBUTING.md)
+- [Security Policy](SECURITY.md)
+- [Changelog](CHANGELOG.md)
 
 ---
 
