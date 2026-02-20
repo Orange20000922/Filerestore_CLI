@@ -149,6 +149,10 @@ public:
     // 批量检测多个簇
     vector<ClusterStatus> CheckClusters(const vector<ULONGLONG>& clusterNumbers);
 
+    // 直接通过 Data Runs 检测覆盖（供 ClusterFilteredReader 使用）
+    OverwriteDetectionResult CheckDataRuns(
+        const vector<pair<ULONGLONG, ULONGLONG>>& dataRuns);
+
     // 获取可读的覆盖检测报告
     string GetDetectionReport(const OverwriteDetectionResult& result);
 };

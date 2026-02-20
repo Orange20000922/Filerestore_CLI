@@ -182,6 +182,9 @@
     <ClCompile Include="src\fileRestore\OverwriteDetectionThreadPool.cpp">
       <Filter>源文件\FileRestore\Detection</Filter>
     </ClCompile>
+    <ClCompile Include="src\fileRestore\ClusterFilteredReader.cpp">
+      <Filter>源文件\FileRestore\Detection</Filter>
+    </ClCompile>
     <!-- FileRestore\ML - 机器学习 -->
     <ClCompile Include="src\fileRestore\MLClassifier.cpp">
       <Filter>源文件\FileRestore\ML</Filter>
@@ -356,6 +359,9 @@
       <Filter>头文件\FileRestore\Detection</Filter>
     </ClInclude>
     <ClInclude Include="src\fileRestore\OverwriteDetectionThreadPool.h">
+      <Filter>头文件\FileRestore\Detection</Filter>
+    </ClInclude>
+    <ClInclude Include="src\fileRestore\ClusterFilteredReader.h">
       <Filter>头文件\FileRestore\Detection</Filter>
     </ClInclude>
     <!-- FileRestore\ML - 机器学习 -->

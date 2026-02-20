@@ -131,9 +131,11 @@ struct RecoveryResult {
     std::string outputPath;             // 输出文件路径
     FileSize bytesRecovered;            // 恢复的字节数
     double overwritePercentage;         // 覆盖百分比
+    double clusterHealthPercentage;     // 簇健康百分比
 
     RecoveryResult()
         : success(false), bytesRecovered(0), overwritePercentage(0.0)
+        , clusterHealthPercentage(100.0)
     {}
 };
 

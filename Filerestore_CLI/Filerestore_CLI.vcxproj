@@ -196,6 +196,7 @@
     <ClCompile Include="src\fileRestore\MFTReader.cpp" />
     <ClCompile Include="src\fileRestore\OverwriteDetectionThreadPool.cpp" />
     <ClCompile Include="src\fileRestore\OverwriteDetector.cpp" />
+    <ClCompile Include="src\fileRestore\ClusterFilteredReader.cpp" />
     <ClCompile Include="src\fileRestore\PathResolver.cpp" />
     <ClCompile Include="src\utils\ProgressBar.cpp" />
     <ClCompile Include="src\fileRestore\SignatureScanThreadPool.cpp" />
@@ -250,6 +251,7 @@
     <ClInclude Include="src\fileRestore\MFTStructures.h" />
     <ClInclude Include="src\fileRestore\OverwriteDetectionThreadPool.h" />
     <ClInclude Include="src\fileRestore\OverwriteDetector.h" />
+    <ClInclude Include="src\fileRestore\ClusterFilteredReader.h" />
     <ClInclude Include="src\fileRestore\PathResolver.h" />
     <ClInclude Include="src\utils\ProgressBar.h" />
     <ClInclude Include="src\fileRestore\SignatureScanThreadPool.h" />

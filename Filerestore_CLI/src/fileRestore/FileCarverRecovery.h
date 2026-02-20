@@ -7,6 +7,7 @@
 #include "FileFormatUtils.h"
 #include "CarvedFileTypes.h"
 #include "FileIntegrityValidator.h"
+#include "ClusterFilteredReader.h"
 
 using namespace std;
 
@@ -45,7 +46,8 @@ public:
     // ==================== 核心恢复方法 ====================
 
     // 恢复 carved 文件到指定路径
-    bool RecoverCarvedFile(const CarvedFileInfo& info, const string& outputPath);
+    bool RecoverCarvedFile(const CarvedFileInfo& info, const string& outputPath,
+                           ClusterHealthReport* healthReport = nullptr);
 
     // 恢复前精细化：精确计算文件大小、完整性验证、置信度重估
     bool RefineCarvedFileInfo(CarvedFileInfo& info, bool verbose = true);

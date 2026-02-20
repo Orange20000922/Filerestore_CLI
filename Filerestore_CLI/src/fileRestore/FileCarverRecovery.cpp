@@ -1,5 +1,6 @@
 #include "FileCarverRecovery.h"
 #include "MFTReader.h"
+#include "ClusterFilteredReader.h"
 #include "Logger.h"
 #include <iostream>
 #include <iomanip>
@@ -112,18 +113,30 @@ double FileCarverRecovery::ValidateFileOptimized(const BYTE* data, size_t dataSi
 // 恢复 carved 文件
 // ============================================================================
 
-bool FileCarverRecovery::RecoverCarvedFile(const CarvedFileInfo& info, const string& outputPath) {
+bool FileCarverRecovery::RecoverCarvedFile(const CarvedFileInfo& info, const string& outputPath,
+                                            ClusterHealthReport* healthReport) {
     cout << "Recovering carved file..." << endl;
     cout << "  Start LCN: " << info.startLCN << endl;
     cout << "  Offset: " << info.startOffset << endl;
     cout << "  Size: " << info.fileSize << " bytes" << endl;
     cout << "  Type: " << info.description << endl;
 
+    // 使用 ClusterFilteredReader 进行过滤读取
+    ClusterFilteredReader filteredReader(reader_);
+    ClusterHealthReport health;
+    wstring wFileName(info.extension.begin(), info.extension.end());
+    // 加上点号让扩展名提取正确
+    wFileName = L"file." + wFileName;
+
     vector<BYTE> fileData;
-    if (!ExtractFile(info.startLCN, info.startOffset, info.fileSize, fileData)) {
+    if (!filteredReader.ReadContiguous(info.startLCN, info.startOffset,
+                                        info.fileSize, wFileName, fileData, health)) {
         cout << "Failed to extract file data." << endl;
+        if (healthReport) *healthReport = health;
         return false;
     }
+
+    if (healthReport) *healthReport = health;
 
     cout << "Extracted " << fileData.size() << " bytes" << endl;
 

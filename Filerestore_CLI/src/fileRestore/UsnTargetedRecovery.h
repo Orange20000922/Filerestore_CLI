@@ -8,6 +8,7 @@
 #include "MFTReader.h"
 #include "MFTParser.h"
 #include "CarvedFileTypes.h"
+#include "ClusterFilteredReader.h"
 
 using namespace std;
 
@@ -68,13 +69,17 @@ struct UsnTargetedRecoveryResult {
     wstring recoveredPath;                              // 恢复后的文件路径
     ULONGLONG recoveredSize;                            // 恢复的字节数
 
+    // 簇健康信息
+    ClusterHealthReport clusterHealth;                  // 簇健康报告
+    bool usedClusterFiltering = false;                  // 是否使用了簇过滤
+
     // 构造函数
     UsnTargetedRecoveryResult() :
         mftRecordNumber(0), expectedSequence(0), actualSequence(0),
         sequenceMatched(false), totalClusters(0), fileSize(0),
         isResident(false), signatureMatched(false), confidence(0.0),
         status(UsnRecoveryStatus::UNKNOWN_ERROR), canRecover(false),
-        recoveredSize(0) {}
+        recoveredSize(0), usedClusterFiltering(false) {}
 };
 
 // USN 文件列表项（带验证状态）

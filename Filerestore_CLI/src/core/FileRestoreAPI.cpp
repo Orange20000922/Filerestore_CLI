@@ -7,6 +7,7 @@
 #include "FileCarver.h"
 #include "OverwriteDetector.h"
 #include "CarvedFileTypes.h"
+#include "ClusterFilteredReader.h"
 #include <Windows.h>
 #include <sstream>
 #include <iomanip>
@@ -521,12 +522,15 @@ Result<RecoveryResult> FileRestoreAPI::RecoverCarvedFile(
         );
     }
 
-    // 读取文件数据
-    ULONGLONG bytesPerCluster = pImpl->reader->GetBytesPerCluster();
-    ULONGLONG clustersNeeded = (file.fileSize + file.offsetInCluster + bytesPerCluster - 1) / bytesPerCluster;
+    // 使用 ClusterFilteredReader 进行过滤读取
+    ClusterFilteredReader filteredReader(pImpl->reader.get());
+    ClusterHealthReport health;
+    std::wstring wExt(file.extension.begin(), file.extension.end());
+    std::wstring wFileName = L"file." + wExt;
 
-    std::vector<BYTE> buffer;
-    if (!pImpl->reader->ReadClusters(file.startCluster, clustersNeeded, buffer)) {
+    std::vector<BYTE> fileData;
+    if (!filteredReader.ReadContiguous(file.startCluster, file.offsetInCluster,
+                                        file.fileSize, wFileName, fileData, health)) {
         return Result<RecoveryResult>::Failure(
             ErrorCode::IOReadFailed,
             "Failed to read file data"
@@ -557,15 +561,15 @@ Result<RecoveryResult> FileRestoreAPI::RecoverCarvedFile(
     DWORD bytesWritten;
     BOOL writeSuccess = WriteFile(
         hFile,
-        buffer.data() + file.offsetInCluster,
-        (DWORD)file.fileSize,
+        fileData.data(),
+        (DWORD)fileData.size(),
         &bytesWritten,
         NULL
     );
 
     CloseHandle(hFile);
 
-    if (!writeSuccess || bytesWritten != file.fileSize) {
+    if (!writeSuccess || bytesWritten != fileData.size()) {
         return Result<RecoveryResult>::Failure(
             ErrorCode::IOWriteFailed,
             "Failed to write file data"
@@ -575,8 +579,9 @@ Result<RecoveryResult> FileRestoreAPI::RecoverCarvedFile(
     RecoveryResult result;
     result.success = true;
     result.outputPath = outputPath;
-    result.bytesRecovered = file.fileSize;
-    result.overwritePercentage = 0.0;
+    result.bytesRecovered = fileData.size();
+    result.clusterHealthPercentage = health.healthPercentage;
+    result.overwritePercentage = 100.0 - health.healthPercentage;
 
     return Result<RecoveryResult>::Success(std::move(result));
 }

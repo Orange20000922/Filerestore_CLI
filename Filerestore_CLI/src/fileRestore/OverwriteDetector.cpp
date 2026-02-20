@@ -1332,3 +1332,69 @@ OverwriteDetectionResult OverwriteDetector::DetectOverwrite(const vector<BYTE>& 
 
     return result;
 }
+
+// ==================== CheckDataRuns ====================
+// 直接通过 Data Runs 执行覆盖检测（供 ClusterFilteredReader 使用）
+OverwriteDetectionResult OverwriteDetector::CheckDataRuns(
+    const vector<pair<ULONGLONG, ULONGLONG>>& dataRuns) {
+
+    auto startTime = high_resolution_clock::now();
+
+    OverwriteDetectionResult result;
+    result.totalClusters = 0;
+    result.overwrittenClusters = 0;
+    result.availableClusters = 0;
+    result.sampledClusters = 0;
+    result.overwritePercentage = 0.0;
+    result.isFullyAvailable = false;
+    result.isPartiallyAvailable = false;
+    result.usedSampling = false;
+    result.usedMultiThreading = false;
+    result.threadCount = 1;
+    result.detectedStorageType = GetStorageType();
+    result.detectionTimeMs = 0.0;
+
+    // 计算总簇数
+    for (const auto& run : dataRuns) {
+        result.totalClusters += run.second;
+    }
+
+    if (result.totalClusters == 0) {
+        result.isFullyAvailable = true;
+        return result;
+    }
+
+    LOG_INFO_FMT("CheckDataRuns: 检测 %llu 个簇", result.totalClusters);
+
+    // 使用批量检测
+    vector<ClusterStatus> clusterStatuses = BatchCheckClusters(dataRuns);
+    result.sampledClusters = clusterStatuses.size();
+
+    // 统计结果
+    for (const auto& status : clusterStatuses) {
+        if (status.isOverwritten) {
+            result.overwrittenClusters++;
+        } else {
+            result.availableClusters++;
+        }
+    }
+
+    // 计算覆盖百分比
+    if (result.totalClusters > 0) {
+        result.overwritePercentage = (double)result.overwrittenClusters / result.totalClusters * 100.0;
+    }
+
+    result.isFullyAvailable = (result.overwrittenClusters == 0);
+    result.isPartiallyAvailable = (result.availableClusters > 0 && result.overwrittenClusters > 0);
+    result.clusterStatuses = clusterStatuses;
+
+    auto endTime = high_resolution_clock::now();
+    result.detectionTimeMs = duration_cast<milliseconds>(endTime - startTime).count();
+
+    LOG_INFO_FMT("CheckDataRuns 完成: 总计=%llu, 可用=%llu, 已覆盖=%llu (%.2f%%), 耗时 %.2f ms",
+                 result.totalClusters, result.availableClusters,
+                 result.overwrittenClusters, result.overwritePercentage,
+                 result.detectionTimeMs);
+
+    return result;
+}
