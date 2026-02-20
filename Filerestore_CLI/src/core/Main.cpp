@@ -280,6 +280,7 @@ int main(int argc, char* argv[])
 
 	// ========== 清理 ==========
 
+	CLI::Shutdown();  // 释放全局命令注册表（必须在 cli 析构前或之后均可）
 	LOG_INFO("Application shutting down...");
 	logger.Close();
 	CrashHandler::Uninstall();

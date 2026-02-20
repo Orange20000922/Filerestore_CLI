@@ -384,10 +384,10 @@ void CarveCommand::Execute(string command) {
 					auto result = recovery.RecoverZipWithEOCDScan(info.startLCN, outputPath, config);
 					if (result.success) {
 						recoveredCount++;
-					} else if (recovery.RecoverCarvedFile(info, outputPath)) {
+					} else if (recovery.RecoverCarvedFile(info, outputPath, nullptr)) {
 						recoveredCount++;
 					}
-				} else if (recovery.RecoverCarvedFile(info, outputPath)) {
+				} else if (recovery.RecoverCarvedFile(info, outputPath, nullptr)) {
 					recoveredCount++;
 				}
 
@@ -609,10 +609,15 @@ void CarveRecoverCommand::Execute(string command) {
 			// 普通恢复模式
 			cout << "Using standard recovery mode..." << endl;
 
-			if (recovery.RecoverCarvedFile(info, outputPath)) {
+			ClusterHealthReport carveHealth;
+			if (recovery.RecoverCarvedFile(info, outputPath, &carveHealth)) {
 				success = true;
 				cout << "\n=== Recovery Successful ===" << endl;
 				cout << "File saved to: " << outputPath << endl;
+				if (carveHealth.overwrittenClusters > 0) {
+					cout << "Cluster health: " << fixed << setprecision(1)
+					     << carveHealth.healthPercentage << "% healthy" << endl;
+				}
 
 				// 如果是 ZIP 且启用了 CRC 验证
 				if (info.extension == "zip" && verifyCRC) {
@@ -1960,22 +1965,33 @@ void CarveRecoverPageCommand::Execute(string command) {
 									pageRecovered++;
 								} else {
 									// EOCD扫描失败，回退到普通恢复
-									if (recovery.RecoverCarvedFile(info, outputPath)) {
-										cout << "  [" << pageIdx << "] Recovered (fallback): " << filename << " [NO EOCD]" << endl;
+									ClusterHealthReport batchHealth;
+									if (recovery.RecoverCarvedFile(info, outputPath, &batchHealth)) {
+										cout << "  [" << pageIdx << "] Recovered (fallback): " << filename << " [NO EOCD]";
+										if (batchHealth.overwrittenClusters > 0) {
+											cout << " [" << fixed << setprecision(1) << batchHealth.healthPercentage << "% healthy]";
+										}
+										cout << endl;
 										pageRecovered++;
 									} else {
 										cout << "  [" << pageIdx << "] FAILED to recover" << endl;
 									}
 								}
-							} else if (recovery.RecoverCarvedFile(info, outputPath)) {
-								cout << "  [" << pageIdx << "] Recovered: " << filename;
-								if (forceMode && info.confidence < 0.5) {
-									cout << " [FORCED]";
-								}
-								cout << endl;
-								pageRecovered++;
 							} else {
-								cout << "  [" << pageIdx << "] FAILED to recover" << endl;
+								ClusterHealthReport batchHealth;
+								if (recovery.RecoverCarvedFile(info, outputPath, &batchHealth)) {
+									cout << "  [" << pageIdx << "] Recovered: " << filename;
+									if (forceMode && info.confidence < 0.5) {
+										cout << " [FORCED]";
+									}
+									if (batchHealth.overwrittenClusters > 0) {
+										cout << " [" << fixed << setprecision(1) << batchHealth.healthPercentage << "% healthy]";
+									}
+									cout << endl;
+									pageRecovered++;
+								} else {
+									cout << "  [" << pageIdx << "] FAILED to recover" << endl;
+								}
 							}
 						}
 

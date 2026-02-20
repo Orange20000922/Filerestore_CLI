@@ -32,6 +32,7 @@ public:
     static void ParseDynamicCommands(const string& modulename);
     static void ParseDynamicCommands();
     static void RegisterFromRegistry();  // 从 CommandRegistry 自动注册命令
+    static void Shutdown();              // 程序退出前清理全局命令注册表
     static const vector<vector<string>>& GetCommands() { return commands; }
     static void SetShouldExit(bool value) { shouldExit = value; }
     static bool ShouldExit() { return shouldExit; }

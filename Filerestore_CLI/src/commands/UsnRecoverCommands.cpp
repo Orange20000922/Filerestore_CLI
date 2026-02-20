@@ -169,7 +169,7 @@ void UsnListCommand::Execute(string command) {
         string fileNameNarrow = UsnTargetedRecovery::WideToNarrow(fileName);
         cout << setw(40) << fileNameNarrow;
 
-        // 文件大小（从 MFT 获取，仅当 MFT 未复用时有效）
+        // 文件大小（从 MFT 获取）
         if (item.usnInfo.MftInfoValid && item.usnInfo.FileSize > 0) {
             string sizeStr = UsnTargetedRecovery::WideToNarrow(
                 UsnTargetedRecovery::FormatFileSize(item.usnInfo.FileSize));
@@ -771,11 +771,26 @@ void RecoverCommand::Execute(string command) {
                     recResult.status == UsnRecoveryStatus::RESIDENT_DATA ||
                     recResult.status == UsnRecoveryStatus::PARTIAL_RECOVERY) {
                     string path = UsnTargetedRecovery::WideToNarrow(recResult.recoveredPath);
-                    cout << "\n=== 恢复成功 ===" << endl;
+                    if (recResult.usedClusterFiltering && recResult.clusterHealth.overwrittenClusters > 0) {
+                        cout << "\n=== 部分恢复 ===" << endl;
+                    } else {
+                        cout << "\n=== 恢复成功 ===" << endl;
+                    }
                     cout << "文件大小: " << recResult.recoveredSize << " bytes" << endl;
                     cout << "已保存到: " << path << endl;
                     if (recResult.signatureMatched) {
                         cout << "签名验证: 通过 (" << recResult.detectedType << ")" << endl;
+                    }
+                    if (recResult.usedClusterFiltering && recResult.clusterHealth.overwrittenClusters > 0) {
+                        cout << "簇健康: " << recResult.clusterHealth.goodClusters << "/"
+                             << recResult.clusterHealth.totalClusters << " ("
+                             << fixed << setprecision(1) << recResult.clusterHealth.healthPercentage
+                             << "%) | 覆写簇: " << recResult.clusterHealth.overwrittenClusters
+                             << " | 检测: " << fixed << setprecision(1)
+                             << recResult.clusterHealth.detectionTimeMs << "ms" << endl;
+                        if (recResult.clusterHealth.formatTruncated) {
+                            cout << "格式截断: 移除了 " << recResult.clusterHealth.truncatedBytes << " bytes" << endl;
+                        }
                     }
                     return;
                 } else {
@@ -807,9 +822,21 @@ void RecoverCommand::Execute(string command) {
                 recResult.status == UsnRecoveryStatus::RESIDENT_DATA ||
                 recResult.status == UsnRecoveryStatus::PARTIAL_RECOVERY) {
                 string path = UsnTargetedRecovery::WideToNarrow(recResult.recoveredPath);
-                cout << "\n=== 恢复成功 ===" << endl;
+                if (recResult.usedClusterFiltering && recResult.clusterHealth.overwrittenClusters > 0) {
+                    cout << "\n=== 部分恢复 ===" << endl;
+                } else {
+                    cout << "\n=== 恢复成功 ===" << endl;
+                }
                 cout << "文件大小: " << recResult.recoveredSize << " bytes" << endl;
                 cout << "已保存到: " << path << endl;
+                if (recResult.usedClusterFiltering && recResult.clusterHealth.overwrittenClusters > 0) {
+                    cout << "簇健康: " << recResult.clusterHealth.goodClusters << "/"
+                         << recResult.clusterHealth.totalClusters << " ("
+                         << fixed << setprecision(1) << recResult.clusterHealth.healthPercentage
+                         << "%) | 覆写簇: " << recResult.clusterHealth.overwrittenClusters
+                         << " | 检测: " << fixed << setprecision(1)
+                         << recResult.clusterHealth.detectionTimeMs << "ms" << endl;
+                }
                 return;
             }
 
@@ -1099,16 +1126,26 @@ void RecoverCommand::Execute(string command) {
                 cout << "CRC校验: " << (result.crcValid ? "通过" : "警告") << endl;
             } else {
                 // 回退到普通恢复
-                recovered = carveRecovery.RecoverCarvedFile(selected.carveInfo, outputPath);
+                ClusterHealthReport carveHealth;
+                recovered = carveRecovery.RecoverCarvedFile(selected.carveInfo, outputPath, &carveHealth);
                 if (recovered) {
                     cout << "恢复成功 (无EOCD，使用估算大小)" << endl;
+                    if (carveHealth.overwrittenClusters > 0) {
+                        cout << "簇健康: " << fixed << setprecision(1)
+                             << carveHealth.healthPercentage << "%" << endl;
+                    }
                 }
             }
         } else {
-            recovered = carveRecovery.RecoverCarvedFile(selected.carveInfo, outputPath);
+            ClusterHealthReport carveHealth;
+            recovered = carveRecovery.RecoverCarvedFile(selected.carveInfo, outputPath, &carveHealth);
             if (recovered) {
                 cout << "恢复成功!" << endl;
                 cout << "文件大小: " << selected.carveInfo.fileSize << " bytes" << endl;
+                if (carveHealth.overwrittenClusters > 0) {
+                    cout << "簇健康: " << fixed << setprecision(1)
+                         << carveHealth.healthPercentage << "%" << endl;
+                }
             }
         }
 
@@ -1161,16 +1198,26 @@ void RecoverCommand::Execute(string command) {
                 cout << "文件大小: " << result.actualSize << " bytes" << endl;
                 cout << "CRC校验: " << (result.crcValid ? "通过" : "警告") << endl;
             } else {
-                recovered = carveRecovery.RecoverCarvedFile(best.carveInfo, outputPath);
+                ClusterHealthReport carveHealth;
+                recovered = carveRecovery.RecoverCarvedFile(best.carveInfo, outputPath, &carveHealth);
                 if (recovered) {
                     cout << "恢复成功 (无EOCD，使用估算大小)" << endl;
+                    if (carveHealth.overwrittenClusters > 0) {
+                        cout << "簇健康: " << fixed << setprecision(1)
+                             << carveHealth.healthPercentage << "%" << endl;
+                    }
                 }
             }
         } else {
-            recovered = carveRecovery.RecoverCarvedFile(best.carveInfo, outputPath);
+            ClusterHealthReport carveHealth;
+            recovered = carveRecovery.RecoverCarvedFile(best.carveInfo, outputPath, &carveHealth);
             if (recovered) {
                 cout << "恢复成功!" << endl;
                 cout << "文件大小: " << best.carveInfo.fileSize << " bytes" << endl;
+                if (carveHealth.overwrittenClusters > 0) {
+                    cout << "簇健康: " << fixed << setprecision(1)
+                         << carveHealth.healthPercentage << "%" << endl;
+                }
             }
         }
 

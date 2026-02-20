@@ -1,6 +1,7 @@
 #include "UsnTargetedRecovery.h"
 #include "MFTSnapshotStore.h"
 #include "OverwriteDetector.h"
+#include "ClusterFilteredReader.h"
 #include "../utils/Logger.h"
 #include <fstream>
 #include <algorithm>
@@ -643,11 +644,20 @@ UsnTargetedRecoveryResult UsnTargetedRecovery::Recover(
         fileData = result.residentData;
     }
     else {
-        if (!ReadFileFromDataRuns(result.dataRuns, result.fileSize, fileData)) {
-            result.status = UsnRecoveryStatus::READ_ERROR;
+        ClusterFilteredReader filteredReader(reader);
+        ClusterHealthReport health;
+        if (!filteredReader.ReadFromDataRuns(result.dataRuns, result.fileSize,
+                                             usnInfo.FileName, fileData, health)) {
+            if (health.goodClusters == 0) {
+                result.status = UsnRecoveryStatus::DATA_OVERWRITTEN;
+            } else {
+                result.status = UsnRecoveryStatus::READ_ERROR;
+            }
             result.statusMessage = GetStatusMessage(result.status);
             return result;
         }
+        result.clusterHealth = health;
+        result.usedClusterFiltering = true;
     }
 
     // 构建输出路径
@@ -690,6 +700,12 @@ UsnTargetedRecoveryResult UsnTargetedRecovery::Recover(
 
     result.statusMessage = GetStatusMessage(result.status);
     result.canRecover = true;
+
+    // 簇过滤后的状态保护：如果有覆盖簇，标记为部分恢复
+    if (result.usedClusterFiltering && result.clusterHealth.overwrittenClusters > 0) {
+        result.status = UsnRecoveryStatus::PARTIAL_RECOVERY;
+        result.statusMessage = GetStatusMessage(result.status);
+    }
 
     return result;
 }

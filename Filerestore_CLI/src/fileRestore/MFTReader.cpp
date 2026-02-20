@@ -5,6 +5,35 @@
 
 using namespace std;
 
+// ============================================================================
+// NTFS 更新序列数组（USA）修正
+// NTFS 在写入 MFT 记录时，会将每个扇区末尾 2 字节替换为更新序列号，
+// 原始数据保存在 UpdateSequenceOffset 处的 USA 数组中。
+// 不做此修正，跨扇区边界的属性字段会包含错误数据。
+// ============================================================================
+static void ApplyUSAFixup(vector<BYTE>& record, DWORD bytesPerSector) {
+    if (record.size() < sizeof(FILE_RECORD_HEADER)) return;
+    if (bytesPerSector == 0) return;
+
+    FILE_RECORD_HEADER* header = (FILE_RECORD_HEADER*)record.data();
+    WORD usaOffset = header->UpdateSequenceOffset;
+    WORD usaCount = header->UpdateSequenceSize;  // 含序列号本身在内的条目总数
+
+    // 至少需要 2 个条目（序列号 + 1 个扇区修正值）
+    if (usaCount < 2) return;
+    if ((DWORD)usaOffset + (DWORD)usaCount * sizeof(WORD) > record.size()) return;
+
+    WORD* usa = (WORD*)(record.data() + usaOffset);
+    // usa[0] = 更新序列号（仅用于校验，不参与替换）
+    // usa[1..usaCount-1] = 各扇区末尾 2 字节的原始值
+
+    for (WORD i = 1; i < usaCount; i++) {
+        DWORD fixupPos = i * bytesPerSector - sizeof(WORD);
+        if (fixupPos + sizeof(WORD) > record.size()) break;
+        *(WORD*)(record.data() + fixupPos) = usa[i];
+    }
+}
+
 MFTReader::MFTReader() :
     bytesPerSector(0), sectorsPerCluster(0),
     mftStartLCN(0), bytesPerFileRecord(0), totalClusters(0),
@@ -232,6 +261,9 @@ bool MFTReader::ReadMFT(ULONGLONG fileRecordNumber, vector<BYTE>& record) {
     }
     memcpy(record.data(), clusterData.data() + offsetInCluster, bytesPerFileRecord);
 
+    // 应用 NTFS 更新序列数组（USA）修正
+    ApplyUSAFixup(record, bytesPerSector);
+
     // 验证FILE签名(放宽验证 - 删除的记录可能签名不完整)
     PFILE_RECORD_HEADER header = (PFILE_RECORD_HEADER)record.data();
     if (header->Signature != 'ELIF') { // 小端序的 'FILE'
@@ -264,7 +296,47 @@ bool MFTReader::ReadMFTBatch(ULONGLONG startRecordNumber, ULONGLONG recordCount,
         return false;
     }
 
-    // 计算需要读取的簇范围
+    // 碎片化 MFT 路径：逐簇读取，缓存避免重复 I/O
+    if (mftDataRunsLoaded && mftDataRuns.size() > 1) {
+        LOG_DEBUG("Using fragmented MFT batch read path");
+
+        ULONGLONG lastLCN = (ULONGLONG)-1;
+        vector<BYTE> cachedCluster;
+
+        for (ULONGLONG i = 0; i < recordCount; i++) {
+            ULONGLONG recordNumber = startRecordNumber + i;
+            ULONGLONG lcn, offsetInCluster;
+
+            if (!GetMFTRecordLCN(recordNumber, lcn, offsetInCluster)) {
+                LOG_WARNING_FMT("Record #%llu: cannot resolve LCN, skipping", recordNumber);
+                continue;
+            }
+
+            // 同一个簇内的多条记录只读一次磁盘
+            if (lcn != lastLCN) {
+                if (!ReadClusters(lcn, 1, cachedCluster)) {
+                    LOG_WARNING_FMT("Failed to read cluster at LCN %llu for record #%llu", lcn, recordNumber);
+                    continue;
+                }
+                lastLCN = lcn;
+            }
+
+            if (offsetInCluster + bytesPerFileRecord > cachedCluster.size()) {
+                LOG_WARNING_FMT("Record #%llu offset out of bounds, skipping", recordNumber);
+                continue;
+            }
+
+            vector<BYTE> record(bytesPerFileRecord);
+            memcpy(record.data(), cachedCluster.data() + offsetInCluster, bytesPerFileRecord);
+            ApplyUSAFixup(record, bytesPerSector);
+            records.push_back(move(record));
+        }
+
+        LOG_DEBUG_FMT("ReadMFTBatch (fragmented) completed: extracted %zu valid records", records.size());
+        return true;
+    }
+
+    // 连续 MFT 路径：批量读取（原始代码）
     ULONGLONG startCluster = startRecordNumber / recordsPerCluster;
     ULONGLONG endRecord = startRecordNumber + recordCount - 1;
     ULONGLONG endCluster = endRecord / recordsPerCluster;
@@ -295,16 +367,11 @@ bool MFTReader::ReadMFTBatch(ULONGLONG startRecordNumber, ULONGLONG recordCount,
         // 提取单个记录
         vector<BYTE> record(bytesPerFileRecord);
         memcpy(record.data(), clusterData.data() + totalOffset, bytesPerFileRecord);
-        /**
-        // 验证签名（可选，提高性能可以跳过）
-        PFILE_RECORD_HEADER header = (PFILE_RECORD_HEADER)record.data();
-        if (header->Signature == 'ELIF') { // 'FILE' in little-endian
-            records.push_back(move(record));
-        } else {
-            // 无效记录，添加空记录作为占位符
-            records.push_back(vector<BYTE>());
-        }
-        **/
+
+        // 应用 NTFS 更新序列数组（USA）修正
+        ApplyUSAFixup(record, bytesPerSector);
+
+        records.push_back(move(record));
     }
 
     LOG_DEBUG_FMT("ReadMFTBatch completed: extracted %zu valid records", records.size());

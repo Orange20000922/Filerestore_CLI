@@ -16,7 +16,8 @@ using namespace std::chrono;
 OverwriteDetector::OverwriteDetector(MFTReader* mftReader)
     : reader(mftReader), detectionMode(MODE_BALANCED),
       threadingStrategy(THREADING_AUTO),
-      cachedStorageType(STORAGE_UNKNOWN), storageTypeDetected(false) {
+      cachedStorageType(STORAGE_UNKNOWN), storageTypeDetected(false),
+      bitmapLoaded(false), cachedBitmapLCN((ULONGLONG)-1) {
     bytesPerCluster = reader->GetBytesPerSector() * reader->GetSectorsPerCluster();
     threadPool = std::make_unique<OverwriteDetectionThreadPool>(this);
     LOG_DEBUG("OverwriteDetector 已初始化，支持多线程");
@@ -164,12 +165,79 @@ bool OverwriteDetector::HasValidFileStructure(const vector<BYTE>& data) {
     return false;
 }
 
+// 加载 $Bitmap (MFT记录#6) 的 data runs
+bool OverwriteDetector::LoadBitmapDataRuns() {
+    if (bitmapLoaded) return !bitmapRuns.empty();
+    bitmapLoaded = true;
+
+    vector<BYTE> bitmapRecord;
+    if (!reader->ReadMFT(6, bitmapRecord)) {
+        LOG_ERROR("Failed to read $Bitmap MFT record (#6)");
+        return false;
+    }
+
+    if (!ExtractDataRuns(bitmapRecord, bitmapRuns)) {
+        LOG_ERROR("Failed to extract $Bitmap data runs");
+        return false;
+    }
+
+    LOG_INFO_FMT("$Bitmap data runs loaded: %zu runs", bitmapRuns.size());
+    return true;
+}
+
 // 检查簇是否已分配给其他文件（通过读取$Bitmap）
 bool OverwriteDetector::CheckClusterAllocation(ULONGLONG clusterNumber) {
-    // TODO: 实现$Bitmap读取功能
-    // 这需要读取MFT记录#6（$Bitmap），检查对应位是否为1
-    // 暂时返回false（假设未分配）
-    return false;
+    if (!LoadBitmapDataRuns()) {
+        return false;  // 无法读取 $Bitmap，假设未分配
+    }
+
+    // 计算该簇号在 bitmap 中的字节偏移和位位置
+    ULONGLONG byteOffset = clusterNumber / 8;
+    BYTE bitMask = 1 << (clusterNumber % 8);
+
+    // 计算这个字节落在 $Bitmap 文件的哪个簇中
+    ULONGLONG bitmapBytesPerCluster = (ULONGLONG)reader->GetBytesPerSector() * reader->GetSectorsPerCluster();
+    ULONGLONG bitmapClusterIndex = byteOffset / bitmapBytesPerCluster;
+    ULONGLONG offsetInCluster = byteOffset % bitmapBytesPerCluster;
+
+    // 通过 $Bitmap 的 data runs 找到实际的物理 LCN
+    ULONGLONG currentClusterOffset = 0;
+    ULONGLONG targetLCN = 0;
+    bool found = false;
+
+    for (const auto& run : bitmapRuns) {
+        if (bitmapClusterIndex < currentClusterOffset + run.second) {
+            targetLCN = run.first + (bitmapClusterIndex - currentClusterOffset);
+            found = true;
+            break;
+        }
+        currentClusterOffset += run.second;
+    }
+
+    if (!found) {
+        return false;  // 簇号超出 bitmap 范围
+    }
+
+    // 检查缓存：如果上次读的就是这个 bitmap 簇，直接查表
+    if (cachedBitmapLCN == targetLCN && !cachedBitmapData.empty()) {
+        if (offsetInCluster >= cachedBitmapData.size()) return false;
+        return (cachedBitmapData[offsetInCluster] & bitMask) != 0;
+    }
+
+    // 读取 bitmap 簇并缓存
+    vector<BYTE> clusterData;
+    if (!reader->ReadClusters(targetLCN, 1, clusterData)) {
+        return false;
+    }
+
+    if (offsetInCluster >= clusterData.size()) {
+        return false;
+    }
+
+    cachedBitmapLCN = targetLCN;
+    cachedBitmapData = move(clusterData);
+
+    return (cachedBitmapData[offsetInCluster] & bitMask) != 0;
 }
 
 // 读取可变长度的无符号整数
@@ -1261,6 +1329,72 @@ OverwriteDetectionResult OverwriteDetector::DetectOverwrite(const vector<BYTE>& 
                  result.detectionTimeMs, result.totalClusters, result.availableClusters,
                  result.overwrittenClusters, result.overwritePercentage,
                  result.usedMultiThreading ? "是" : "否");
+
+    return result;
+}
+
+// ==================== CheckDataRuns ====================
+// 直接通过 Data Runs 执行覆盖检测（供 ClusterFilteredReader 使用）
+OverwriteDetectionResult OverwriteDetector::CheckDataRuns(
+    const vector<pair<ULONGLONG, ULONGLONG>>& dataRuns) {
+
+    auto startTime = high_resolution_clock::now();
+
+    OverwriteDetectionResult result;
+    result.totalClusters = 0;
+    result.overwrittenClusters = 0;
+    result.availableClusters = 0;
+    result.sampledClusters = 0;
+    result.overwritePercentage = 0.0;
+    result.isFullyAvailable = false;
+    result.isPartiallyAvailable = false;
+    result.usedSampling = false;
+    result.usedMultiThreading = false;
+    result.threadCount = 1;
+    result.detectedStorageType = GetStorageType();
+    result.detectionTimeMs = 0.0;
+
+    // 计算总簇数
+    for (const auto& run : dataRuns) {
+        result.totalClusters += run.second;
+    }
+
+    if (result.totalClusters == 0) {
+        result.isFullyAvailable = true;
+        return result;
+    }
+
+    LOG_INFO_FMT("CheckDataRuns: 检测 %llu 个簇", result.totalClusters);
+
+    // 使用批量检测
+    vector<ClusterStatus> clusterStatuses = BatchCheckClusters(dataRuns);
+    result.sampledClusters = clusterStatuses.size();
+
+    // 统计结果
+    for (const auto& status : clusterStatuses) {
+        if (status.isOverwritten) {
+            result.overwrittenClusters++;
+        } else {
+            result.availableClusters++;
+        }
+    }
+
+    // 计算覆盖百分比
+    if (result.totalClusters > 0) {
+        result.overwritePercentage = (double)result.overwrittenClusters / result.totalClusters * 100.0;
+    }
+
+    result.isFullyAvailable = (result.overwrittenClusters == 0);
+    result.isPartiallyAvailable = (result.availableClusters > 0 && result.overwrittenClusters > 0);
+    result.clusterStatuses = clusterStatuses;
+
+    auto endTime = high_resolution_clock::now();
+    result.detectionTimeMs = duration_cast<milliseconds>(endTime - startTime).count();
+
+    LOG_INFO_FMT("CheckDataRuns 完成: 总计=%llu, 可用=%llu, 已覆盖=%llu (%.2f%%), 耗时 %.2f ms",
+                 result.totalClusters, result.availableClusters,
+                 result.overwrittenClusters, result.overwritePercentage,
+                 result.detectionTimeMs);
 
     return result;
 }

@@ -276,11 +276,6 @@
   "crp.conf_med": "[中]",
   "crp.conf_low": "[低!]",
 
-  "common.yes": "是",
-  "common.no": "否",
-
-  "error.invalid_drive": "无效的驱动器号",
-  "error.open_volume_failed": "无法打开卷",
   "error.usn_open_failed": "无法打开 USN 日志",
 
   "usnlist.usage": "用法：",

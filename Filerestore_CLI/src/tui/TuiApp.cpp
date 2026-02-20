@@ -41,6 +41,18 @@ TuiApp::~TuiApp() {
     }
 }
 
+// 线程安全的刷新请求：通过 WriteConsoleInput 注入一个 WINDOW_BUFFER_SIZE_EVENT，
+// FTXUI 的 FetchTerminalEvents() 在主线程读到后会调 Post()，避免跨线程访问 TaskQueue。
+void TuiApp::RequestRefresh() {
+    HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+    if (hInput == INVALID_HANDLE_VALUE) return;
+    INPUT_RECORD ir = {};
+    ir.EventType = WINDOW_BUFFER_SIZE_EVENT;
+    ir.Event.WindowBufferSizeEvent.dwSize = {0, 0};
+    DWORD written = 0;
+    WriteConsoleInputW(hInput, &ir, 1, &written);
+}
+
 void TuiApp::AppendOutput(const std::string& text) {
     std::lock_guard<std::mutex> lock(outputMutex_);
     outputLines_.push_back(text);
@@ -108,7 +120,7 @@ void TuiApp::ExecuteCommand(const std::string& command) {
         if (capture_) capture_->EndCapture();
         commandRunning_ = false;
         AppendLog("[DONE] " + command);
-        screen_.PostEvent(Event::Custom);
+        RequestRefresh();
     }).detach();
 }
 
@@ -126,7 +138,7 @@ void TuiApp::Run() {
     OutputCapture capture;
     capture.SetCallback([this](const std::string& line) {
         AppendOutput(line);
-        screen_.PostEvent(Event::Custom);
+        RequestRefresh();
     });
     capture.Install();
     capture_ = &capture;
@@ -511,9 +523,13 @@ void TuiApp::Run() {
                     text(" No monitor daemon is currently running.") | color(Color::Yellow)
                 );
                 monitorElems.push_back(text(""));
-                monitorElems.push_back(
-                    text(std::string(" Target drive: ") + monitorDrive_ + ":")
-                );
+                monitorElems.push_back(hbox({
+                    text(" Target drive: ") | bold,
+                    text(" < ") | dim,
+                    text(std::string(1, monitorDrive_) + ":") | bold | color(Color::Cyan),
+                    text(" > ") | dim,
+                    text("  (use Arrow Keys to change)") | dim,
+                }));
                 monitorElems.push_back(
                     text(" Press [S] to start a monitor daemon.")
                 );
@@ -622,7 +638,7 @@ void TuiApp::Run() {
 
             monitorElems.push_back(separator());
             monitorElems.push_back(
-                text(" [S] Start  [T] Stop  [A] Toggle AutoStart  [Esc] Back") | dim
+                text(" [S] Start  [T] Stop  [A] Toggle AutoStart  [</>] Drive  [Esc] Back") | dim
             );
             mainContent = vbox(monitorElems) | border;
 
@@ -815,6 +831,21 @@ void TuiApp::Run() {
 
         // Monitor Dashboard 键盘快捷键
         if (currentView_.load() == ViewMode::Monitor && !commandRunning_) {
+            // 左右箭头切换驱动器
+            if (event == Event::ArrowLeft || event == Event::ArrowRight) {
+                DWORD drives = GetLogicalDrives();
+                char current = monitorDrive_ != 0 ? monitorDrive_ : 'C';
+                int dir = (event == Event::ArrowRight) ? 1 : -1;
+                for (int i = 1; i <= 26; i++) {
+                    char next = 'A' + ((current - 'A' + dir * i + 26) % 26);
+                    if (drives & (1 << (next - 'A'))) {
+                        monitorDrive_ = next;
+                        break;
+                    }
+                }
+                screen_.PostEvent(Event::Custom);
+                return true;
+            }
             if (event == Event::Character('s') || event == Event::Character('S')) {
                 // 启动守护进程
                 char drive = monitorDrive_ != 0 ? monitorDrive_ : 'C';
@@ -876,7 +907,7 @@ void TuiApp::Run() {
         while (running_) {
             std::this_thread::sleep_for(std::chrono::milliseconds(200));
             if (commandRunning_ || currentView_.load() == ViewMode::Monitor) {
-                screen_.PostEvent(Event::Custom);
+                RequestRefresh();
             }
         }
     });

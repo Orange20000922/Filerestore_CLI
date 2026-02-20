@@ -86,6 +86,13 @@ private:
     bool HasValidFileStructureFromPointer(const BYTE* data, size_t size);
     bool CheckClusterAllocation(ULONGLONG clusterNumber);
 
+    // $Bitmap 簇分配检测
+    vector<pair<ULONGLONG, ULONGLONG>> bitmapRuns;  // $Bitmap 文件的 data runs
+    bool bitmapLoaded;
+    ULONGLONG cachedBitmapLCN;          // 缓存的 bitmap 簇 LCN
+    vector<BYTE> cachedBitmapData;      // 缓存的 bitmap 簇数据
+    bool LoadBitmapDataRuns();
+
     // 解析Data Runs的辅助函数
     ULONGLONG ReadVariableLength(const BYTE* data, int length);
     LONGLONG ReadVariableLengthSigned(const BYTE* data, int length);
@@ -141,6 +148,10 @@ public:
 
     // 批量检测多个簇
     vector<ClusterStatus> CheckClusters(const vector<ULONGLONG>& clusterNumbers);
+
+    // 直接通过 Data Runs 检测覆盖（供 ClusterFilteredReader 使用）
+    OverwriteDetectionResult CheckDataRuns(
+        const vector<pair<ULONGLONG, ULONGLONG>>& dataRuns);
 
     // 获取可读的覆盖检测报告
     string GetDetectionReport(const OverwriteDetectionResult& result);

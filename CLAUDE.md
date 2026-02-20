@@ -1,5 +1,15 @@
 # Filerestore_CLI 项目配置
 
+## 项目目录结构
+
+- **主项目**：`D:\Users\21405\source\repos\Filerestore_CLI`
+  - 整个项目的主体，包含 CLI/TUI 应用层代码（Filerestore_CLI）
+- **内核驱动项目**：`D:\Users\21405\source\repos\Filerestore_sys`
+  - 内核层代码的主项目，涉及驱动相关的修改应先在此处进行（用户在此编译测试）
+  - 测试通过后再同步到主项目
+
+**注意：仅内核驱动相关改动走 Filerestore_sys → 主项目 的同步流程，应用层代码直接在主项目修改。**
+
 ## 构建环境
 
 MSBuild 路径：

@@ -33,6 +33,9 @@ public:
 	// - BOOL ElevatePrivilegeForSystem(wstring Privilege);
 	// - BOOL DLLImplantForSystemProcess(string dllfile, int PID);
 
+private:
+	void CleanupMappedFile();
+
 public:
 	ImageTableAnalyzer();
 	~ImageTableAnalyzer();
