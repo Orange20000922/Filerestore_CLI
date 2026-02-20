@@ -138,8 +138,6 @@ private:
     // 私有方法
     bool ParseMftDataRuns(ULONGLONG recordNumber, vector<DataRun>& outRuns,
                           ULONGLONG& outFileSize, bool& outIsResident);
-    bool ValidateSignature(const BYTE* data, size_t size, const string& expectedType,
-                          string& detectedType, double& signatureConfidence);
     double CalculateConfidence(const TripleValidationResult& result);
     ValidationLevel DetermineLevel(const TripleValidationResult& result);
     bool CompareTimestamps(const FILETIME& ft1, const FILETIME& ft2, double toleranceSeconds);
