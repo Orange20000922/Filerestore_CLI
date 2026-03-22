@@ -1,0 +1,84 @@
+;
+; Filerestore_sys.inf - Minifilter driver installation
+;
+
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = "ActivityMonitor"
+ClassGuid   = {b86dff51-a31e-4bac-b3cf-e8cfe75c9fc2}
+Provider    = %ManufacturerName%
+CatalogFile = Filerestore_sys.cat
+DriverVer   = 02/19/2026,1.0.0.0
+PnpLockdown = 1
+
+[DestinationDirs]
+DefaultDestDir          = 12        ; %windir%\system32\drivers
+FileRestoreMon.CopyFiles = 12
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+Filerestore_sys.sys = 1,,
+
+;*****************************************
+; DefaultInstall Section (non-PnP)
+;*****************************************
+
+[DefaultInstall.NT$ARCH$]
+OptionDesc  = %ServiceDescription%
+CopyFiles   = FileRestoreMon.CopyFiles
+
+[DefaultInstall.NT$ARCH$.Services]
+AddService  = FileRestoreMon,,FileRestoreMon.Service
+
+[DefaultUninstall.NT$ARCH$]
+LegacyUninstall = 1
+DelFiles        = FileRestoreMon.CopyFiles
+
+[DefaultUninstall.NT$ARCH$.Services]
+DelService = FileRestoreMon,0x200  ; SPSVCINST_STOPSERVICE
+
+;*****************************************
+; File copy
+;*****************************************
+
+[FileRestoreMon.CopyFiles]
+Filerestore_sys.sys
+
+;*****************************************
+; Service installation
+;*****************************************
+
+[FileRestoreMon.Service]
+DisplayName    = %ServiceName%
+Description    = %ServiceDescription%
+ServiceType    = 2                  ; SERVICE_FILE_SYSTEM_DRIVER
+StartType      = 3                  ; SERVICE_DEMAND_START
+ErrorControl   = 1                  ; SERVICE_ERROR_NORMAL
+ServiceBinary  = %12%\Filerestore_sys.sys
+LoadOrderGroup = "FSFilter Activity Monitor"
+AddReg         = FileRestoreMon.AddRegistry
+
+;*****************************************
+; Minifilter instance registration
+;*****************************************
+
+[FileRestoreMon.AddRegistry]
+HKR,"Instances","DefaultInstance",0x00000000,%DefaultInstance%
+HKR,"Instances\"%Instance1.Name%,"Altitude",0x00000000,%Instance1.Altitude%
+HKR,"Instances\"%Instance1.Name%,"Flags",0x00010001,%Instance1.Flags%
+
+;*****************************************
+; Strings
+;*****************************************
+
+[Strings]
+ManufacturerName    = "FileRestore"
+ServiceName         = "FileRestoreMon"
+ServiceDescription  = "FileRestore Monitor Minifilter Driver"
+DiskName            = "FileRestoreMon Installation Disk"
+DefaultInstance     = "FileRestoreMon Instance"
+Instance1.Name      = "FileRestoreMon Instance"
+Instance1.Altitude  = "370100"
+Instance1.Flags     = 0x0           ; automatic attachment

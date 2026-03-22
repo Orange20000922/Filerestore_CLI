@@ -233,6 +233,7 @@ void MonitorDaemon::DetachSharedMemory() {
 bool MonitorDaemon::ReadState(MonitorSharedState& out) {
     if (!sharedPtr_) return false;
     if (sharedPtr_->magic != MONITOR_SHARED_MAGIC) return false;
+    if (sharedPtr_->version != MONITOR_SHARED_VERSION) return false;
 
     // seqlock 读端：重试直到拿到一致快照
     for (int retry = 0; retry < 100; retry++) {
@@ -258,6 +259,9 @@ bool MonitorDaemon::ReadState(MonitorSharedState& out) {
     }
     // 超过重试上限（不应发生），仍返回最后一次拷贝
     memcpy(&out, (const void*)sharedPtr_, sizeof(MonitorSharedState));
+    SpinLockRelease(&sharedPtr_->spinLock);
+
+    // 拷贝完成后释放锁，out 是本地副本，后续操作无需锁
     return true;
 }
 
