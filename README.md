@@ -176,6 +176,13 @@ usnrecover C 3 D:\recovered\                 # 按索引恢复
 recover C important.docx D:\recovered\       # 智能恢复向导
 ```
 
+### 2. USN 精准恢复 (v1.0.0+)
+```bash
+usnlist C                                    # 列出最近删除文件
+usnrecover C 3 D:\recovered\                 # 按索引恢复
+recover C important.docx D:\recovered\       # 智能恢复向导
+```
+
 ### 3. 实时删除监控 (v1.0.0+)
 - 后台守护进程监听 USN 删除事件
 - 文件删除瞬间自动捕获 MFT 快照
@@ -811,6 +818,12 @@ msbuild Filerestore_CLI.vcxproj /p:Configuration=Release /p:Platform=x64
 | `searchdeleted <drive> <pattern>` | Search files |
 | `restorebyrecord <drive> <record> <output>` | Restore file |
 | `recover <drive> [filename] [output]` | Smart recovery wizard (USN + MFT + signature) |
+
+### USN Recovery (v1.0.0+)
+| Command | Description |
+|---------|-------------|
+| `usnlist <drive>` | List recently deleted files (with confidence scoring) |
+| `usnrecover <drive> <target> <output>` | Recover by index/filename/record number |
 
 ### USN Recovery (v1.0.0+)
 | Command | Description |

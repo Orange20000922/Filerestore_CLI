@@ -9,7 +9,8 @@
       "Bash(python -c:*)",
       "WebSearch",
       "Bash(python:*)",
-      "Bash(du:*)"
+      "Bash(du:*)",
+      "Bash(git -C \"D:\\\\Users\\\\21405\\\\source\\\\repos\\\\Filerestore_CLI\" log --oneline -3 master)"
     ]
   }
 }
